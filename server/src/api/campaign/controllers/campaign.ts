@@ -1,0 +1,69 @@
+/**
+ * campaign controller
+ */
+
+import { factories } from '@strapi/strapi'
+
+const getCurrentCampaign = async (strapi, ctx) => {
+    const campaigns = await strapi.query('api::campaign.campaign').findMany({
+        // filters: {
+        //     publishedAt: { $notNull: true },
+        //     // current: true,
+        // },
+        populate: {
+            game: {
+                populate: ['cover'],
+            },
+            user: {
+                populate: ['users_permissions_user'],
+            },
+        },
+        limit: 1,
+    });
+
+    const campaign = campaigns.filter(campaign => {
+        return campaign.current;
+    })?.[0];
+
+    return campaign;
+};
+
+export default factories.createCoreController('api::campaign.campaign', ({ strapi }) => ({
+
+    async getCurrentCampaignInternal(ctx) {
+        return await getCurrentCampaign(strapi, ctx);
+    },
+
+    async getCurrentCampaign(ctx) {
+        const currentCampaign = await getCurrentCampaign(strapi, ctx);
+        ctx.body = currentCampaign;
+
+        return currentCampaign;
+    },
+
+    async updatePlayerGameInformation(ctx) {
+        const currentUser = ctx.state.user;
+        const campaign = await getCurrentCampaign(strapi, ctx);
+        const body = ctx.request.body;
+
+        const updatedUser = campaign.user.map(campaignUser => {
+            if (campaignUser?.users_permissions_user?.id === currentUser.id) {
+                return {
+                    ...campaignUser,
+                    played_the_game: body.played_the_game,
+                    finished_the_game: body.finished_the_game,
+                }
+            }
+            return campaignUser;
+        });
+
+        const updatedCampaign = await strapi.entityService.update('api::campaign.campaign', campaign.id, {
+            data: {
+                user: updatedUser,
+            }
+        });
+
+        ctx.body = updatedCampaign;
+    },
+
+}));
