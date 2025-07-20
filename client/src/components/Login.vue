@@ -29,18 +29,18 @@ const logout = () => {
   <div class="login-wrapper">
     <div>
       <div class="float-login">
+
         <div v-if="isAuthenticated">
           <template v-if="user">
 
-            <template v-if="user.picture">
-              <img :src="user.picture" alt="">
+            <template v-if="user.avatar">
+              <img :src="user.avatar" alt="">
             </template>
             <template v-else>
               <div v-if="user.name" class="user-initial">{{ user.name[0] }}</div>
-              <div v-if="!user.name && user.username" class="user-initial">{{ user.username[0] }}</div>
             </template>
             
-            <p v-if="user.username">{{ user.name || user.username }}</p>
+            <p v-if="user.name">{{ user.name }}</p>
           </template>
 
           <n-tooltip v-if="campaignUser">

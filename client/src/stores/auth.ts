@@ -16,7 +16,6 @@ export const useAuthStore = defineStore('auth', () => {
   // Actions
   async function handleAuthCallback() {
     const params = new URLSearchParams(window.location.search)
-    const idToken = params.get('id_token')
     const accessTokenParam = params.get('access_token')
 
     if (!accessTokenParam) {
@@ -25,10 +24,9 @@ export const useAuthStore = defineStore('auth', () => {
 
     let {
       data: { jwt, user },
-    } = (await api.get('/auth/auth0/callback', {
+    } = (await api.get('/auth/discord/callback', {
       params: {
         access_token: accessTokenParam,
-        id_token: idToken,
       },
       headers: {
         Authorization: '',
@@ -39,13 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
       throw new Error('Failed to fetch user')
     }
 
-    const { name, picture } = jwtDecode(idToken);
-
-    user = {
-      ...user,
-      name: name ? name : user.name,
-      picture: picture ? picture : user.picture,
-    }
+    user.name = user.global_name || user.username;
 
     localStorage.setItem('jwt', jwt)
     localStorage.setItem('user', JSON.stringify(user))
@@ -73,7 +65,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function login() {
     const redirectUri = encodeURIComponent(window.location.origin)
-    window.location.href = `${import.meta.env.VITE_API_URL}/connect/auth0?redirectUri=${redirectUri}`
+    window.location.href = `${import.meta.env.VITE_API_URL}/connect/discord?redirectUri=${redirectUri}`
   }
 
   async function logout() {

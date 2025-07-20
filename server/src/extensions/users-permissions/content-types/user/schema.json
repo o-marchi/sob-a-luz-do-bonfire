@@ -66,10 +66,16 @@
       "inversedBy": "users",
       "configurable": false
     },
-    "picture": {
+    "avatar": {
       "type": "string"
     },
-    "name": {
+    "accent_color": {
+      "type": "string"
+    },
+    "banner_color": {
+      "type": "string"
+    },
+    "global_name": {
       "type": "string"
     }
   }

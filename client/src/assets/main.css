@@ -60,6 +60,16 @@ body {
   user-drag: none;
 }
 
+.luz-modal {
+  p {
+    color: #a4a4a4;
+
+    b {
+      color: white;
+    }
+  }
+}
+
 .title-wrapper {
   width: 1000px;
   max-width: 100%;

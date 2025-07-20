@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { NModal, NButton } from 'naive-ui'
+import { NModal, NButton, NIcon } from 'naive-ui'
 import { useAuthStore } from '@/stores/auth'
 import { storeToRefs } from 'pinia'
+import { LogoDiscord, LogOut } from '@vicons/ionicons5'
 
 const auth = useAuthStore()
 const { isAuthenticated } = storeToRefs(auth);
@@ -12,7 +13,7 @@ const showModal = ref(false)
 
 <template>
   <div class="title-wrapper">
-    <n-modal v-model:show="showModal" :mask-closable="false" :close-on-esc="false" preset="card" style="width: 400px">
+    <n-modal class="luz-modal" v-model:show="showModal" :mask-closable="false" :close-on-esc="false" preset="card" style="width: 400px">
       <div v-if="isAuthenticated" class="flex">
         <p><b>A chama reconhece sua presença.</b></p>
         <p>Sente-se ao redor da fogueira.</p>
@@ -24,11 +25,15 @@ const showModal = ref(false)
         <p>Agora, para se juntar ao círculo da fogueira, basta revelar sua presença.</p>
 
         <n-button
-          style="margin: 20px 0 10px;"
+          style="margin: 20px 0 10px; width: 100%"
           size="large"
           @click="auth.login"
         >
           Revelar-se
+
+          <n-icon size="16" style="margin-left: 10px">
+            <LogoDiscord />
+          </n-icon>
         </n-button>
       </div>
     </n-modal>
