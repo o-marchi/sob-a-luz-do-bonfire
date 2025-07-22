@@ -1,6 +1,4 @@
-﻿const { jwtDecode } = require('jwt-decode');
-
-module.exports = (config, { strapi }) => {
+﻿module.exports = (config, { strapi }) => {
     return async (ctx, next) => {
 
         await next();
