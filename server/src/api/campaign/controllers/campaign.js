@@ -54,8 +54,8 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
         return {
           __component: 'campaign.user',
           users_permissions_user: currentUser.id,
-          suggested_a_game: currentUser.suggested_a_game,
-          partook_in_the_meeting: currentUser.partook_in_the_meeting,
+          suggested_a_game: currentUser.suggested_a_game || false,
+          partook_in_the_meeting: currentUser.partook_in_the_meeting || false,
 
           played_the_game: body.played_the_game,
           finished_the_game: body.finished_the_game,
