@@ -71,6 +71,7 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
 
     const updatedCampaign = await strapi.entityService.update('api::campaign.campaign', campaign.id, {
       data: {
+        month: campaign.month,
         user: updatedUser,
       }
     });
