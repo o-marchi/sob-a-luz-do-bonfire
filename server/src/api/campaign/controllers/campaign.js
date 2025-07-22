@@ -53,59 +53,30 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
       return;
     }
 
-    async function updateCampagin () {
-      const updatedUser = campaign.user.map(campaignUser => {
-        if (campaignUser?.users_permissions_user?.id === currentUser.id) {
-          return {
-            __component: 'campaign.user',
-            users_permissions_user: currentUser.id,
-            played_the_game: body.played_the_game,
-            finished_the_game: body.finished_the_game,
-            suggested_a_game: currentUser.suggested_a_game,
-            partook_in_the_meeting: currentUser.partook_in_the_meeting,
-          }
-        }
+    const updatedUser = campaign.user.map(campaignUser => {
+      if (campaignUser?.users_permissions_user?.id === currentUser.id) {
+        return {
+          __component: 'campaign.user',
+          id: currentUser.id,
+          users_permissions_user: currentUser.users_permissions_user,
+          suggested_a_game: currentUser.suggested_a_game,
+          partook_in_the_meeting: currentUser.partook_in_the_meeting,
 
-        return campaignUser;
-      });
-
-      const updatedCampaign = await strapi.entityService.update('api::campaign.campaign', campaign.id, {
-        data: {
-          user: updatedUser,
-        }
-      });
-
-      return updatedCampaign;
-    }
-
-    try {
-      let attempts = 0;
-      let success = false;
-
-      while (!success && attempts < 5) {
-        try {
-          const updatedCampaign = await updateCampagin();
-          success = true;
-          ctx.body = updatedCampaign;
-
-          return;
-        } catch (err) {
-          attempts++;
-          if (attempts === 5) throw err;
-          await new Promise(resolve => setTimeout(resolve, 500));
+          played_the_game: body.played_the_game,
+          finished_the_game: body.finished_the_game,
         }
       }
 
-    } catch (error) {
-      const updatedCampaign = await strapi.entityService.update('api::campaign.campaign', campaign.id, {
-        data: {
-          month: campaign.month
-        }
-      });
+      return campaignUser;
+    });
 
-      ctx.body = updatedCampaign;
-    }
+    const updatedCampaign = await strapi.entityService.update('api::campaign.campaign', campaign.id, {
+      data: {
+        user: updatedUser,
+      }
+    });
 
+    ctx.body = updatedCampaign;
   },
 
 }));
