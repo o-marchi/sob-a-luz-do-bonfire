@@ -7,7 +7,7 @@
 const { createCoreController } = require('@strapi/strapi').factories;
 
 const getCurrentCampaign = async (strapi, ctx) => {
-  const campaigns = await strapi.db.query('api::campaign.campaign').findMany({
+  const campaigns = await strapi.query('api::campaign.campaign').findMany({
     populate: {
       game: {
         populate: ['cover'],
@@ -69,6 +69,12 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
       data: {
         month: campaign.month,
         user: updatedUser,
+      }
+    });
+
+    await strapi.entityService.update('api::campaign.campaign', campaign.id, {
+      data: {
+        month: campaign.month,
       }
     });
 
