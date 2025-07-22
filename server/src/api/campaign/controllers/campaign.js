@@ -44,9 +44,14 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
   },
 
   async updatePlayerGameInformation(ctx) {
-    const currentUser = ctx.state.user;
     const campaign = await getCurrentCampaign(strapi, ctx);
+    const currentUser = ctx.state.user;
     const body = ctx.request.body;
+
+    if (!currentUser) {
+      ctx.body = campaign;
+      return;
+    }
 
     const updatedUser = campaign.user.map(campaignUser => {
       if (campaignUser?.users_permissions_user?.id === currentUser.id) {
