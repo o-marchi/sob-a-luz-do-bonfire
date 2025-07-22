@@ -27,7 +27,7 @@ module.exports = (config, { strapi }) => {
                         throw new Error(`Discord API responded with status: ${discordUserResponse.status}`);
                     }
 
-                    const discordUser: any = await discordUserResponse.json() || {};
+                    const discordUser = await discordUserResponse.json() || {};
                     const avatarUrl = discordUser.avatar
                         ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
                         : null;
