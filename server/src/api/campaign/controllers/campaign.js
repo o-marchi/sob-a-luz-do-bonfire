@@ -75,7 +75,7 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
         }
       });
 
-       return updatedCampaign;
+      return updatedCampaign;
     }
 
     try {
@@ -92,6 +92,7 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
         } catch (err) {
           attempts++;
           if (attempts === 5) throw err;
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
 
