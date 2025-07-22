@@ -62,7 +62,10 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
           finished_the_game: body.finished_the_game,
         }
       }
-      return campaignUser;
+      return {
+        ...campaignUser,
+        users_permissions_user: campaignUser?.users_permissions_user?.id,
+      };
     });
 
     const updatedCampaign = await strapi.entityService.update('api::campaign.campaign', campaign.id, {

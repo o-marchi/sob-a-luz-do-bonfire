@@ -1,11 +1,7 @@
 ﻿module.exports = (config, { strapi }) => {
     return async (ctx, next) => {
-      console.log('Intercepting middlewares');
 
         await next();
-
-      console.log('Intercepting middlewares: after next()');
-      console.log(ctx.url);
 
         if (ctx.url.includes('/api/auth/discord/callback')) {
           console.log('We are in');
