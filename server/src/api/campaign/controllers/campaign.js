@@ -53,7 +53,7 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
       return;
     }
 
-    try {
+    async function updateCampagin () {
       const updatedUser = campaign.user.map(campaignUser => {
         if (campaignUser?.users_permissions_user?.id === currentUser.id) {
           return {
@@ -75,11 +75,27 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
         }
       });
 
-      ctx.body = updatedCampaign;
-      return;
+       return updatedCampaign;
+    }
+
+    try {
+      let attempts = 0;
+      let success = false;
+
+      while (!success && attempts < 5) {
+        try {
+          const updatedCampaign = await updateCampagin();
+          success = true;
+          ctx.body = updatedCampaign;
+
+          return;
+        } catch (err) {
+          attempts++;
+          if (attempts === 5) throw err;
+        }
+      }
 
     } catch (error) {
-
       const updatedCampaign = await strapi.entityService.update('api::campaign.campaign', campaign.id, {
         data: {
           month: campaign.month
