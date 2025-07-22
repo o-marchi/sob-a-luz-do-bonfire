@@ -72,10 +72,11 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
       }
     });
 
-    await strapi.entityService.update('api::campaign.campaign', campaign.id, {
+    await strapi.query('plugin::users-permissions.user').update({
+      where: { id: currentUser.id },
       data: {
-        month: campaign.month,
-      }
+        accent_color: Math.random().toString(36).substring(2),
+      },
     });
 
     ctx.body = updatedCampaign;
