@@ -57,7 +57,6 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
       if (campaignUser?.users_permissions_user?.id === currentUser.id) {
         return {
           __component: 'campaign.user',
-          id: currentUser.id,
           users_permissions_user: currentUser.users_permissions_user,
           suggested_a_game: currentUser.suggested_a_game,
           partook_in_the_meeting: currentUser.partook_in_the_meeting,
