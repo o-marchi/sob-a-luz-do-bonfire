@@ -7,6 +7,9 @@
 const { createCoreController } = require('@strapi/strapi').factories;
 
 const getCurrentCampaign = async (strapi, ctx) => {
+  await strapi.db.connection.destroy();
+  await strapi.db.connection.initialize();
+
   const campaigns = await strapi.query('api::campaign.campaign').findMany({
     populate: {
       game: {
