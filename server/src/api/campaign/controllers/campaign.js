@@ -51,6 +51,7 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
     const updatedUser = campaign.user.map(campaignUser => {
       if (campaignUser?.users_permissions_user?.id === currentUser.id) {
         return {
+          __component: 'campaign.user',
           ...campaignUser,
           played_the_game: body.played_the_game,
           finished_the_game: body.finished_the_game,
