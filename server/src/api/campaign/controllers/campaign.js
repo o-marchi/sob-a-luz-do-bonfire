@@ -53,28 +53,40 @@ module.exports = createCoreController('api::campaign.campaign', ({ strapi }) => 
       return;
     }
 
-    const updatedUser = campaign.user.map(campaignUser => {
-      if (campaignUser?.users_permissions_user?.id === currentUser.id) {
-        return {
-          ...campaignUser,
-          users_permissions_user: currentUser.id,
-          played_the_game: body.played_the_game,
-          finished_the_game: body.finished_the_game,
+    try {
+      const updatedUser = campaign.user.map(campaignUser => {
+        if (campaignUser?.users_permissions_user?.id === currentUser.id) {
+          return {
+            ...campaignUser,
+            users_permissions_user: currentUser.id,
+            played_the_game: body.played_the_game,
+            finished_the_game: body.finished_the_game,
+          }
         }
-      }
-      return {
-        ...campaignUser,
-        users_permissions_user: campaignUser?.users_permissions_user?.id,
-      };
-    });
 
-    const updatedCampaign = await strapi.entityService.update('api::campaign.campaign', campaign.id, {
-      data: {
-        user: updatedUser,
-      }
-    });
+        return campaignUser;
+      });
 
-    ctx.body = updatedCampaign;
+      const updatedCampaign = await strapi.entityService.update('api::campaign.campaign', campaign.id, {
+        data: {
+          user: updatedUser,
+        }
+      });
+
+      ctx.body = updatedCampaign;
+      return;
+
+    } catch (error) {
+
+      const updatedCampaign = await strapi.entityService.update('api::campaign.campaign', campaign.id, {
+        data: {
+          month: campaign.month
+        }
+      });
+
+      ctx.body = updatedCampaign;
+    }
+
   },
 
 }));
