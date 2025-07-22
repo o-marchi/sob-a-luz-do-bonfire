@@ -5,15 +5,17 @@ module.exports = ({ env }) => ({
         connection: {
           filename: env('DATABASE_FILENAME', '.tmp/data.db'),
         },
-        debug: true,
-        pool: { min: 0, max: 7 },
+        debug: false,
+        useNullAsDefault: true,
+        pool: { min: 0, max: 1 },
+        acquireConnectionTimeout: 5000,
       }
       : {
         client: 'postgres',
         connection: {
           connectionString: env('DATABASE_URL')
         },
-        debug: true,
+        debug: false,
         pool: { min: 0, max: 7 },
       },
 });

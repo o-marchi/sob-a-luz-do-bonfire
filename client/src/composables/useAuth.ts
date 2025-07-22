@@ -42,7 +42,7 @@ export async function initAuth() {
 }
 
 export function login() {
-  const redirectUri = encodeURIComponent(window.location.origin + '/auth.ts/callback')
+  const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback')
   window.location.href = `${import.meta.env.VITE_API_URL}/connect/auth0?redirectUri=${redirectUri}`
 }
 

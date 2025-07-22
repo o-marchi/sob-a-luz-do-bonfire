@@ -64,7 +64,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function login() {
-    const redirectUri = encodeURIComponent(window.location.origin)
+    const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`)
     window.location.href = `${import.meta.env.VITE_API_URL}/connect/discord?redirectUri=${redirectUri}`
   }
 
