@@ -1,0 +1,27 @@
+{
+  "collectionName": "components_campaign_user_campaign_users",
+  "info": {
+    "displayName": "Campaign User",
+    "icon": "user"
+  },
+  "options": {},
+  "attributes": {
+    "played_the_game": {
+      "type": "boolean"
+    },
+    "finished_the_game": {
+      "type": "boolean"
+    },
+    "suggested_a_game": {
+      "type": "boolean"
+    },
+    "partook_in_the_meeting": {
+      "type": "boolean"
+    },
+    "users_permissions_user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

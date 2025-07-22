@@ -1,0 +1,34 @@
+{
+  "kind": "collectionType",
+  "collectionName": "campaigns",
+  "info": {
+    "singularName": "campaign",
+    "pluralName": "campaigns",
+    "displayName": "Campaign",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "month": {
+      "type": "string"
+    },
+    "year": {
+      "type": "string"
+    },
+    "current": {
+      "type": "boolean"
+    },
+    "game": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::game.game"
+    },
+    "user": {
+      "type": "component",
+      "repeatable": true,
+      "component": "campaign-user.campaign-user"
+    }
+  }
+}
