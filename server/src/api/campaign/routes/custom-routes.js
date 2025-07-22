@@ -14,9 +14,7 @@ module.exports = {
       path: '/update-player-game-information',
       handler: 'campaign.updatePlayerGameInformation',
       config: {
-        auth: {
-          required: true,
-        }
+        auth: false
       },
     },
   ],
