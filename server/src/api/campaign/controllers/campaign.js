@@ -7,11 +7,7 @@
 const { createCoreController } = require('@strapi/strapi').factories;
 
 const getCurrentCampaign = async (strapi, ctx) => {
-  const campaigns = await strapi.query('api::campaign.campaign').findMany({
-    // filters: {
-    //     publishedAt: { $notNull: true },
-    //     // current: true,
-    // },
+  const campaigns = await strapi.db.query('api::campaign.campaign').findMany({
     populate: {
       game: {
         populate: ['cover'],
