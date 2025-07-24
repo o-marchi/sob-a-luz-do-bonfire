@@ -18,6 +18,8 @@
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts"
   },
   "dependencies": {
+    "@libsql/client": "^0.15.10",
+    "@libsql/linux-x64-musl": "^0.5.17",
     "@payloadcms/db-postgres": "^3.48.0",
     "@payloadcms/db-sqlite": "3.48.0",
     "@payloadcms/next": "3.48.0",
@@ -31,6 +33,7 @@
     "graphql": "^16.8.1",
     "jose": "^6.0.12",
     "jsonwebtoken": "^9.0.2",
+    "libsql": "^0.5.17",
     "next": "15.3.2",
     "payload": "3.48.0",
     "react": "19.1.0",

@@ -4,6 +4,10 @@ import { withPayload } from '@payloadcms/next/withPayload'
 const nextConfig = {
   output: 'standalone',
 
+  outputFileTracingIncludes: {
+    './**/*': ['./node_modules/@libsql/linux*/**/*'],
+  },
+
   // Your Next.js config here
   webpack: (webpackConfig) => {
     webpackConfig.resolve.extensionAlias = {
