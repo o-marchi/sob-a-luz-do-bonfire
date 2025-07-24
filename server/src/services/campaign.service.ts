@@ -11,7 +11,9 @@ export class CampaignService {
     const campaignDocs = await req.payload.find({
       collection: 'campaigns',
       where: {
-        current: true,
+        current: {
+          equals: true,
+        },
       },
       limit: 1,
     })
@@ -46,6 +48,7 @@ export class CampaignService {
 
     const updatedCampaignPlayers = [...(campaign.players || []), newCampaignPlayer]
 
+    // @ts-ignore
     return await req.payload.update<Campaign>({
       collection: 'campaigns',
       id: campaign.id,
@@ -86,7 +89,7 @@ export class CampaignService {
       return p
     })
 
-    await req.payload.update<Campaign>({
+    await req.payload.update({
       collection: 'campaigns',
       id: campaign.id,
       data: {

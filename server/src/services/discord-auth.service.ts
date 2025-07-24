@@ -1,6 +1,7 @@
 ﻿import { jwtSign, PayloadRequest } from 'payload'
 import DiscordOAuth2 from 'discord-oauth2'
 import { Player } from '@/payload-types'
+// @ts-ignore
 import { PayloadHandler } from 'payload/dist/config/types'
 import { jwtVerify } from 'jose'
 
@@ -28,7 +29,9 @@ export class DiscordAuthService {
     const playerDocs = await req.payload.find({
       collection: 'players',
       where: {
-        'discord.discordId': discordUserId,
+        'discord.discordId': {
+          equals: discordUserId,
+        }
       },
     })
 
@@ -39,14 +42,13 @@ export class DiscordAuthService {
     return null
   }
 
-  static async findPlayerByEmail(
-    req: PayloadRequest,
-    email: string,
-  ): Promise<Player | null> {
+  static async findPlayerByEmail(req: PayloadRequest, email: string): Promise<Player | null> {
     const playerDocs = await req.payload.find({
       collection: 'players',
       where: {
-        email,
+        email: {
+          equals: email
+        },
       },
     })
 
@@ -131,9 +133,7 @@ export class DiscordAuthService {
     handler: PayloadHandler,
     options: { forceAuth: boolean } = { forceAuth: false },
   ): Promise<PayloadHandler> {
-
     return async (req: PayloadRequest): Promise<Response> => {
-      
       try {
         if (req.user) {
           return handler(req)
@@ -143,14 +143,17 @@ export class DiscordAuthService {
         const jwtToken: string | null = authHeader?.replace('Bearer ', '') || null
 
         const secretKey = new TextEncoder().encode(process.env.JWT_SECRET)
-        const { payload: user } = await jwtVerify(jwtToken, secretKey);
+        // @ts-ignore
+        const { payload: user } = await jwtVerify(jwtToken, secretKey)
 
         if (!user) {
           throw new Error('Invalid JWT token')
         }
 
+        // @ts-ignore
         req.user = user
 
+        // @ts-ignore
         const discordId: string = user.discord.discordId as string
         const player: Player | null = await DiscordAuthService.findPlayerByDiscordId(req, discordId)
 
@@ -158,9 +161,9 @@ export class DiscordAuthService {
           throw new Error('Player not found')
         }
 
-        return handler(req, player);
+        return handler(req, player)
       } catch (error: any) {
-        console.error('playerAuthMiddleware: ', error);
+        console.error('playerAuthMiddleware: ', error)
 
         if (options.forceAuth) {
           return new Response(JSON.stringify({ error: error.message }), {
@@ -171,9 +174,8 @@ export class DiscordAuthService {
           })
         }
 
-        return handler(req);
+        return handler(req)
       }
     }
-
   }
 }

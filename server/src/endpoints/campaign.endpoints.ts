@@ -59,6 +59,7 @@ export const updatePlayerGameInformation: Endpoint = {
   handler: await DiscordAuthService.playerAuthMiddleware(
     async (req: PayloadRequest): Promise<Response> => {
       try {
+        // @ts-ignore
         const playerGameInformation: PlayerGameInformation = await req.json()
 
         if (!playerGameInformation) {
