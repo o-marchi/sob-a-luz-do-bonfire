@@ -3,7 +3,16 @@ import { RouterLink, RouterView } from 'vue-router'
 import Title from './components/Title.vue'
 import Login from '@/components/Login.vue'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
-import { NConfigProvider, darkTheme, ptBR, datePtBR, GlobalThemeOverrides, NMenu } from 'naive-ui'
+import {
+  NConfigProvider,
+  darkTheme,
+  ptBR,
+  datePtBR,
+  GlobalThemeOverrides,
+  useMessage,
+  NMenu,
+  NMessageProvider,
+} from 'naive-ui'
 
 const canvasRef = ref(null)
 
@@ -11,7 +20,7 @@ let ctx, width, height, animationFrameId
 const particles = []
 
 function random(min, max) {
-  return Math.random() * (max - min) + min;
+  return Math.random() * (max - min) + min
 }
 
 class Particle {
@@ -33,7 +42,7 @@ class Particle {
   update() {
     this.x += this.dx
     this.y += this.dy
-    this.opacity = this.opacity + random(-40, 40) / 300;
+    this.opacity = this.opacity + random(-40, 40) / 300
 
     if (this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
       this.reset()
@@ -133,17 +142,17 @@ function animate() {
 }
 
 function resizeCanvas() {
-  width = window.innerWidth;
-  height = document.body.scrollHeight;
-  const canvas = canvasRef.value;
+  width = window.innerWidth
+  height = document.body.scrollHeight
+  const canvas = canvasRef.value
   if (canvas) {
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = width
+    canvas.height = height
 
     // Optional: Reset particles to match new canvas size
-    particles.length = 0; // Clear old particles
+    particles.length = 0 // Clear old particles
     for (let i = 0; i < 100; i++) {
-      particles.push(new Particle());
+      particles.push(new Particle())
     }
   }
 }
@@ -168,6 +177,12 @@ onMounted(() => {
 
     animate()
   }
+
+  // const params = new URLSearchParams(window.location.search)
+  // console.log('Query params:', params.get('authentication_error'))
+  // if (params.get('authentication_error') === 'true') {
+  //   useMessage().error('Authentication failed')
+  // }
 })
 
 onBeforeUnmount(() => {
@@ -175,17 +190,17 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(animationFrameId)
 })
 
-const activeMenu = ref<string | null>(null);
+const activeMenu = ref<string | null>(null)
 
 const menuOptions: any[] = [
   {
     label: 'Home',
-    path: '/'
+    path: '/',
   },
   {
     label: 'Lista de Jogos',
-    path: '/games-list'
-  }
+    path: '/games-list',
+  },
 ]
 
 const themeOverrides: GlobalThemeOverrides = {
@@ -205,7 +220,7 @@ const themeOverrides: GlobalThemeOverrides = {
   },
   Switch: {
     // railColorActive: '#5d4041',
-  }
+  },
 }
 </script>
 
@@ -216,6 +231,7 @@ const themeOverrides: GlobalThemeOverrides = {
     :date-locale="datePtBR"
     :theme-overrides="themeOverrides"
   >
+
     <canvas ref="canvasRef" class="background-canvas"></canvas>
 
     <header>
@@ -224,18 +240,20 @@ const themeOverrides: GlobalThemeOverrides = {
         <Title />
 
         <div class="main-menu-wrapper">
-<!--          <n-menu-->
-<!--            class="main-menu"-->
-<!--            :options="menuOptions"-->
-<!--            v-model:value="activeMenu"-->
-<!--            mode="horizontal"-->
-<!--          ></n-menu>-->
+          <!--          <n-menu-->
+          <!--            class="main-menu"-->
+          <!--            :options="menuOptions"-->
+          <!--            v-model:value="activeMenu"-->
+          <!--            mode="horizontal"-->
+          <!--          ></n-menu>-->
         </div>
       </div>
     </header>
 
     <main>
-      <RouterView />
+      <n-message-provider>
+        <RouterView />
+      </n-message-provider>
     </main>
   </n-config-provider>
 </template>

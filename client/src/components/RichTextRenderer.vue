@@ -1,42 +1,87 @@
 ﻿<script setup lang="ts">
 import { h } from 'vue'
 
-defineProps<{
-  content: any[]
-}>()
+interface TextNode {
+  type: string
+  text?: string,
+  format?: number,
+  children?: Node[],
+  fields?: {
+    url: string,
+    newTab: boolean,
+  },
+}
 
-function renderNode(node: any) {
-  if (node.type === 'paragraph') {
-    return h('p', {}, node.children.map(renderNode))
-  }
+interface Node {
+  type: string
+  format?: number,
+  children?: Node[],
+  fields?: {
+    url: string,
+    newTab: boolean,
+  },
+}
 
-  if (node.type === 'link') {
-    return h('a', { href: node.url, target: '_blank', rel: 'noopener' }, node.children.map(renderNode))
-  }
-
-  if (node.type === 'text' || typeof node.text === 'string') {
-    if (!node.text) {
-      return h('br')
+interface Props {
+  content: {
+    root: {
+      children: Node[]
     }
+  }
+}
 
-    if (node.bold) {
+defineProps<Props>()
+
+function renderNode(node: Node | TextNode): any {
+
+  if ('text' in node) {
+    if (node.format === 1) {
       return h('b', {}, node.text)
     }
-
-
     return node.text
   }
 
-  return null
+  if (!node.children?.length) {
+    return h('br')
+  }
+
+  switch (node.type) {
+    case 'paragraph':
+      return h(
+        'p',
+        {},
+        node.children?.map(child => renderNode(child))
+      )
+
+    case 'link':
+      return h(
+        'a',
+        {
+          href: node.fields?.url,
+          // target: node.fields?.newTab ? '_blank' : '_self',
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
+        node.children?.map(child => renderNode(child))
+      )
+
+    case 'root':
+      return h(
+        'div',
+        {},
+        node.children?.map(child => renderNode(child))
+      )
+
+    default:
+      return null
+  }
 }
 </script>
 
 <template>
-  <div>
+  <div v-if="content?.root?.children">
     <component
-      v-for="(block, i) in content"
-      :key="i"
-      :is="renderNode(block)"
+      :is="renderNode(content.root)"
     />
   </div>
 </template>

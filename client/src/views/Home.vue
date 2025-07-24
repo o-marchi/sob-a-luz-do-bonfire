@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import RichTextRenderer from '@/components/RichTextRenderer.vue'
-import { NCalendar, NSpace, NSwitch, NButton, NSpin } from 'naive-ui'
+import { NCalendar, NSpace, NSwitch, NButton, NSpin, useMessage } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { useCampaignStore } from '@/stores/campaign.ts'
 import { updatePlayerGameInformation } from '@/services/campaignService.ts'
+import { getGameCover } from '@/services/gameService.ts'
 
 const campaignStore = useCampaignStore()
 const { campaign, currentGame, campaignUser } = storeToRefs(campaignStore)
@@ -18,7 +19,7 @@ function onUpdateMonth(date: Date) {
 
 const initialState = ref({
   finished_the_game: false,
-  played_the_game: false
+  played_the_game: false,
 })
 
 const played_the_game = ref<boolean>(false)
@@ -38,6 +39,16 @@ onMounted(async () => {
   }
 })
 
+const params = new URLSearchParams(window.location.search)
+
+if (params.get('authentication_error') === 'true') {
+  useMessage().error('Autenticação falhou. Tente novamente (ou desista).', {
+    duration: 5000,
+  })
+
+  history.replaceState({}, '', window.location.pathname)
+}
+
 const switchPlayedTheGame = (value: boolean) => {
   played_the_game.value = value
 
@@ -47,12 +58,13 @@ const switchPlayedTheGame = (value: boolean) => {
 }
 
 const hasChanges = computed(() => {
-  return initialState.value.finished_the_game !== finished_the_game.value ||
+  return (
+    initialState.value.finished_the_game !== finished_the_game.value ||
     initialState.value.played_the_game !== played_the_game.value
+  )
 })
 
 const saveInformation = async () => {
-
   saveInformationLoading.value = true
 
   await updatePlayerGameInformation({
@@ -64,7 +76,6 @@ const saveInformation = async () => {
 
   window.location.href = '/'
 }
-
 </script>
 
 <template>
@@ -73,10 +84,10 @@ const saveInformation = async () => {
       <div class="main-block-cover">
         <div
           class="main-block-cover-bg"
-          :style="`background-image: url('${currentGame.image}')`"
+          :style="`background-image: url('${getGameCover(currentGame)}')`"
         ></div>
         <div class="main-block-cover-content">
-          <p>Jogo do mês de {{ campaign.month }}</p>
+          <p v-if="campaign?.month">Jogo do mês de {{ campaign.month }}</p>
           <h2>{{ currentGame.title }}</h2>
         </div>
       </div>
@@ -102,18 +113,14 @@ const saveInformation = async () => {
           </n-space>
         </n-space>
         <n-space>
-          <n-button
-            v-show="hasChanges"
-            type="primary"
-            @click="saveInformation()"
-          >
-            <n-spin v-if="saveInformationLoading" />
-            <span v-else>Salvar informação</span>
+          <n-button v-show="hasChanges" type="primary" @click="saveInformation()">
+            <n-spin stroke="#18131C" size="small" v-show="saveInformationLoading" />
+            <span v-show="!saveInformationLoading">Salvar informação</span>
           </n-button>
         </n-space>
       </div>
       <div class="main-block-content">
-        <RichTextRenderer :content="currentGame.heroDescription" />
+        <RichTextRenderer v-if="campaign?.heroDescription" :content="campaign.heroDescription" />
       </div>
     </div>
 

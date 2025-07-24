@@ -1,46 +1,24 @@
 ﻿import api from './api'
-import { convertGameDataToGame } from '@/services/gameService.ts'
-import type { Campaign, CampaignData, CampaignUser, CampaignUserData } from '@/types/Campaign.ts'
-import { calculateUserTokens } from '@/services/userService.ts'
+import type { Campaign, PlayerGameInformation } from '@/types/Campaign.ts'
 
-
-export const convertCampaignUserDataToCampaignUser = (campaignUserData: CampaignUserData): CampaignUser => {
-
-  return {
-    ...campaignUserData,
-    id: campaignUserData?.users_permissions_user?.id,
-    username: campaignUserData?.users_permissions_user?.username,
-    email: campaignUserData?.users_permissions_user?.email,
-    provider: campaignUserData?.users_permissions_user?.provider,
-    tokens: calculateUserTokens(campaignUserData),
-  }
-}
-
-export const getCurrentCampaign = async (): Promise<Campaign> => {
+export const getCurrentCampaign = async (): Promise<Campaign | null> => {
   const {
-    data: campaignData,
-  } = await api.get<CampaignData>(
-    '/current-campaign'
-  )
+    data: { campaign },
+  } = await api.get<{ campaign: Campaign }>('/campaign/current', {
+    params: {
+      includePlayerInCampaign: true,
+    },
+  })
 
-  return {
-    ...campaignData,
-    game: campaignData?.game ? convertGameDataToGame(campaignData.game) : null,
-    users: campaignData?.user?.map(convertCampaignUserDataToCampaignUser) || [],
-  }
+  return campaign
 }
 
-interface PlayerGameInformation {
-  played_the_game: boolean
-  finished_the_game: boolean
-}
-
-export const updatePlayerGameInformation =
-  async(playerGameInformation: PlayerGameInformation): Promise<void> => {
-
-  await api.post( '/update-player-game-information', {
+export const updatePlayerGameInformation = async (
+  playerGameInformation: PlayerGameInformation,
+): Promise<boolean> => {
+  await api.put('/campaign/update-player-game-information', {
     ...playerGameInformation,
-  });
+  })
 
-  return true;
+  return true
 }

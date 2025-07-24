@@ -8,9 +8,10 @@ const api: AxiosInstance = axios.create({
 api.interceptors.request.use((config) => {
   const auth = useAuthStore();
 
-  const token = auth.jwt ? auth.jwt : import.meta.env.VITE_API_TOKEN;
+  if (auth.jwt) {
+    config.headers.Authorization = `Bearer ${auth.jwt}`;
+  }
 
-  config.headers.Authorization = `Bearer ${token}`;
   config.headers['Content-Type'] = 'application/json';
 
   return config;

@@ -1,31 +1,14 @@
-﻿export interface GameData {
+﻿export interface Game {
   id: number
-  title: string
-  order: number
-  month?: string
-  year?: string
-  heroDescription?: any[]
+  title?: string
+  suggestion?: boolean
   cover?: {
-    name: string
-    width: number
-    height: number
-    mime: string
-    ext: string
-    size: number
+    alt?: string
+    filename?: number
+    mimeType?: number
     url: string
-    hash: string
   }
   createdAt: string
   updatedAt: string
   publishedAt: string
-}
-
-export interface Game {
-  id: number
-  title: string
-  order: number
-  month?: string
-  year?: string
-  heroDescription?: any[],
-  image?: string,
 }

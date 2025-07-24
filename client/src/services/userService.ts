@@ -1,6 +1,6 @@
-﻿import type { CampaignUser, CampaignUserData } from '@/types/Campaign.ts'
+﻿import type { CampaignPlayer } from '@/types/Campaign.ts'
 
-export const calculateUserTokens = (user: CampaignUser | CampaignUserData): number => {
+export const calculateUserTokens = (user: CampaignPlayer): number => {
   let tokens = 1;
 
   if (user.played_the_game) {

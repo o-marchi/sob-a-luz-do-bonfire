@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { NModal, NButton, NIcon } from 'naive-ui'
 import { useAuthStore } from '@/stores/auth'
 import { storeToRefs } from 'pinia'
-import { LogoDiscord, LogOut } from '@vicons/ionicons5'
+import { LogoDiscord } from '@vicons/ionicons5'
 
 const auth = useAuthStore()
 const { isAuthenticated } = storeToRefs(auth);

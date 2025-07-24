@@ -33,8 +33,8 @@ const logout = () => {
         <div v-if="isAuthenticated">
           <template v-if="user">
 
-            <template v-if="user.avatar">
-              <img :src="user.avatar" alt="">
+            <template v-if="user.discord.avatar">
+              <img :src="user.discord.avatar" alt="">
             </template>
             <template v-else>
               <div v-if="user.name" class="user-initial">{{ user.name[0] }}</div>

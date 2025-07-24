@@ -1,6 +1,5 @@
 ﻿import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import api from '@/services/api.ts'
 import type { User } from '@/types/User.ts'
 import { jwtDecode } from 'jwt-decode'
 
@@ -17,27 +16,17 @@ export const useAuthStore = defineStore('auth', () => {
   async function handleAuthCallback() {
     const params = new URLSearchParams(window.location.search)
     const accessTokenParam = params.get('access_token')
+    const jwt = params.get('jwt')
 
-    if (!accessTokenParam) {
+    if (!accessTokenParam || !jwt) {
       throw new Error('Failed to fetch user')
     }
 
-    let {
-      data: { jwt, user },
-    } = (await api.get('/auth/discord/callback', {
-      params: {
-        access_token: accessTokenParam,
-      },
-      headers: {
-        Authorization: '',
-      },
-    })) || { data: { jwt: null, user: null } }
+    const user = jwtDecode(jwt)
 
-    if (!jwt || !user) {
+    if (!user) {
       throw new Error('Failed to fetch user')
     }
-
-    user.name = user.global_name || user.username;
 
     localStorage.setItem('jwt', jwt)
     localStorage.setItem('user', JSON.stringify(user))
@@ -64,8 +53,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function login() {
-    const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`)
-    window.location.href = `${import.meta.env.VITE_API_URL}/connect/discord?redirectUri=${redirectUri}`
+    window.location.href = `${import.meta.env.VITE_API_URL}/connect/discord`
   }
 
   async function logout() {
