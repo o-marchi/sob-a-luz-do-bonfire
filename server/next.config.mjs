@@ -2,7 +2,7 @@ import { withPayload } from '@payloadcms/next/withPayload'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  output: 'export',
 
   outputFileTracingIncludes: {
     './**/*': ['./node_modules/@libsql/linux*/**/*'],
