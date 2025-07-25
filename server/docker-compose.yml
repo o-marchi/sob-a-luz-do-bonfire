@@ -1,0 +1,15 @@
+﻿version: '3'
+
+services:
+  payload:
+    build:
+      dockerfile: Dockerfile
+    environment:
+      DATABASE: 'postgres'
+      DATABASE_URI: 'postgresql://postgres:XJrhCsBFreFoUVRjVuCarnnHAfDhadoO@shinkansen.proxy.rlwy.net:20100/railway'
+      PAYLOAD_SECRET: 'c09d6820a4034b1bc86714cc'
+      JWT_SECRET: 'myjwt'
+      PAYLOAD_PUBLIC_SERVER_URL: 'http://localhost:3000'
+      PAYLOAD_PUBLIC_SITE_URL: 'http://localhost:5173'
+    ports:
+      - '3000:3000'
