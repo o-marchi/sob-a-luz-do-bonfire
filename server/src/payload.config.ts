@@ -53,6 +53,7 @@ export default buildConfig({
   hooks: {
     afterError: [
       async ({ error, req, collection, result }) => {
+        console.log('Global error handler log:', error, collection, req?.user, result)
         console.error('Global error handler:', error, collection, req?.user, result)
       },
     ],
