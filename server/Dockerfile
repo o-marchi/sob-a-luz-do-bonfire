@@ -32,7 +32,7 @@ ENV PORT=3000
 
 RUN npm install -g pnpm
 
-CMD ["pnpm", "dev"]
+CMD ["pnpm", "run", "dev"]
 
 ## Production image, copy all the files and run next
 #FROM base AS runner
