@@ -9,17 +9,17 @@ import { fileURLToPath } from 'url'
 import sharp from 'sharp'
 
 import { Users } from './collections/Users'
-import { Media } from './collections/Media'
-import { Games } from './collections/Games'
-import { Campaigns } from './collections/Campaigns'
-import { Players } from './collections/Players'
-
-import {
-  discordAuthEndpoint,
-  discordCallbackEndpoint,
-  testEndpoint,
-} from '@/endpoints/auth.endpoints'
-import { getCurrentCampaign, updatePlayerGameInformation } from '@/endpoints/campaign.endpoints'
+// import { Media } from './collections/Media'
+// import { Games } from './collections/Games'
+// import { Campaigns } from './collections/Campaigns'
+// import { Players } from './collections/Players'
+//
+// import {
+//   discordAuthEndpoint,
+//   discordCallbackEndpoint,
+//   testEndpoint,
+// } from '@/endpoints/auth.endpoints'
+// import { getCurrentCampaign, updatePlayerGameInformation } from '@/endpoints/campaign.endpoints'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -33,17 +33,18 @@ export default buildConfig({
   },
   cors: '*',
   defaultDepth: 9,
-  collections: [Users, Media, Games, Campaigns, Players],
+  // collections: [Users, Media, Games, Campaigns, Players],
+  collections: [Users],
   editor: lexicalEditor(),
   endpoints: [
-    // Discord Auth
-    discordAuthEndpoint,
-    discordCallbackEndpoint,
-    testEndpoint,
-
-    // Campaign
-    getCurrentCampaign,
-    updatePlayerGameInformation,
+    // // Discord Auth
+    // discordAuthEndpoint,
+    // discordCallbackEndpoint,
+    // testEndpoint,
+    //
+    // // Campaign
+    // getCurrentCampaign,
+    // updatePlayerGameInformation,
   ],
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
