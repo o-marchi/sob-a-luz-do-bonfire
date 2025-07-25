@@ -32,11 +32,6 @@ const nextConfig = {
     },
     incomingRequests: true,
   },
-
-  devIndicators: {
-    buildActivity: true,
-    buildActivityPosition: 'bottom-right',
-  },
 }
 
 export default withPayload(nextConfig, {
