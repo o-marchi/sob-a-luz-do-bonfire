@@ -49,6 +49,7 @@ export default buildConfig({
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
+  debug: true,
   db:
     (process.env.DATABASE || 'postgres') === 'postgres'
       ? postgresAdapter({
