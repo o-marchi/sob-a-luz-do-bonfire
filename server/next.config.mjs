@@ -18,6 +18,25 @@ const nextConfig = {
 
     return webpackConfig
   },
+
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['*'],
+      logging: 'verbose',
+    },
+  },
+
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+    incomingRequests: true,
+  },
+
+  devIndicators: {
+    buildActivity: true,
+    buildActivityPosition: 'bottom-right',
+  },
 }
 
 export default withPayload(nextConfig, {
@@ -25,5 +44,8 @@ export default withPayload(nextConfig, {
   payLoadConfig: {
     logErrors: true,
     debug: true,
+    errors: {
+      expose: true,
+    },
   },
 })
