@@ -46,6 +46,11 @@ RUN ls -la /app/.next || true
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
+
+# Docker does not provide a mechanism for failing gracefully if a directory does not exist
+# Create the .next directory to avoid errors
+RUN mkdir -p ./.next
+COPY --from=builder /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
