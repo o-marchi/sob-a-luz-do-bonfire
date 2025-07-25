@@ -50,6 +50,13 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   debug: true,
+  hooks: {
+    afterError: [
+      async ({ error, req, collection, result }) => {
+        console.error('Global error handler:', error, collection, req?.user, result)
+      },
+    ],
+  },
   db:
     (process.env.DATABASE || 'postgres') === 'postgres'
       ? postgresAdapter({
