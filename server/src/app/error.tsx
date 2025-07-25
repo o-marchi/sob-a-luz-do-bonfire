@@ -6,7 +6,7 @@ export default function GlobalError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
+  error: Error & { digest?: string; cause?: any }
   reset: () => void
 }) {
   useEffect(() => {
@@ -18,16 +18,16 @@ export default function GlobalError({
       <body>
         <div className="flex flex-col items-center justify-center min-h-screen p-4">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-2xl w-full">
-            <h2 className="text-lg font-semibold text-red-800 mb-2">
-              Application Error
-            </h2>
+            <h2 className="text-lg font-semibold text-red-800 mb-2">Application Error</h2>
             <div className="text-red-600 mb-4">
               {error.message || 'An unexpected error occurred'}
+
+              <pre>{JSON.stringify(error, null, 2)}</pre>
+              <hr />
+              {error.cause && <pre>{error.cause}</pre>}
             </div>
             {error.digest && (
-              <div className="text-sm text-red-500 mb-4">
-                Error Code: {error.digest}
-              </div>
+              <div className="text-sm text-red-500 mb-4">Error Code: {error.digest}</div>
             )}
             <button
               onClick={reset}
