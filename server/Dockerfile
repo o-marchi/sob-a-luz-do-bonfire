@@ -30,7 +30,8 @@ RUN npm install -g pnpm && pnpm run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
+#ENV NODE_ENV=production
+ENV NODE_ENV=development
 # Uncomment the following line in case you want to disable telemetry during runtime.
 # ENV NEXT_TELEMETRY_DISABLED 1
 
