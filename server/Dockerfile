@@ -30,7 +30,9 @@ EXPOSE 3000
 
 ENV PORT=3000
 
-RUN npm install -g pnpm && pnpm run dev
+RUN npm install -g pnpm
+
+CMD ["pnpm", "dev"]
 
 ## Production image, copy all the files and run next
 #FROM base AS runner
