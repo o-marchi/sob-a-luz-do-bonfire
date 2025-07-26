@@ -1,67 +1,92 @@
-# Payload Blank Template
+<p align="center">
+  <a href="https://funkyton.com/payload-cms/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://res.cloudinary.com/hczpmiapo/image/upload/v1732576652/Static%20assets/Logos/payload_V3_mhv6wc.png">
+      <source media="(prefers-color-scheme: light)" srcset="https://res.cloudinary.com/hczpmiapo/image/upload/v1732576652/Static%20assets/Logos/payload_V3_mhv6wc.png">
+      <img alt="Payload CMS logo" src="https://res.cloudinary.com/hczpmiapo/image/upload/v1732576652/Static%20assets/Logos/payload_V3_mhv6wc.png" width=100>
+    </picture>
+  </a>
+  <a href="https://railway.app/template/L8TUlT?referralCode=-Yg50p">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://railway.app/brand/logo-light.svg">
+      <source media="(prefers-color-scheme: light)" srcset="https://railway.app/brand/logo-dark.svg">
+      <img alt="Railway logo" src="https://railway.app/brand/logo-light.svg" width=100>
+    </picture>
+  </a>
+</p>
 
-This template comes configured with the bare minimum to get started on anything you need.
+<h2 align="center">
+  Payload CMS V3 Website Template<br>
+  <a href="https://railway.app/template/L8TUlT?referralCode=-Yg50p">One-click deploy on Railway!</a>
+</h2>
 
-## Quick start
+<h1 align="center">
+  Need help?<br>
+  <a href="https://funkyton.com/payload-cms/">Step by step guide and instructions</a>
+</h1>
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+<p align="center">
+  A powerful, flexible, and production-ready Payload CMS V3 website builder with PostgreSQL database.
+</p>
 
-## Quick Start - local setup
+<p align="center">
+  <a href="https://github.com/payloadcms/payload/blob/main/CONTRIBUTING.md">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat" alt="PRs welcome!" />
+  </a>
+  <a href="https://discord.gg/payload">
+    <img src="https://img.shields.io/badge/chat-on%20discord-7289DA.svg" alt="Discord Chat" />
+  </a>
+</p>
 
-To spin up this template locally, follow these steps:
+## About this boilerplate
 
-### Clone
+This boilerplate is a pre-configured, ready-to-deploy solution for Payload CMS as a website builder. It includes a fully-working backend, enterprise-grade admin panel, and a beautifully designed, production-ready website. This template is optimized for seamless deployment on [Railway](https://railway.app?referralCode=-Yg50p), and uses PostgreSQL for both local development and production environments.
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+## Preconfigured Features & Integrations
 
-### Development
+- **Authentication**: Robust user authentication system
+- **Access Control**: Role-based access control for admins and users
+- **Premium Content**: Gated content for authenticated users
+- **Comments**: User commenting system with admin approval
+- **Layout Builder**: Flexible content creation with pre-configured blocks
+- **Draft Preview**: Preview unpublished content before going live
+- **SEO**: Built-in SEO optimization tools
+- **Redirects**: Easy management of URL redirects
+- **PostgreSQL Support**: Configured for both local and production use
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URI` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+### Railway Setup
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+Use one-click deploy template:
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/L8TUlT?referralCode=-Yg50p)
 
-#### Docker (Optional)
+### Local Setup
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+1. Clone proejct: (recommeded) Laucnh on Railway and ejct [watch how](https://www.youtube.com/watch?v=LJFek8JP8TE). Alternatively clone this repo or fork it.
+2. Copy `.env.example` to `.env` (fill in your own values..)
+3. Install dependencies: `pnpm install` or `npm install`
+4. Run development mode: `pnpm dev` or `npm run dev`
+or
+5. Build the project: `pnpm build` or `npm run build`
+6. Start the server: `pnpm start` or `npm run start`
 
-To do so, follow these steps:
 
-- Modify the `MONGODB_URI` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URI` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+### Requirements
 
-## How it works
+- **Database**: PostgreSQL
+- **Node.js**: Compatible version as specified in `package.json`
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
+## Useful Resources
 
-### Collections
+- **Blog post about this template**: [Read here](https://funkyton.com/payload-cms/)
+- **Official Payload Documentation**: [Read here](https://payloadcms.com/docs)
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
-
-- #### Users (Authentication)
-
-  Users are auth-enabled collections that have access to the admin panel.
-
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/main/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
-
-- #### Media
-
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
-
-### Docker
-
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
-
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
-
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
-
-## Questions
-
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+<p align="center">
+  <a href="https://funkyton.com/">
+    A template by,
+    <br><br>
+    <picture>
+      <img alt="FUNKYTON logo" src="https://res-5.cloudinary.com/hczpmiapo/image/upload/q_auto/v1/ghost-blog-images/funkyton-logo.png" width=200>
+    </picture>
+  </a>
+</p>

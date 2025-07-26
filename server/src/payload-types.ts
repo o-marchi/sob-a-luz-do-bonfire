@@ -68,10 +68,6 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
-    media: Media;
-    games: Game;
-    campaigns: Campaign;
-    players: Player;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
@@ -79,10 +75,6 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
-    media: MediaSelect<false> | MediaSelect<true>;
-    games: GamesSelect<false> | GamesSelect<true>;
-    campaigns: CampaignsSelect<false> | CampaignsSelect<true>;
-    players: PlayersSelect<false> | PlayersSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -125,6 +117,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
+  name?: string | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -145,118 +138,14 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
- */
-export interface Media {
-  id: number;
-  alt: string;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "games".
- */
-export interface Game {
-  id: number;
-  title: string;
-  cover?: (number | null) | Media;
-  suggestion?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "campaigns".
- */
-export interface Campaign {
-  id: number;
-  month: string;
-  year?: string | null;
-  current?: boolean | null;
-  heroDescription?: {
-    root: {
-      type: string;
-      children: {
-        type: string;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  game?: (number | null) | Game;
-  players?:
-    | {
-        player: number | Player;
-        played_the_game?: boolean | null;
-        finished_the_game?: boolean | null;
-        suggested_a_game?: string | null;
-        partook_in_the_meeting?: boolean | null;
-        tokens?: number | null;
-        id?: string | null;
-      }[]
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "players".
- */
-export interface Player {
-  id: number;
-  email: string;
-  name?: string | null;
-  discord?: {
-    discordId?: string | null;
-    username?: string | null;
-    global_name?: string | null;
-    avatar?: string | null;
-  };
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
   id: number;
-  document?:
-    | ({
-        relationTo: 'users';
-        value: number | User;
-      } | null)
-    | ({
-        relationTo: 'media';
-        value: number | Media;
-      } | null)
-    | ({
-        relationTo: 'games';
-        value: number | Game;
-      } | null)
-    | ({
-        relationTo: 'campaigns';
-        value: number | Campaign;
-      } | null)
-    | ({
-        relationTo: 'players';
-        value: number | Player;
-      } | null);
+  document?: {
+    relationTo: 'users';
+    value: number | User;
+  } | null;
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
@@ -304,6 +193,7 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  name?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -320,77 +210,6 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media_select".
- */
-export interface MediaSelect<T extends boolean = true> {
-  alt?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  url?: T;
-  thumbnailURL?: T;
-  filename?: T;
-  mimeType?: T;
-  filesize?: T;
-  width?: T;
-  height?: T;
-  focalX?: T;
-  focalY?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "games_select".
- */
-export interface GamesSelect<T extends boolean = true> {
-  title?: T;
-  cover?: T;
-  suggestion?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "campaigns_select".
- */
-export interface CampaignsSelect<T extends boolean = true> {
-  month?: T;
-  year?: T;
-  current?: T;
-  heroDescription?: T;
-  game?: T;
-  players?:
-    | T
-    | {
-        player?: T;
-        played_the_game?: T;
-        finished_the_game?: T;
-        suggested_a_game?: T;
-        partook_in_the_meeting?: T;
-        tokens?: T;
-        id?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "players_select".
- */
-export interface PlayersSelect<T extends boolean = true> {
-  email?: T;
-  name?: T;
-  discord?:
-    | T
-    | {
-        discordId?: T;
-        username?: T;
-        global_name?: T;
-        avatar?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

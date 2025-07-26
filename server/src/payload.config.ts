@@ -1,25 +1,13 @@
-// storage-adapter-import-placeholder
-import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import { postgresAdapter } from '@payloadcms/db-postgres'
-import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
+import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+
+import sharp from 'sharp'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
-import sharp from 'sharp'
-
 import { Users } from './collections/Users'
-// import { Media } from './collections/Media'
-// import { Games } from './collections/Games'
-// import { Campaigns } from './collections/Campaigns'
-// import { Players } from './collections/Players'
-//
-// import {
-//   discordAuthEndpoint,
-//   discordCallbackEndpoint,
-//   testEndpoint,
-// } from '@/endpoints/auth.endpoints'
-// import { getCurrentCampaign, updatePlayerGameInformation } from '@/endpoints/campaign.endpoints'
+import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -31,34 +19,8 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  cors: '*',
-  defaultDepth: 9,
-  // collections: [Users, Media, Games, Campaigns, Players],
-  collections: [Users],
+  // This config helps us configure global or default features that the other editors can inherit
   editor: lexicalEditor(),
-  endpoints: [
-    // // Discord Auth
-    // discordAuthEndpoint,
-    // discordCallbackEndpoint,
-    // testEndpoint,
-    //
-    // // Campaign
-    // getCurrentCampaign,
-    // updatePlayerGameInformation,
-  ],
-  secret: process.env.PAYLOAD_SECRET || '',
-  typescript: {
-    outputFile: path.resolve(dirname, 'payload-types.ts'),
-  },
-  debug: true,
-  hooks: {
-    afterError: [
-      async ({ error, req, collection, result }) => {
-        console.log('Global error handler log:', error, collection, req?.user, result)
-        console.error('Global error handler:', error, collection, req?.user, result)
-      },
-    ],
-  },
   db:
     (process.env.DATABASE || 'postgres') === 'postgres'
       ? postgresAdapter({
@@ -71,9 +33,25 @@ export default buildConfig({
             url: process.env.DATABASE_URI || '',
           },
         }),
-  sharp,
+  collections: [Users],
+  cors: '*',
+  defaultDepth: 9,
   plugins: [
     payloadCloudPlugin(),
     // storage-adapter-placeholder
   ],
+  endpoints: [
+    {
+      path: '/health',
+      method: 'get',
+      handler: async (req) => {
+        return new Response('OK', { status: 200 })
+      },
+    },
+  ],
+  secret: process.env.PAYLOAD_SECRET,
+  sharp,
+  typescript: {
+    outputFile: path.resolve(dirname, 'payload-types.ts'),
+  },
 })
