@@ -5,15 +5,9 @@ import sharp from 'sharp' // sharp-import
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
-
-import { Categories } from './collections/Categories'
-import { Comments } from './collections/Comments'
-import { Media } from './collections/Media'
-import { Pages } from './collections/Pages'
-import { Posts } from './collections/Posts'
 import { Users } from './collections/Users'
-import { plugins } from './plugins'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -32,11 +26,11 @@ export default buildConfig({
       connectionString: process.env.DATABASE_URI || '',
     },
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Comments],
+  collections: [Users],
   cors: '*',
   defaultDepth: 9,
   plugins: [
-    ...plugins,
+    payloadCloudPlugin(),
     // storage-adapter-placeholder
   ],
   endpoints: [
