@@ -12,9 +12,8 @@ import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
 import { Users } from './collections/Users'
-import { plugins } from './plugins'
-import { getServerSideURL } from './utilities/getURL'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -34,12 +33,21 @@ export default buildConfig({
     },
   }),
   collections: [Pages, Posts, Media, Categories, Users, Comments],
-  cors: [getServerSideURL()].filter(Boolean),
+  cors: '*',
+  defaultDepth: 9,
   plugins: [
-    ...plugins,
+    payloadCloudPlugin(),
     // storage-adapter-placeholder
   ],
-  endpoints: [],
+  endpoints: [
+    {
+      path: '/health',
+      method: 'get',
+      handler: async (req) => {
+        return new Response('OK', { status: 200 })
+      },
+    },
+  ],
   secret: process.env.PAYLOAD_SECRET,
   sharp,
   typescript: {
