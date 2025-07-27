@@ -1,17 +1,31 @@
 version: '3'
 
 services:
-  payload:
-    image: node:18-alpine
-    ports:
-      - '3000:3000'
+  #  payload:
+  #    image: node:18-alpine
+  #    ports:
+  #      - '3000:3000'
+  #    volumes:
+  #      - .:/home/node/app
+  #      - node_modules:/home/node/app/node_modules
+  #    working_dir: /home/node/app/
+  #    command: sh -c "yarn install && yarn dev"
+  #    env_file:
+  #      - .env
+  #    depends_on:
+  #      - db  # ensures db starts before payload
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: payloaddb
     volumes:
-      - .:/home/node/app
-      - node_modules:/home/node/app/node_modules
-    working_dir: /home/node/app/
-    command: sh -c "yarn install && yarn dev"
-    env_file:
-      - .env
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "6000:5432"
 
 volumes:
   node_modules:
+  pgdata:
