@@ -1,50 +1,30 @@
-// storage-adapter-import-placeholder
-import { postgresAdapter } from '@payloadcms/db-postgres'
-
-import sharp from 'sharp' // sharp-import
 import path from 'path'
-import { buildConfig } from 'payload'
-import { fileURLToPath } from 'url'
-import { Users } from './collections/Users'
-import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
 
-const filename = fileURLToPath(import.meta.url)
-const dirname = path.dirname(filename)
+import { payloadCloud } from '@payloadcms/plugin-cloud'
+import { postgresAdapter } from '@payloadcms/db-postgres'
+import { webpackBundler } from '@payloadcms/bundler-webpack'
+import { slateEditor } from '@payloadcms/richtext-slate'
+import { buildConfig } from 'payload/config'
+
+import Users from './collections/Users'
 
 export default buildConfig({
   admin: {
     user: Users.slug,
-    importMap: {
-      baseDir: path.resolve(dirname),
-    },
+    bundler: webpackBundler(),
   },
-  // This config helps us configure global or default features that the other editors can inherit
-  editor: lexicalEditor(),
+  editor: slateEditor({}),
+  collections: [Users],
+  typescript: {
+    outputFile: path.resolve(__dirname, 'payload-types.ts'),
+  },
+  graphQL: {
+    schemaOutputFile: path.resolve(__dirname, 'generated-schema.graphql'),
+  },
+  plugins: [payloadCloud()],
   db: postgresAdapter({
     pool: {
-      connectionString: process.env.DATABASE_URI || '',
+      connectionString: process.env.DATABASE_URI,
     },
   }),
-  collections: [Users],
-  cors: '*',
-  defaultDepth: 9,
-  plugins: [
-    payloadCloudPlugin(),
-    // storage-adapter-placeholder
-  ],
-  endpoints: [
-    {
-      path: '/health',
-      method: 'get',
-      handler: async (req) => {
-        return new Response('OK', { status: 200 })
-      },
-    },
-  ],
-  secret: process.env.PAYLOAD_SECRET,
-  sharp,
-  typescript: {
-    outputFile: path.resolve(dirname, 'payload-types.ts'),
-  },
 })

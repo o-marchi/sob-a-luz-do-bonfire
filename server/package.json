@@ -1,85 +1,42 @@
 {
-  "name": "payload-3-boilerplate",
+  "name": "payload",
+  "description": "A blank template to get started with Payload",
   "version": "1.0.0",
-  "description": "Payload V3 Website builder boilerplate for Railway",
+  "engines": {
+    "node": ">=21.7.1"
+  },
+  "main": "dist/server.js",
   "license": "MIT",
-  "type": "module",
   "scripts": {
-    "build": "payload migrate && cross-env NODE_OPTIONS=--no-deprecation next build",
-    "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
-    "dev:prod": "cross-env NODE_OPTIONS=--no-deprecation rm -rf .next && pnpm build && pnpm start",
-    "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
-    "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
-    "ii": "cross-env NODE_OPTIONS=--no-deprecation pnpm --ignore-workspace install",
-    "lint": "cross-env NODE_OPTIONS=--no-deprecation next lint",
-    "lint:fix": "cross-env NODE_OPTIONS=--no-deprecation next lint --fix",
-    "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
-    "reinstall": "cross-env NODE_OPTIONS=--no-deprecation rm -rf node_modules && rm pnpm-lock.yaml && pnpm --ignore-workspace install",
-    "start": "cross-env NODE_OPTIONS=--no-deprecation next start"
+    "dev": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts nodemon",
+    "build:payload": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload build",
+    "build:server": "tsc",
+    "build": "yarn copyfiles && yarn build:payload && yarn build:server",
+    "serve": "ls & cross-env PAYLOAD_CONFIG_PATH=dist/payload.config.js NODE_ENV=production node dist/server.js",
+    "copyfiles": "copyfiles -u 1 \"src/**/*.{html,css,scss,ttf,woff,woff2,eot,svg,jpg,png}\" dist/",
+    "generate:types": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:types",
+    "generate:graphQLSchema": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload generate:graphQLSchema",
+    "payload": "cross-env PAYLOAD_CONFIG_PATH=src/payload.config.ts payload"
   },
   "dependencies": {
-    "@payloadcms/db-postgres": "latest",
-    "@payloadcms/live-preview-react": "latest",
-    "@payloadcms/next": "latest",
-    "@payloadcms/payload-cloud": "latest",
-    "@payloadcms/plugin-form-builder": "latest",
-    "@payloadcms/plugin-nested-docs": "latest",
-    "@payloadcms/plugin-redirects": "latest",
-    "@payloadcms/plugin-search": "latest",
-    "@payloadcms/plugin-seo": "latest",
-    "@payloadcms/richtext-lexical": "latest",
-    "@payloadcms/ui": "latest",
-    "@radix-ui/react-checkbox": "^1.1.2",
-    "@radix-ui/react-label": "^2.1.0",
-    "@radix-ui/react-select": "^2.1.2",
-    "@radix-ui/react-slot": "^1.1.0",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
+    "@payloadcms/bundler-webpack": "^1.0.7",
+    "@payloadcms/db-postgres": "^0.8.5",
+    "@payloadcms/plugin-cloud": "^3.0.1",
+    "@payloadcms/richtext-slate": "^1.5.2",
     "cross-env": "^7.0.3",
-    "geist": "^1.3.1",
-    "graphql": "^16.9.0",
-    "jsonwebtoken": "9.0.2",
-    "lucide-react": "^0.378.0",
-    "next": "^15.0.4",
-    "payload": "latest",
-    "payload-admin-bar": "^1.0.6",
-    "prism-react-renderer": "^2.4.0",
-    "react": "19.0.0-rc-65a56d0e-20241020",
-    "react-dom": "19.0.0-rc-65a56d0e-20241020",
-    "react-hook-form": "7.45.4",
-    "sharp": "0.32.6",
-    "tailwind-merge": "^2.5.5",
-    "tailwindcss-animate": "^1.0.7"
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jackspeak": "4.0.1",
+    "payload": "^2.25.0"
   },
   "devDependencies": {
-    "@next/eslint-plugin-next": "^13.5.7",
-    "@payloadcms/eslint-config": "^1.1.1",
-    "@tailwindcss/typography": "^0.5.15",
-    "@types/escape-html": "^1.0.4",
-    "@types/jsonwebtoken": "^9.0.7",
-    "@types/node": "22.5.4",
-    "@types/react": "npm:types-react@19.0.0-rc.1",
-    "@types/react-dom": "npm:types-react-dom@19.0.0-rc.1",
-    "autoprefixer": "^10.4.20",
+    "@types/express": "^4.17.9",
     "copyfiles": "^2.4.1",
-    "eslint": "^8.57.1",
-    "eslint-config-next": "15.0.0",
-    "postcss": "^8.4.49",
-    "prettier": "^3.4.2",
-    "tailwindcss": "^3.4.16",
-    "typescript": "5.7.2"
+    "nodemon": "^3.1.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
   },
-  "engines": {
-    "node": "^18.20.2 || >=20.9.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "@types/react": "npm:types-react@19.0.0-rc.1",
-      "@types/react-dom": "npm:types-react-dom@19.0.0-rc.1"
-    }
-  },
-  "overrides": {
-    "@types/react": "npm:types-react@19.0.0-rc.1",
-    "@types/react-dom": "npm:types-react-dom@19.0.0-rc.1"
+  "resolutions": {
+    "jackspeak": "2.1.1"
   }
 }
