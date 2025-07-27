@@ -12,8 +12,8 @@ import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
 import { Users } from './collections/Users'
+import { plugins } from './plugins'
 import { getServerSideURL } from './utilities/getURL'
-import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 
 const filename = fileURLToPath(import.meta.url)
@@ -26,6 +26,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
+  // This config helps us configure global or default features that the other editors can inherit
   editor: lexicalEditor(),
   db: postgresAdapter({
     pool: {
@@ -35,7 +36,7 @@ export default buildConfig({
   collections: [Pages, Posts, Media, Categories, Users, Comments],
   cors: [getServerSideURL()].filter(Boolean),
   plugins: [
-    payloadCloudPlugin(),
+    ...plugins,
     // storage-adapter-placeholder
   ],
   endpoints: [],
