@@ -1,4 +1,4 @@
-﻿import type { CollectionConfig } from 'payload'
+﻿import { CollectionConfig } from 'payload/types'
 
 export const Games: CollectionConfig = {
   slug: 'games',
@@ -17,11 +17,11 @@ export const Games: CollectionConfig = {
     {
       name: 'cover',
       type: 'upload',
-      relationTo: 'media'
+      relationTo: 'media',
     },
     {
       name: 'suggestion',
       type: 'checkbox',
     },
-  ]
+  ],
 }

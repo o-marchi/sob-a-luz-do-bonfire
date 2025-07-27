@@ -1,55 +1,10 @@
-﻿import type { CollectionConfig } from 'payload'
+﻿import { CollectionConfig } from 'payload/types'
 
 export const Players: CollectionConfig = {
   slug: 'players',
   admin: {
     useAsTitle: 'name',
   },
-  // auth: {
-  //   strategies: [
-  //     {
-  //       name: 'custom-strategy',
-  //       authenticate: async ({ payload, headers }) => {
-  //
-  //         return false;
-  //
-  //         // console.log(payload.login);
-  //         // // console.log(payload.req.url);
-  //         // //
-  //         // // if (payload.req.url.startsWith('/admin')) {
-  //         // //   return false; // This tells Payload to try the next strategy
-  //         // // }
-  //         //
-  //         // const authHeader = headers?.get('Authorization')
-  //         // const token = authHeader?.replace('Bearer ', '')
-  //         //
-  //         // console.log('----------------------')
-  //         // console.log(token)
-  //         // console.log('----------------------')
-  //         //
-  //         // if (!token) {
-  //         //   return null;
-  //         // }
-  //         //
-  //         // const playerDocs = await payload.find({
-  //         //   collection: 'players',
-  //         //   where: {
-  //         //     id: 1
-  //         //   },
-  //         // })
-  //         //
-  //         // if (!playerDocs.docs.length) {
-  //         //   return { user: null };
-  //         // }
-  //         //
-  //         // return {
-  //         //   user: playerDocs.docs[0],
-  //         //   collection: 'players'
-  //         // }
-  //       }
-  //     }
-  //   ]
-  // },
   fields: [
     {
       name: 'email',
@@ -80,7 +35,7 @@ export const Players: CollectionConfig = {
           name: 'avatar',
           type: 'text',
         },
-      ]
+      ],
     },
-  ]
+  ],
 }
