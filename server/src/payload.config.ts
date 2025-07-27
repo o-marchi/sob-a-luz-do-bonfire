@@ -12,8 +12,8 @@ import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
 import { Users } from './collections/Users'
+import { plugins } from './plugins'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -36,7 +36,7 @@ export default buildConfig({
   cors: '*',
   defaultDepth: 9,
   plugins: [
-    payloadCloudPlugin(),
+    ...plugins,
     // storage-adapter-placeholder
   ],
   endpoints: [
