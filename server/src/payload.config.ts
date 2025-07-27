@@ -12,11 +12,9 @@ import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
 import { Users } from './collections/Users'
-import { Footer } from './Footer/config'
-import { Header } from './Header/config'
-import { plugins } from './plugins'
-import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL } from './utilities/getURL'
+import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -28,8 +26,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  // This config helps us configure global or default features that the other editors can inherit
-  editor: defaultLexical,
+  editor: lexicalEditor(),
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URI || '',
@@ -37,20 +34,11 @@ export default buildConfig({
   }),
   collections: [Pages, Posts, Media, Categories, Users, Comments],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer],
   plugins: [
-    ...plugins,
+    payloadCloudPlugin(),
     // storage-adapter-placeholder
   ],
-  endpoints: [
-    {
-      path: '/health',
-      method: 'get',
-      handler: async (req) => {
-        return new Response('OK', { status: 200 })
-      },
-    },
-  ],
+  endpoints: [],
   secret: process.env.PAYLOAD_SECRET,
   sharp,
   typescript: {
