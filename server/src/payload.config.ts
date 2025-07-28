@@ -1,0 +1,50 @@
+// storage-adapter-import-placeholder
+import { postgresAdapter } from '@payloadcms/db-postgres'
+
+import sharp from 'sharp' // sharp-import
+import path from 'path'
+import { buildConfig } from 'payload'
+import { fileURLToPath } from 'url'
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
+
+import { Users } from './collections/Users'
+
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
+
+export default buildConfig({
+  admin: {
+    importMap: {
+      baseDir: path.resolve(dirname),
+    },
+    user: Users.slug,
+  },
+  // This config helps us configure global or default features that the other editors can inherit
+  editor: lexicalEditor(),
+  db: postgresAdapter({
+    pool: {
+      connectionString: process.env.DATABASE_URI || '',
+    },
+  }),
+  collections: [Users],
+  cors: '*',
+  plugins: [
+    payloadCloudPlugin(),
+    // storage-adapter-placeholder
+  ],
+  endpoints: [
+    {
+      path: '/health',
+      method: 'get',
+      handler: async (req) => {
+        return new Response('OK', { status: 200 })
+      },
+    },
+  ],
+  secret: process.env.PAYLOAD_SECRET as string,
+  sharp,
+  typescript: {
+    outputFile: path.resolve(dirname, 'payload-types.ts'),
+  },
+})
