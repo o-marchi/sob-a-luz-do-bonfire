@@ -79,6 +79,7 @@ class Bonfire {
     height: number
     length: number
   }
+  y: number
   currentFrame: number
   frameTimer: number
   frameInterval: number
@@ -95,6 +96,7 @@ class Bonfire {
     this.image = image
     this.frame = frame
 
+    this.y = 495
     this.currentFrame = 0
     this.frameTimer = 0
     this.frameInterval = 500
@@ -109,11 +111,23 @@ class Bonfire {
   }
 
   update(delta: number) {
+    if (!state.value) {
+      return
+    }
+
     this.frameTimer += delta
 
     if (this.frameTimer >= this.frameInterval) {
       this.frameTimer = 0
       this.currentFrame = (this.currentFrame + 1) % this.frame.length
+    }
+
+    if (state.value.width <= 480) {
+      this.y = 390
+    } else if (state.value.width <= 768) {
+      this.y = 433
+    } else {
+      this.y = 495
     }
 
     this.glowPulse = (this.glowPulse + this.glowSpeed) % (Math.PI * 2)
@@ -131,7 +145,7 @@ class Bonfire {
     const scaledWidth = this.frame.width * this.scale
     const scaledHeight = this.frame.height * this.scale
     const centerX = (state.value.width - scaledWidth) / 2
-    const centerY = 495 + scaledHeight / 2 + 20
+    const centerY = this.y + scaledHeight / 2 + 20
 
     const gradient = context.createRadialGradient(
       centerX + scaledWidth / 2,
@@ -177,7 +191,7 @@ class Bonfire {
       this.frame.width,
       this.frame.height,
       centerX,
-      495,
+      this.y,
       scaledWidth,
       scaledHeight,
     )
