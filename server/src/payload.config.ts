@@ -14,6 +14,13 @@ import { Games } from '@/collections/Games'
 import { Campaigns } from '@/collections/Campaigns'
 import { Players } from '@/collections/Players'
 
+import {
+  discordAuthEndpoint,
+  discordCallbackEndpoint,
+  testEndpoint,
+} from './endpoints/auth.endpoints'
+import { getCurrentCampaign, updatePlayerGameInformation } from '@/endpoints/campaign.endpoints'
+
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
@@ -45,6 +52,15 @@ export default buildConfig({
         return new Response('OK', { status: 200 })
       },
     },
+
+    // Discord Auth
+    discordAuthEndpoint,
+    discordCallbackEndpoint,
+    testEndpoint,
+
+    // Campaign
+    getCurrentCampaign,
+    updatePlayerGameInformation,
   ],
   secret: process.env.PAYLOAD_SECRET as string,
   sharp,
