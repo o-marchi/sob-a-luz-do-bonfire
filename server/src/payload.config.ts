@@ -9,6 +9,10 @@ import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
 
 import { Users } from './collections/Users'
+import { Media } from '@/collections/Media'
+import { Games } from '@/collections/Games'
+import { Campaigns } from '@/collections/Campaigns'
+import { Players } from '@/collections/Players'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -27,7 +31,7 @@ export default buildConfig({
       connectionString: process.env.DATABASE_URI || '',
     },
   }),
-  collections: [Users],
+  collections: [Users, Media, Games, Campaigns, Players],
   cors: '*',
   plugins: [
     payloadCloudPlugin(),
