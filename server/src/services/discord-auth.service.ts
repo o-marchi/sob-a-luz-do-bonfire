@@ -142,6 +142,10 @@ export class DiscordAuthService {
         const authHeader: string | null = req.headers.get('authorization')
         const jwtToken: string | null = authHeader?.replace('Bearer ', '') || null
 
+        if (!jwtToken) {
+          return handler(req)
+        }
+
         const secretKey = new TextEncoder().encode(process.env.JWT_SECRET)
         // @ts-ignore
         const { payload: user } = await jwtVerify(jwtToken, secretKey)
@@ -164,7 +168,7 @@ export class DiscordAuthService {
         return handler(req, player)
       } catch (error: any) {
         console.error('playerAuthMiddleware: ', error)
-        
+
         if (options.forceAuth || error.message === 'signature verification failed') {
           return new Response(JSON.stringify({ error: error.message }), {
             status: 401,
