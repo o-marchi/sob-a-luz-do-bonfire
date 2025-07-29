@@ -8,12 +8,12 @@ export const r2Storage = s3Storage({
       prefix: 'sobaluz',
     },
   },
-  bucket: process.env.R2_BUCKET,
+  bucket: process.env.R2_BUCKET as string,
   config: {
-    endpoint: process.env.R2_ENDPOINT,
+    endpoint: process.env.R2_ENDPOINT as string,
     credentials: {
-      accessKeyId: process.env.R2_ACCESS_KEY_ID,
-      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+      accessKeyId: process.env.R2_ACCESS_KEY_ID as string,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY as string,
     },
     region: 'auto',
     forcePathStyle: true,
