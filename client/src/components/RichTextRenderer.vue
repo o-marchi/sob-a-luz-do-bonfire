@@ -3,23 +3,23 @@ import { h } from 'vue'
 
 interface TextNode {
   type: string
-  text?: string,
-  format?: number,
-  children?: Node[],
+  text?: string
+  format?: number
+  children?: Node[]
   fields?: {
-    url: string,
-    newTab: boolean,
-  },
+    url: string
+    newTab: boolean
+  }
 }
 
 interface Node {
   type: string
-  format?: number,
-  children?: Node[],
+  format?: number
+  children?: Node[]
   fields?: {
-    url: string,
-    newTab: boolean,
-  },
+    url: string
+    newTab: boolean
+  }
 }
 
 interface Props {
@@ -33,7 +33,6 @@ interface Props {
 defineProps<Props>()
 
 function renderNode(node: Node | TextNode): any {
-
   if ('text' in node) {
     if (node.format === 1) {
       return h('b', {}, node.text)
@@ -50,10 +49,11 @@ function renderNode(node: Node | TextNode): any {
       return h(
         'p',
         {},
-        node.children?.map(child => renderNode(child))
+        node.children?.map((child) => renderNode(child)),
       )
 
     case 'link':
+    case 'autolink':
       return h(
         'a',
         {
@@ -62,14 +62,14 @@ function renderNode(node: Node | TextNode): any {
           target: '_blank',
           rel: 'noopener noreferrer',
         },
-        node.children?.map(child => renderNode(child))
+        node.children?.map((child) => renderNode(child)),
       )
 
     case 'root':
       return h(
         'div',
         {},
-        node.children?.map(child => renderNode(child))
+        node.children?.map((child) => renderNode(child)),
       )
 
     default:
@@ -80,8 +80,6 @@ function renderNode(node: Node | TextNode): any {
 
 <template>
   <div v-if="content?.root?.children">
-    <component
-      :is="renderNode(content.root)"
-    />
+    <component :is="renderNode(content.root)" />
   </div>
 </template>
