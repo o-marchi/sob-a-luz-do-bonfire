@@ -6,7 +6,6 @@ import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
 
 import { Users } from './collections/Users'
 import { Media } from '@/collections/Media'
@@ -20,6 +19,7 @@ import {
   testEndpoint,
 } from './endpoints/auth.endpoints'
 import { getCurrentCampaign, updatePlayerGameInformation } from '@/endpoints/campaign.endpoints'
+import { r2Storage } from '@/plugins/storage'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -40,10 +40,7 @@ export default buildConfig({
   }),
   collections: [Users, Media, Games, Campaigns, Players],
   cors: '*',
-  plugins: [
-    payloadCloudPlugin(),
-    // storage-adapter-placeholder
-  ],
+  plugins: [r2Storage],
   endpoints: [
     {
       path: '/health',

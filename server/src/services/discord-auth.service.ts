@@ -31,7 +31,7 @@ export class DiscordAuthService {
       where: {
         'discord.discordId': {
           equals: discordUserId,
-        }
+        },
       },
     })
 
@@ -47,7 +47,7 @@ export class DiscordAuthService {
       collection: 'players',
       where: {
         email: {
-          equals: email
+          equals: email,
         },
       },
     })
@@ -164,8 +164,8 @@ export class DiscordAuthService {
         return handler(req, player)
       } catch (error: any) {
         console.error('playerAuthMiddleware: ', error)
-
-        if (options.forceAuth) {
+        
+        if (options.forceAuth || error.message === 'signature verification failed') {
           return new Response(JSON.stringify({ error: error.message }), {
             status: 401,
             headers: {
