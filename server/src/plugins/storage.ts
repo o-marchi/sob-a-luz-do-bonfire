@@ -4,7 +4,6 @@ import * as process from 'node:process'
 export const r2Storage = s3Storage({
   collections: {
     media: {
-      adapter: 's3',
       disableLocalStorage: true,
       prefix: 'sobaluz',
     },
