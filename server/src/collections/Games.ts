@@ -17,11 +17,19 @@ export const Games: CollectionConfig = {
     {
       name: 'cover',
       type: 'upload',
-      relationTo: 'media'
+      relationTo: 'media',
     },
     {
       name: 'suggestion',
       type: 'checkbox',
     },
-  ]
+    {
+      name: 'steam',
+      type: 'text',
+    },
+    {
+      name: 'trailer',
+      type: 'text',
+    },
+  ],
 }

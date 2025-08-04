@@ -172,6 +172,8 @@ export interface Game {
   title: string;
   cover?: (number | null) | Media;
   suggestion?: boolean | null;
+  steam?: string | null;
+  trailer?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -200,6 +202,22 @@ export interface Campaign {
     [k: string]: unknown;
   } | null;
   game?: (number | null) | Game;
+  election?: {
+    active?: boolean | null;
+    electionOptions?:
+      | {
+          game: number | Game;
+          voters?:
+            | {
+                player?: (number | null) | Player;
+                id?: string | null;
+              }[]
+            | null;
+          tokens?: number | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
   players?:
     | {
         player: number | Player;
@@ -349,6 +367,8 @@ export interface GamesSelect<T extends boolean = true> {
   title?: T;
   cover?: T;
   suggestion?: T;
+  steam?: T;
+  trailer?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -362,6 +382,24 @@ export interface CampaignsSelect<T extends boolean = true> {
   current?: T;
   heroDescription?: T;
   game?: T;
+  election?:
+    | T
+    | {
+        active?: T;
+        electionOptions?:
+          | T
+          | {
+              game?: T;
+              voters?:
+                | T
+                | {
+                    player?: T;
+                    id?: T;
+                  };
+              tokens?: T;
+              id?: T;
+            };
+      };
   players?:
     | T
     | {

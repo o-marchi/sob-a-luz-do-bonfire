@@ -15,10 +15,36 @@ export const getCurrentCampaign = async (): Promise<Campaign | null> => {
 
 export const updatePlayerGameInformation = async (
   playerGameInformation: PlayerGameInformation,
-): Promise<boolean> => {
-  await api.put('/campaign/update-player-game-information', {
+): Promise<Campaign> => {
+  const {
+    data: { campaign },
+  } = await api.put('/campaign/update-player-game-information', {
     ...playerGameInformation,
   })
+
+  return campaign
+}
+
+export const vote = async (option: string): Promise<Campaign> => {
+  const {
+    data: { campaign },
+  } = await api.post('/campaign/vote', {
+    option,
+  })
+
+  return campaign
+}
+
+export const undoVote = async (): Promise<Campaign> => {
+  const {
+    data: { campaign },
+  } = await api.post('/campaign/undo-vote')
+
+  return campaign
+}
+
+export const recalculateElectionResult = async (): Promise<boolean> => {
+  await api.get('/campaign/recalculate-election-result')
 
   return true
 }

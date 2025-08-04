@@ -89,14 +89,108 @@ export class CampaignService {
       return p
     })
 
-    await req.payload.update({
+    return await req.payload.update({
       collection: 'campaigns',
       id: campaign.id,
       data: {
         players: updatedPlayers,
       },
     })
+  }
 
-    return updatedPlayer
+  static async vote(req: PayloadRequest, selectedOption: string): Promise<any> {
+    const loggedUserId = req?.user?.id
+
+    if (!loggedUserId) {
+      throw new Error('User ID is required')
+    }
+
+    const campaign: Campaign = await this.getCurrentCampaign(req)
+    const player = CampaignService.findPlayerInCampaign(campaign, loggedUserId)
+
+    if (!player) {
+      throw new Error('Player not found in current campaign')
+    }
+
+    if (!campaign?.election?.active) {
+      throw new Error('Election is not active')
+    }
+
+    const electionOptions = campaign?.election?.electionOptions || []
+
+    electionOptions.forEach((option: any) => {
+      if (option.id !== selectedOption) {
+        return
+      }
+
+      if (option.voters.find((voter: any) => voter?.player?.id === loggedUserId)) {
+        return
+      }
+
+      option.voters = [...(option.voters || []), { player: { id: loggedUserId } }]
+    })
+
+    return await req.payload.update({
+      collection: 'campaigns',
+      id: campaign.id,
+      data: {
+        election: {
+          ...campaign.election,
+          electionOptions,
+        },
+      },
+    })
+  }
+
+  static async undoVote(req: PayloadRequest): Promise<any> {
+    const loggedUserId = req?.user?.id
+
+    if (!loggedUserId) {
+      throw new Error('User ID is required')
+    }
+
+    const campaign: Campaign = await this.getCurrentCampaign(req)
+    const player = CampaignService.findPlayerInCampaign(campaign, loggedUserId)
+
+    if (!player) {
+      throw new Error('Player not found in current campaign')
+    }
+
+    if (!campaign?.election?.active) {
+      throw new Error('Election is not active')
+    }
+
+    const electionOptions = campaign?.election?.electionOptions || []
+
+    electionOptions.forEach((option: any) => {
+      option.voters = option.voters.filter((voter: any) => voter?.player?.id !== loggedUserId)
+    })
+
+    return await req.payload.update({
+      collection: 'campaigns',
+      id: campaign.id,
+      data: {
+        election: {
+          ...campaign.election,
+          electionOptions,
+        },
+      },
+    })
+  }
+
+  static async recalculateElectionResults(req: PayloadRequest): Promise<Campaign> {
+    const campaign: Campaign = await this.getCurrentCampaign(req)
+    const electionOptions = campaign?.election?.electionOptions || []
+
+    return await req.payload.update({
+      collection: 'campaigns',
+      id: campaign.id,
+      data: {
+        election: {
+          ...campaign.election,
+          electionOptions,
+        },
+      },
+    })
   }
 }

@@ -18,7 +18,13 @@ import {
   discordCallbackEndpoint,
   testEndpoint,
 } from './endpoints/auth.endpoints'
-import { getCurrentCampaign, updatePlayerGameInformation } from '@/endpoints/campaign.endpoints'
+import {
+  getCurrentCampaign,
+  recalculateElectionResult,
+  undoVote,
+  updatePlayerGameInformation,
+  vote,
+} from '@/endpoints/campaign.endpoints'
 import { r2Storage } from '@/plugins/storage'
 
 const filename = fileURLToPath(import.meta.url)
@@ -58,6 +64,9 @@ export default buildConfig({
     // Campaign
     getCurrentCampaign,
     updatePlayerGameInformation,
+    undoVote,
+    vote,
+    recalculateElectionResult,
   ],
   secret: process.env.PAYLOAD_SECRET as string,
   sharp,
