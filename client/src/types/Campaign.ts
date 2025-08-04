@@ -1,6 +1,18 @@
 ﻿import type { Game } from '@/types/Game.ts'
 import type { User } from '@/types/User.ts'
 
+export interface ElectionOption {
+  id?: string
+  game?: Game
+  tokens?: number
+  voters?: User[]
+}
+
+export interface Election {
+  active: boolean
+  electionOptions: ElectionOption[]
+}
+
 export interface CampaignPlayer extends User {
   player: number
   played_the_game: boolean
@@ -20,6 +32,7 @@ export interface Campaign {
       children: Node[]
     }
   }
+  election?: Election
   game?: Game
   players?: CampaignPlayer[]
   createdAt: string
