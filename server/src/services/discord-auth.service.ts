@@ -136,10 +136,6 @@ export class DiscordAuthService {
     return async (req: PayloadRequest): Promise<Response> => {
       try {
         if (req.user) {
-          if (options.forceAuth) {
-            throw new Error('Unauthorized')
-          }
-
           return handler(req)
         }
 
@@ -147,10 +143,6 @@ export class DiscordAuthService {
         const jwtToken: string | null = authHeader?.replace('Bearer ', '') || null
 
         if (!jwtToken) {
-          if (options.forceAuth) {
-            throw new Error('Unauthorized')
-          }
-
           return handler(req)
         }
 
@@ -177,12 +169,14 @@ export class DiscordAuthService {
       } catch (error: any) {
         console.error('playerAuthMiddleware: ', error)
 
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 401,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
+        if (options.forceAuth || error.message === 'signature verification failed') {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 401,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          })
+        }
 
         return handler(req)
       }
