@@ -1,92 +1,98 @@
 <p align="center">
-  <a href="https://funkyton.com/payload-cms/">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://res.cloudinary.com/hczpmiapo/image/upload/v1732576652/Static%20assets/Logos/payload_V3_mhv6wc.png">
-      <source media="(prefers-color-scheme: light)" srcset="https://res.cloudinary.com/hczpmiapo/image/upload/v1732576652/Static%20assets/Logos/payload_V3_mhv6wc.png">
-      <img alt="Payload CMS logo" src="https://res.cloudinary.com/hczpmiapo/image/upload/v1732576652/Static%20assets/Logos/payload_V3_mhv6wc.png" width=100>
-    </picture>
-  </a>
-  <a href="https://railway.app/template/L8TUlT?referralCode=-Yg50p">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://railway.app/brand/logo-light.svg">
-      <source media="(prefers-color-scheme: light)" srcset="https://railway.app/brand/logo-dark.svg">
-      <img alt="Railway logo" src="https://railway.app/brand/logo-light.svg" width=100>
-    </picture>
-  </a>
+  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-<h2 align="center">
-  Payload CMS V3 Website Template<br>
-  <a href="https://railway.app/template/L8TUlT?referralCode=-Yg50p">One-click deploy on Railway!</a>
-</h2>
+[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
+[circleci-url]: https://circleci.com/gh/nestjs/nest
 
-<h1 align="center">
-  Need help?<br>
-  <a href="https://funkyton.com/payload-cms/">Step by step guide and instructions</a>
-</h1>
-
-<p align="center">
-  A powerful, flexible, and production-ready Payload CMS V3 website builder with PostgreSQL database.
+  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
+    <p align="center">
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
+<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
+<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
+<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
+<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
+  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
+    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
+  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
 </p>
+  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
+  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-<p align="center">
-  <a href="https://github.com/payloadcms/payload/blob/main/CONTRIBUTING.md">
-    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat" alt="PRs welcome!" />
-  </a>
-  <a href="https://discord.gg/payload">
-    <img src="https://img.shields.io/badge/chat-on%20discord-7289DA.svg" alt="Discord Chat" />
-  </a>
-</p>
+## Description
 
-## About this boilerplate
+[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-This boilerplate is a pre-configured, ready-to-deploy solution for Payload CMS as a website builder. It includes a fully-working backend, enterprise-grade admin panel, and a beautifully designed, production-ready website. This template is optimized for seamless deployment on [Railway](https://railway.app?referralCode=-Yg50p), and uses PostgreSQL for both local development and production environments.
+## Project setup
 
-## Preconfigured Features & Integrations
+```bash
+$ yarn install
+```
 
-- **Authentication**: Robust user authentication system
-- **Access Control**: Role-based access control for admins and users
-- **Premium Content**: Gated content for authenticated users
-- **Comments**: User commenting system with admin approval
-- **Layout Builder**: Flexible content creation with pre-configured blocks
-- **Draft Preview**: Preview unpublished content before going live
-- **SEO**: Built-in SEO optimization tools
-- **Redirects**: Easy management of URL redirects
-- **PostgreSQL Support**: Configured for both local and production use
+## Compile and run the project
 
-### Railway Setup
+```bash
+# development
+$ yarn run start
 
-Use one-click deploy template:
+# watch mode
+$ yarn run start:dev
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/L8TUlT?referralCode=-Yg50p)
+# production mode
+$ yarn run start:prod
+```
 
-### Local Setup
+## Run tests
 
-1. Clone proejct: (recommeded) Laucnh on Railway and ejct [watch how](https://www.youtube.com/watch?v=LJFek8JP8TE). Alternatively clone this repo or fork it.
-2. Copy `.env.example` to `.env` (fill in your own values..)
-3. Install dependencies: `pnpm install` or `npm install`
-4. Run development mode: `pnpm dev` or `npm run dev`
-or
-5. Build the project: `pnpm build` or `npm run build`
-6. Start the server: `pnpm start` or `npm run start`
+```bash
+# unit tests
+$ yarn run test
 
+# e2e tests
+$ yarn run test:e2e
 
-### Requirements
+# test coverage
+$ yarn run test:cov
+```
 
-- **Database**: PostgreSQL
-- **Node.js**: Compatible version as specified in `package.json`
+## Deployment
 
-## Useful Resources
+When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
 
-- **Blog post about this template**: [Read here](https://funkyton.com/payload-cms/)
-- **Official Payload Documentation**: [Read here](https://payloadcms.com/docs)
+If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
 
-<p align="center">
-  <a href="https://funkyton.com/">
-    A template by,
-    <br><br>
-    <picture>
-      <img alt="FUNKYTON logo" src="https://res-5.cloudinary.com/hczpmiapo/image/upload/q_auto/v1/ghost-blog-images/funkyton-logo.png" width=200>
-    </picture>
-  </a>
-</p>
+```bash
+$ yarn install -g @nestjs/mau
+$ mau deploy
+```
+
+With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+
+## Resources
+
+Check out a few resources that may come in handy when working with NestJS:
+
+- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
+- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
+- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
+- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
+- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
+- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
+- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
+- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+
+## Support
+
+Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+
+## Stay in touch
+
+- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
+- Website - [https://nestjs.com](https://nestjs.com/)
+- Twitter - [@nestframework](https://twitter.com/nestframework)
+
+## License
+
+Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
