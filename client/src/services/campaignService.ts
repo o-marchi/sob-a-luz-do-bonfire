@@ -2,9 +2,7 @@
 import type { Campaign, PlayerGameInformation } from '@/types/Campaign.ts'
 
 export const getCurrentCampaign = async (): Promise<Campaign | null> => {
-  const {
-    data: { campaign },
-  } = await api.get<{ campaign: Campaign }>('/campaign/current', {
+  const { data: campaign } = await api.get<Campaign>('/campaign/current', {
     params: {
       includePlayerInCampaign: true,
     },

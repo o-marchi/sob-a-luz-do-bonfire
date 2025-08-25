@@ -27,16 +27,10 @@ export interface Campaign {
   month?: string
   year?: string
   current: boolean
-  heroDescription?: {
-    root: {
-      children: Node[]
-    }
-  }
+  description?: string
   election?: Election
   game?: Game
   players?: CampaignPlayer[]
-  createdAt: string
-  updatedAt: string
 }
 
 export interface PlayerGameInformation {

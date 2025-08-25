@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import RichTextRenderer from '@/components/RichTextRenderer.vue'
 import { NButton, NSpace, NSpin, NSwitch, useMessage } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { useCampaignStore } from '@/stores/campaign.ts'
@@ -10,6 +9,7 @@ import {
 } from '@/services/campaignService.ts'
 import { getGameCover } from '@/services/gameService.ts'
 import ElectionView from '@/components/ElectionView.vue'
+import VueMarkdown from 'vue-markdown-render'
 
 const campaignStore = useCampaignStore()
 const { campaign, currentGame, campaignUser } = storeToRefs(campaignStore)
@@ -60,6 +60,10 @@ const switchPlayedTheGame = (value: boolean) => {
     finished_the_game.value = false
   }
 }
+
+const formattedDescription = computed(() => {
+  return campaign.value?.description.replace(/\\n/g, '\n')
+})
 
 const hasChanges = computed(() => {
   return (
@@ -134,8 +138,15 @@ const recalculateElection = async () => {
           </n-button>
         </n-space>
       </div>
-      <div class="main-block-content">
-        <RichTextRenderer v-if="campaign?.heroDescription" :content="campaign.heroDescription" />
+      <div class="main-block-content" v-if="campaign">
+        <!--        <RichTextRenderer v-if="campaign?.heroDescription" :content="campaign.heroDescription" />-->
+        <!--        <pre>{{ campaign.description }}</pre>-->
+
+        <!--        :options="{ breaks: true, html: true, linkify: true }"-->
+        <vue-markdown
+          :source="formattedDescription"
+          :options="{ breaks: true, html: true, linkify: true }"
+        />
       </div>
     </div>
 
