@@ -19,6 +19,7 @@ import { AuthModule } from './auth/auth.module';
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_NAME,
       autoLoadEntities: true,
+      migrations: ['db/migrations/*{.ts,.js}'],
       synchronize: process.env.NODE_ENV !== 'production',
     }),
 
