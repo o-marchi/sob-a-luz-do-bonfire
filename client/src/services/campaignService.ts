@@ -27,7 +27,7 @@ export const vote = async (option: string): Promise<Campaign> => {
   const {
     data: { campaign },
   } = await api.post('/campaign/vote', {
-    option,
+    optionId: option,
   })
 
   return campaign

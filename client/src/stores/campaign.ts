@@ -1,6 +1,6 @@
 ﻿import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Campaign, CampaignPlayer, Election } from '@/types/Campaign.ts'
+import type { Campaign, CampaignPlayer, Pool } from '@/types/Campaign.ts'
 import type { Game } from '@/types/Game.ts'
 import { getCurrentCampaign } from '@/services/campaignService.ts'
 import { useAuthStore } from '@/stores/auth.ts'
@@ -12,7 +12,7 @@ export const useCampaignStore = defineStore('campaign', () => {
   const loadingCampaign = ref<boolean>(true)
   const campaignUser = ref<CampaignPlayer | null>(null)
   const electionActive = ref<boolean>(false)
-  const election = ref<Election | null>(null)
+  const pool = ref<Pool | null>(null)
 
   // Actions
   async function init(campaignValue?: Campaign) {
@@ -40,8 +40,8 @@ export const useCampaignStore = defineStore('campaign', () => {
         ) ?? null
     }
 
-    electionActive.value = campaign.value?.election?.active || false
-    election.value = campaign.value?.election || null
+    electionActive.value = campaign.value?.electionActive || false
+    pool.value = campaign.value?.pool || null
 
     loadingCampaign.value = false
   }
@@ -52,7 +52,7 @@ export const useCampaignStore = defineStore('campaign', () => {
     campaignUser,
     loadingCampaign,
     electionActive,
-    election,
+    election: pool,
 
     init,
   }

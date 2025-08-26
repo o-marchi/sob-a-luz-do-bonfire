@@ -8,6 +8,7 @@ import { PlayersService } from '../players/players.service';
 import { CampaignPlayer } from './entities/campaign-player.entity';
 import { Player } from '../players/entities/player.entity';
 import { UpdateGameInformationDto } from './dto/update-game-information.dto';
+import { PoolOption } from '../pool/entities/pool-option.entity';
 
 @Injectable()
 export class CampaignService {
@@ -16,8 +17,20 @@ export class CampaignService {
     private campaignRepository: Repository<Campaign>,
     @InjectRepository(CampaignPlayer)
     private campaignPlayerRepository: Repository<CampaignPlayer>,
+    @InjectRepository(PoolOption)
+    private poolOptionRepository: Repository<PoolOption>,
     private playersService: PlayersService,
   ) {}
+
+  private defaultRelations: string[] = [
+    'game',
+    'players',
+    'players.player',
+    'pool',
+    'pool.options',
+    'pool.options.game',
+    'pool.options.players',
+  ];
 
   async create(createCampaignDto: CreateCampaignDto): Promise<Campaign> {
     const entity: Campaign = this.campaignRepository.create(createCampaignDto);
@@ -25,9 +38,7 @@ export class CampaignService {
   }
 
   findAll(): Promise<Campaign[]> {
-    return this.campaignRepository.find({
-      relations: ['game', 'players', 'players.player'],
-    });
+    return this.campaignRepository.find({ relations: this.defaultRelations });
   }
 
   findOne(id: number): Promise<Campaign | null> {
@@ -50,6 +61,12 @@ export class CampaignService {
         : null;
     }
 
+    if (Object.prototype.hasOwnProperty.call(updateCampaignDto, 'poolId')) {
+      payload.pool = updateCampaignDto.poolId
+        ? { id: updateCampaignDto.poolId }
+        : null;
+    }
+
     const entity: Campaign | undefined =
       await this.campaignRepository.preload(payload);
 
@@ -61,7 +78,7 @@ export class CampaignService {
 
     return this.campaignRepository.findOneOrFail({
       where: { id },
-      relations: ['game', 'players', 'players.player'],
+      relations: this.defaultRelations,
     });
   }
 
@@ -94,7 +111,7 @@ export class CampaignService {
     const currentCampaign: Campaign =
       await this.campaignRepository.findOneOrFail({
         where: { current: true },
-        relations: ['game', 'players', 'players.player'],
+        relations: this.defaultRelations,
       });
 
     if (!player) {
@@ -106,7 +123,7 @@ export class CampaignService {
     if (wasPlayerAdded) {
       return this.campaignRepository.findOneOrFail({
         where: { current: true },
-        relations: ['game', 'players', 'players.player'],
+        relations: this.defaultRelations,
       });
     }
 
@@ -135,5 +152,113 @@ export class CampaignService {
     campaignPlayer.finished_the_game = updateGameInformation.finished_the_game;
 
     return this.campaignPlayerRepository.save(campaignPlayer);
+  }
+
+  async undoVote(player: Player): Promise<Campaign> {
+    const currentCampaign: Campaign | null = await this.current();
+
+    if (!currentCampaign) {
+      throw new Error('No campaign found');
+    }
+
+    const pool = currentCampaign.pool;
+
+    if (!pool) {
+      throw new Error('No pool found');
+    }
+
+    for (const option of pool.options) {
+      option.players = option.players.filter((p) => p.id !== player.id);
+
+      await this.poolOptionRepository.save(option);
+    }
+
+    return this.current();
+  }
+
+  async vote(player: Player, optionId: number): Promise<Campaign> {
+    const currentCampaign: Campaign | null = await this.current();
+
+    if (!currentCampaign) {
+      throw new Error('No campaign found');
+    }
+
+    const pool = currentCampaign.pool;
+
+    if (!pool) {
+      throw new Error('No pool found');
+    }
+
+    for (const option of pool.options) {
+      option.players = option.players.filter((p) => p.id !== player.id);
+
+      await this.poolOptionRepository.save(option);
+    }
+
+    currentCampaign.pool?.options.forEach((option) => {
+      if (option.id === optionId) {
+        const alreadyVoted = option.players.some((p) => p.id === player.id);
+
+        if (!alreadyVoted) {
+          option.players.push(player);
+        }
+      } else {
+        option.players = option.players.filter((p) => p.id !== player.id);
+      }
+    });
+
+    const selectedOption = await this.poolOptionRepository.findOneOrFail({
+      where: { id: optionId },
+      relations: ['players'],
+    });
+
+    selectedOption.players.push(player);
+
+    await this.poolOptionRepository.save(selectedOption);
+
+    return this.current();
+  }
+
+  async recalculateElectionResult(): Promise<
+    { optionId: number; game: string; tokens: number }[]
+  > {
+    const currentCampaign: Campaign | null = await this.current();
+
+    if (!currentCampaign) {
+      throw new Error('No campaign found');
+    }
+
+    const pool = currentCampaign.pool;
+
+    if (!pool) {
+      throw new Error('No pool found');
+    }
+
+    const electionResult: { optionId: number; game: string; tokens: number }[] =
+      [];
+
+    for (const option of pool.options) {
+      const players = option.players;
+
+      const tokens = players.reduce((tokens, player) => {
+        const campaignPlayer = currentCampaign.players.find(
+          (campaignPlayer) => campaignPlayer.player.id === player.id,
+        );
+
+        if (!campaignPlayer) {
+          return tokens;
+        }
+
+        return campaignPlayer.tokens + tokens;
+      }, 0);
+
+      electionResult.push({
+        optionId: option.id,
+        game: option?.game.title,
+        tokens,
+      });
+    }
+
+    return electionResult;
   }
 }

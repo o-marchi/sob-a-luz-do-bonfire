@@ -10,19 +10,15 @@ import { undoVote, vote } from '@/services/campaignService.ts'
 import { ref } from 'vue'
 
 const campaignStore = useCampaignStore()
-const { electionActive, election } = storeToRefs(campaignStore)
+const { electionActive, election: pool } = storeToRefs(campaignStore)
 
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 
-interface Voter {
-  player: User
-}
-
 const loadingVote = ref<boolean | string>(false)
 
-const didIVoteForThis = (voters: Voter[]) => {
-  return !!(voters ?? []).find((voter: Voter) => voter?.player?.id === user.value.id)
+const didIVoteForThis = (players: User[]) => {
+  return !!(players ?? []).find((player: User) => player?.id === user.value.id)
 }
 
 const undoVoteAction = async () => {
@@ -46,9 +42,9 @@ const voteAction = async (option: string) => {
 
     <div class="election">
       <div
-        v-for="option in election?.electionOptions || []"
+        v-for="option in pool?.options || []"
         class="election-option"
-        :class="didIVoteForThis(option?.voters || []) ? '--voted' : '--not-voted'"
+        :class="didIVoteForThis(option?.players || []) ? '--voted' : '--not-voted'"
       >
         <div v-if="option?.game">
           <div class="election-option-cover">
@@ -88,7 +84,7 @@ const voteAction = async (option: string) => {
             <h4>{{ option.game?.title }}</h4>
 
             <div class="undo-vote-action" v-if="user">
-              <div v-if="didIVoteForThis(option?.voters || [])">
+              <div v-if="didIVoteForThis(option?.players || [])">
                 <n-button
                   quaternary
                   style="margin: 10px 0 0; width: 100%"

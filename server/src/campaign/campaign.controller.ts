@@ -46,6 +46,13 @@ export class CampaignController {
     return this.campaignService.current(player);
   }
 
+  @Get('recalculate-election-result')
+  async recalculateElectionResult(): Promise<
+    { optionId: number; game: string; tokens: number }[]
+  > {
+    return this.campaignService.recalculateElectionResult();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Campaign | null> {
     return this.campaignService.findOne(+id);
@@ -94,5 +101,20 @@ export class CampaignController {
     );
 
     return this.campaignService.current();
+  }
+
+  @Post('vote')
+  @UseGuards(AuthGuard('jwt'))
+  async vote(
+    @Body() body: { optionId: number },
+    @CurrentPlayer() player: Player,
+  ): Promise<Campaign> {
+    return this.campaignService.vote(player, body.optionId);
+  }
+
+  @Post('undo-vote')
+  @UseGuards(AuthGuard('jwt'))
+  async undoVote(@CurrentPlayer() player: Player): Promise<Campaign> {
+    return this.campaignService.undoVote(player);
   }
 }

@@ -13,4 +13,10 @@ export class Game {
 
   @Column({ default: false })
   suggestion: boolean;
+
+  @Column({ nullable: true })
+  steam: string;
+
+  @Column({ nullable: true })
+  trailer: string;
 }

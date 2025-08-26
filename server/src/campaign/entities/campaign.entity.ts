@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Game } from '../../games/entities/game.entity';
 import { CampaignPlayer } from './campaign-player.entity';
+import { Pool } from '../../pool/entities/pool.entity';
 
 @Entity('campaigns')
 export class Campaign {
@@ -36,4 +37,11 @@ export class Campaign {
     { cascade: true },
   )
   players: CampaignPlayer[];
+
+  @Column({ default: false })
+  electionActive: boolean;
+
+  @ManyToOne(() => Pool, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'pool_id' })
+  pool?: Pool | null;
 }
