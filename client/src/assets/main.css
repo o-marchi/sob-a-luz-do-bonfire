@@ -460,11 +460,11 @@ main {
     }
 
     .main-block-content {
-        padding: 40px;
+        padding: 20px 40px;
         word-wrap: break-word;
 
         p {
-            margin: 8px 0;
+            margin: 20px 0;
             font-size: 16px;
             text-shadow: 0 2px 1px rgba(0, 0, 0, 0.8);
         }
