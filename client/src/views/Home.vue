@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import RichTextRenderer from '@/components/RichTextRenderer.vue'
-import { NCalendar, NSpace, NSwitch, NButton, NSpin, useMessage } from 'naive-ui'
+import { computed, onMounted, ref } from 'vue'
+import { NButton, NSpace, NSpin, NSwitch, useMessage } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { useCampaignStore } from '@/stores/campaign.ts'
-import { updatePlayerGameInformation } from '@/services/campaignService.ts'
+import {
+  recalculateElectionResult,
+  updatePlayerGameInformation,
+} from '@/services/campaignService.ts'
 import { getGameCover } from '@/services/gameService.ts'
+import ElectionView from '@/components/ElectionView.vue'
+import VueMarkdown from 'vue-markdown-render'
 
 const campaignStore = useCampaignStore()
 const { campaign, currentGame, campaignUser } = storeToRefs(campaignStore)
@@ -57,6 +61,10 @@ const switchPlayedTheGame = (value: boolean) => {
   }
 }
 
+const formattedDescription = computed(() => {
+  return campaign.value?.description.replace(/\\n/g, '\n')
+})
+
 const hasChanges = computed(() => {
   return (
     initialState.value.finished_the_game !== finished_the_game.value ||
@@ -67,19 +75,30 @@ const hasChanges = computed(() => {
 const saveInformation = async () => {
   saveInformationLoading.value = true
 
-  await updatePlayerGameInformation({
+  const newCampaignValue = await updatePlayerGameInformation({
     played_the_game: played_the_game.value,
     finished_the_game: finished_the_game.value,
   })
 
-  saveInformationLoading.value = false
+  initialState.value.played_the_game = played_the_game.value
+  initialState.value.finished_the_game = finished_the_game.value
 
-  window.location.href = '/'
+  await campaignStore.init(newCampaignValue)
+
+  saveInformationLoading.value = false
+}
+
+const recalculateElection = async () => {
+  recalculateElectionResult()
 }
 </script>
 
 <template>
   <div>
+    <button class="secret-action" @click="recalculateElection"></button>
+
+    <ElectionView />
+
     <div v-if="currentGame" class="home main-block">
       <div class="main-block-cover">
         <div
@@ -113,14 +132,21 @@ const saveInformation = async () => {
           </n-space>
         </n-space>
         <n-space>
-          <n-button v-show="hasChanges" type="primary" @click="saveInformation()">
+          <n-button type="primary" @click="saveInformation()">
             <n-spin stroke="#18131C" size="small" v-show="saveInformationLoading" />
             <span v-show="!saveInformationLoading">Salvar informação</span>
           </n-button>
         </n-space>
       </div>
-      <div class="main-block-content">
-        <RichTextRenderer v-if="campaign?.heroDescription" :content="campaign.heroDescription" />
+      <div class="main-block-content" v-if="campaign">
+        <!--        <RichTextRenderer v-if="campaign?.heroDescription" :content="campaign.heroDescription" />-->
+        <!--        <pre>{{ campaign.description }}</pre>-->
+
+        <!--        :options="{ breaks: true, html: true, linkify: true }"-->
+        <vue-markdown
+          :source="formattedDescription"
+          :options="{ breaks: true, html: true, linkify: true }"
+        />
       </div>
     </div>
 

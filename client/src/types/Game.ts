@@ -2,13 +2,7 @@
   id: number
   title?: string
   suggestion?: boolean
-  cover?: {
-    alt?: string
-    filename?: number
-    mimeType?: number
-    url: string
-  }
-  createdAt: string
-  updatedAt: string
-  publishedAt: string
+  game?: string
+  trailer?: string
+  cover?: string
 }
