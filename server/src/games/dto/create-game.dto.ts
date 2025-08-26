@@ -12,4 +12,12 @@ export class CreateGameDto {
   @IsBoolean()
   @IsOptional()
   suggestion: boolean;
+
+  @IsString()
+  @IsOptional()
+  steam: string;
+
+  @IsString()
+  @IsOptional()
+  trailer: string;
 }

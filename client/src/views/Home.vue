@@ -139,10 +139,6 @@ const recalculateElection = async () => {
         </n-space>
       </div>
       <div class="main-block-content" v-if="campaign">
-        <!--        <RichTextRenderer v-if="campaign?.heroDescription" :content="campaign.heroDescription" />-->
-        <!--        <pre>{{ campaign.description }}</pre>-->
-
-        <!--        :options="{ breaks: true, html: true, linkify: true }"-->
         <vue-markdown
           :source="formattedDescription"
           :options="{ breaks: true, html: true, linkify: true }"

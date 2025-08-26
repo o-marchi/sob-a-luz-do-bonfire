@@ -30,4 +30,14 @@ export class CreateCampaignDto {
   @Transform(({ value, obj }) => value ?? obj?.game_id, { toClassOnly: true })
   @Min(1)
   gameId?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  electionActive?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Transform(({ value, obj }) => value ?? obj?.pool_id, { toClassOnly: true })
+  @Min(1)
+  poolId?: number;
 }
