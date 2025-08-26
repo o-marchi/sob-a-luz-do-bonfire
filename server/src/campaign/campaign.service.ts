@@ -106,7 +106,7 @@ export class CampaignService {
     if (wasPlayerAdded) {
       return this.campaignRepository.findOneOrFail({
         where: { current: true },
-        relations: ['game', 'players'],
+        relations: ['game', 'players', 'players.player'],
       });
     }
 
