@@ -10,6 +10,36 @@ import { Player } from '../players/entities/player.entity';
 import { UpdateGameInformationDto } from './dto/update-game-information.dto';
 import { PoolOption } from '../pool/entities/pool-option.entity';
 
+const sortCampaigns = (campaigns: Campaign[]): Campaign[] => {
+  const months = [
+    'Janeiro',
+    'Fevereiro',
+    'Março',
+    'Abril',
+    'Maio',
+    'Junho',
+    'Julho',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Dezembro',
+  ];
+
+  return campaigns.sort((a, b) => {
+    // sort by year
+    if (a.year !== b.year) {
+      return +a.year - +b.year;
+    }
+
+    // sort by month
+    const indexA = months.findIndex((month) => month === a.month);
+    const indexB = months.findIndex((month) => month === b.month);
+
+    return indexA - indexB;
+  });
+};
+
 @Injectable()
 export class CampaignService {
   constructor(
@@ -39,6 +69,14 @@ export class CampaignService {
 
   findAll(): Promise<Campaign[]> {
     return this.campaignRepository.find({ relations: this.defaultRelations });
+  }
+
+  async findAllHistory(): Promise<Campaign[]> {
+    const campaigns = await this.campaignRepository.find({
+      relations: ['game'],
+    });
+
+    return sortCampaigns(campaigns);
   }
 
   findOne(id: number): Promise<Campaign | null> {

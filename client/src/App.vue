@@ -28,10 +28,10 @@ const menuOptions: any[] = [
     label: () => h(RouterLink, { to: '/' }, 'Home'),
     key: 'home',
   },
-  // {
-  //   label: () => h(RouterLink, { to: '/campanhas' }, 'Campanhas'),
-  //   key: 'campanhas',
-  // },
+  {
+    label: () => h(RouterLink, { to: '/campanhas' }, 'Campanhas'),
+    key: 'campanhas',
+  },
   {
     label: () => h(RouterLink, { to: '/regras' }, 'Regras'),
     key: 'regras',

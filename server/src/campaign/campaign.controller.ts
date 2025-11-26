@@ -46,6 +46,11 @@ export class CampaignController {
     return this.campaignService.current(player);
   }
 
+  @Get('history')
+  async findAllHistory(): Promise<Campaign[]> {
+    return this.campaignService.findAllHistory();
+  }
+
   @Get('recalculate-election-result')
   async recalculateElectionResult(): Promise<
     { optionId: number; game: string; tokens: number }[]
