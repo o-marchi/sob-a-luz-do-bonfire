@@ -11,18 +11,20 @@ const router = createRouter({
       component: Home,
     },
     {
-      path: '/games-list',
-      name: 'games-list',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/GamesList.vue'),
+      path: '/campanhas',
+      name: 'campanhas',
+      component: () => import('../views/Campaigns.vue'),
+    },
+    {
+      path: '/regras',
+      name: 'regras',
+      component: () => import('../views/Rules.vue'),
     },
     {
       path: '/auth/callback',
       name: 'auth-callback',
       component: AuthCallbackPage,
-    }
+    },
   ],
 })
 

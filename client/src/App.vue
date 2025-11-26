@@ -1,28 +1,40 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
+import { RouterLink, RouterView } from 'vue-router'
 import Title from './components/Title.vue'
 import Login from '@/components/Login.vue'
-import { ref } from 'vue'
+import { ref, h } from 'vue'
 import Canvas from '@/components/Canvas.vue'
 import {
+  type GlobalThemeOverrides,
   darkTheme,
   datePtBR,
-  GlobalThemeOverrides,
-  NConfigProvider,
-  NMessageProvider,
   ptBR,
+  NConfigProvider,
+  NMenu,
+  NMessageProvider,
 } from 'naive-ui'
 
-const activeMenu = ref<string | null>(null)
+function getMenuKeyByPath(path: string) {
+  if (path === '/') return 'home'
+  if (path.startsWith('/campanhas')) return 'campanhas'
+  if (path.startsWith('/regras')) return 'regras'
+  return null
+}
+
+const activeMenu = ref<string | null>(getMenuKeyByPath(window.location.pathname))
 
 const menuOptions: any[] = [
   {
-    label: 'Home',
-    path: '/',
+    label: () => h(RouterLink, { to: '/' }, 'Home'),
+    key: 'home',
   },
+  // {
+  //   label: () => h(RouterLink, { to: '/campanhas' }, 'Campanhas'),
+  //   key: 'campanhas',
+  // },
   {
-    label: 'Lista de Jogos',
-    path: '/games-list',
+    label: () => h(RouterLink, { to: '/regras' }, 'Regras'),
+    key: 'regras',
   },
 ]
 
@@ -62,12 +74,12 @@ const themeOverrides: GlobalThemeOverrides = {
         <Title />
 
         <div class="main-menu-wrapper">
-          <!--          <n-menu-->
-          <!--            class="main-menu"-->
-          <!--            :options="menuOptions"-->
-          <!--            v-model:value="activeMenu"-->
-          <!--            mode="horizontal"-->
-          <!--          ></n-menu>-->
+          <n-menu
+            class="main-menu"
+            :options="menuOptions"
+            v-model:value="activeMenu"
+            mode="horizontal"
+          ></n-menu>
         </div>
       </div>
     </header>
@@ -76,6 +88,8 @@ const themeOverrides: GlobalThemeOverrides = {
       <n-message-provider>
         <RouterView />
       </n-message-provider>
+
+      <p>&nbsp;</p>
     </main>
   </n-config-provider>
 </template>
