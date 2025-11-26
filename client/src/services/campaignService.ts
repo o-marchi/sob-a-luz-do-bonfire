@@ -11,6 +11,12 @@ export const getCurrentCampaign = async (): Promise<Campaign | null> => {
   return campaign
 }
 
+export const getCampaignHistory = async (): Promise<Campaign[] | null> => {
+  const { data: campaigns } = await api.get<Campaign[]>('/campaign/history')
+
+  return campaigns
+}
+
 export const updatePlayerGameInformation = async (
   playerGameInformation: PlayerGameInformation,
 ): Promise<Campaign> => {
