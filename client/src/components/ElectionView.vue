@@ -18,7 +18,7 @@ const { user } = storeToRefs(auth)
 const loadingVote = ref<boolean | string>(false)
 
 const didIVoteForThis = (players: User[]) => {
-  return !!(players ?? []).find((player: User) => player?.id === user.value.id)
+  return !!(players ?? []).find((player: User) => player?.id === user?.value?.id)
 }
 
 const undoVoteAction = async () => {

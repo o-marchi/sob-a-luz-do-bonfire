@@ -18,7 +18,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js"
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
+    "db:import": "docker exec -i server-db-1 sh -c 'pg_dump \"$PRODUCTION_DATABASE_URI\" | psql -U postgres -d sobaluz'"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
