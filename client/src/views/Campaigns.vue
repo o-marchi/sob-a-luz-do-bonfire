@@ -28,7 +28,7 @@ onMounted(async () => {
                 <p v-if="campaign?.month">{{ campaign.month }} - {{ campaign.year }}</p>
                 <h2>{{ campaign.game.title }}</h2>
 
-                <div style="margin-top: 28px">
+                <div>
                   <n-space>
                     <n-button
                       v-if="campaign?.game?.steam"
