@@ -1,6 +1,28 @@
-﻿<script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useCampaignStore } from '@/stores/campaign.ts'
 import bonfireSprite from '@/assets/bonfire-sprite.png'
+import { storeToRefs } from 'pinia'
+
+const campaignStore = useCampaignStore()
+const { campaign } = storeToRefs(campaignStore)
+
+const state = ref<CanvasState | null>(null)
+
+watch(
+  () => state.value,
+  () => {
+    maybeCreatePlayers()
+  },
+)
+
+watch(
+  () => campaign.value?.players,
+  () => {
+    maybeCreatePlayers()
+  },
+  { imediate: true },
+)
 
 interface CanvasState {
   canvas: HTMLCanvasElement
@@ -72,6 +94,134 @@ class Particle {
   }
 }
 
+class Player {
+  order: number
+  debug: boolean
+  x: number
+  y: number
+  loaded: boolean
+  img: Image
+  bobOffset: number
+  bobPhase: number
+  light: number
+  lightPulse: number
+  name: string
+  avatar: string
+
+  constructor(order, name, avatar) {
+    this.order = order
+    this.debug = false
+    this.x = 0
+    this.y = 0
+    this.loaded = false
+    this.bobOffset = 0
+    this.bobPhase = Math.random() * Math.PI * 2
+    this.light = 54
+    this.lightPulse = 0.1
+    this.avatar = avatar
+
+    this.name = name
+
+    if (this.avatar) {
+      this.img = new Image()
+      this.img.src = this.avatar
+      this.img.onload = () => {
+        this.loaded = true
+      }
+    } else {
+      this.loaded = true
+    }
+  }
+
+  update() {
+    const time = performance.now() / 1000
+    this.bobOffset = Math.sin(time * 2 + this.bobPhase) * 1
+
+    this.lightPulse = time * 2
+    this.light = 50 + (Math.sin(this.lightPulse) + 1) * 0.2 * (90 - 50)
+  }
+
+  draw() {
+    if (!state.value) {
+      return
+    }
+
+    if (!this.loaded) {
+      return
+    }
+
+    const context: CanvasRenderingContext2D = state.value.context
+    const playerPosition = playersPositions[this.order]
+
+    const centerY = getCenterY(state.value.width)
+    const centerX = state.value.width / 2
+
+    this.x = centerX + playerPosition.x + this.bobOffset
+    this.y = centerY + playerPosition.y + this.bobOffset
+
+    // Calculate direction vector from bonfire to avatar
+    const dx = this.x - centerX
+    const dy = this.y - centerY
+    const length = Math.sqrt(dx * dx + dy * dy)
+    const shadowDistance = 8
+
+    // Normalize and offset
+    const offsetX = length ? (dx / length) * shadowDistance : 0
+    const offsetY = length ? (dy / length) * shadowDistance : 0
+
+    // Draw shadow
+    context.save()
+    context.globalAlpha = 0.4
+    context.beginPath()
+    context.arc(this.x + offsetX, this.y + offsetY, 20, 0, Math.PI * 2)
+    context.closePath()
+    context.fillStyle = 'black'
+    context.filter = 'blur(6px)'
+    context.fill()
+    context.restore()
+
+    // // draw background and letter
+    context.save()
+    context.beginPath()
+    context.arc(this.x, this.y, 20, 0, Math.PI * 2)
+    context.closePath()
+    context.clip()
+    context.fillStyle = '#faac55'
+    context.fillRect(this.x - 20, this.y - 20, 40, 40)
+    context.restore()
+
+    if (this.name && this.name.length) {
+      context.fillStyle = `black`
+      context.font = 'bold 20px Mulish'
+      context.fillText(this.name[0], this.x - 6, this.y + 7, 20)
+    }
+
+    // draw avatar
+    if (this.avatar) {
+      context.save()
+      context.beginPath()
+      context.arc(this.x, this.y, 20, 0, Math.PI * 2)
+      context.closePath()
+      context.clip()
+      context.drawImage(this.img, this.x - 20, this.y - 20, 40, 40)
+      context.restore()
+    }
+
+    // draw border
+    context.beginPath()
+    context.arc(this.x, this.y, 20, 0, Math.PI * 2)
+    context.strokeStyle = `hsla(15, 33%, ${this.light}%, 1)`
+    context.lineWidth = 1
+    context.stroke()
+
+    if (this.debug) {
+      context.fillStyle = `black`
+      context.font = '20px Arial'
+      context.fillText(this.order.toString(), this.x - 5, this.y + 7, 20)
+    }
+  }
+}
+
 class Bonfire {
   image: HTMLImageElement
   frame: {
@@ -122,13 +272,7 @@ class Bonfire {
       this.currentFrame = (this.currentFrame + 1) % this.frame.length
     }
 
-    if (state.value.width <= 480) {
-      this.y = 390
-    } else if (state.value.width <= 768) {
-      this.y = 433
-    } else {
-      this.y = 495
-    }
+    this.y = getCenterY(state.value.width)
 
     this.glowPulse = (this.glowPulse + this.glowSpeed) % (Math.PI * 2)
     this.glowRadius =
@@ -201,11 +345,51 @@ class Bonfire {
 }
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const state = ref<CanvasState | null>(null)
 const animationFrame = ref<number | null>(null)
+
+const generatePlayerPositions = () => {
+  const bases = [
+    { x: 220, y: 140 },
+    { x: 170, y: 0 },
+    { x: 170, y: 270 },
+    { x: 300, y: 60 },
+    { x: 310, y: 200 },
+    { x: 380, y: -30 },
+    { x: 420, y: 130 },
+    { x: 380, y: 290 },
+    { x: 60, y: -30 },
+    { x: 60, y: 320 },
+    { x: 250, y: 300 },
+    { x: 250, y: 0 },
+    { x: 320, y: 130 },
+    { x: 450, y: 45 },
+    { x: 460, y: 220 },
+    { x: 520, y: 140 },
+  ]
+
+  return bases.reduce((acc, base, index) => {
+    acc.push({ x: -base.x, y: base.y })
+    acc.push({ x: base.x + 10, y: base.y })
+    return acc
+  }, [])
+}
+
+const playersPositions = generatePlayerPositions()
 
 const random = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min) + min)
+}
+
+const getCenterY = (width) => {
+  if (width <= 480) {
+    return 390
+  }
+
+  if (width <= 768) {
+    return 433
+  }
+
+  return 495
 }
 
 const resizeCanvas = () => {
@@ -237,6 +421,36 @@ const createParticles = (count: number) => {
     const particle = new Particle()
     state.value.particles.push(particle)
   }
+}
+
+const maybeCreatePlayers = () => {
+  if (!state || !state.value) {
+    return
+  }
+
+  if (!campaign?.value?.players || !campaign?.value?.players.length) {
+    return
+  }
+
+  createPlayers()
+}
+
+const createPlayers = () => {
+  state.value.players = []
+
+  // playersPositions.forEach((position, index) => {
+  //   const player = new Player(index, 'a')
+  //   state.value.players.push(player)
+  // })
+
+  campaign?.value?.players.forEach((campaignPlayer, index) => {
+    const player = new Player(
+      index,
+      campaignPlayer?.player?.name,
+      campaignPlayer?.player?.discord?.avatar,
+    )
+    state.value.players.push(player)
+  })
 }
 
 const igniteBonfire = () => {
@@ -275,6 +489,11 @@ const animate = () => {
     particle.draw()
   })
 
+  state.value.players.forEach((player) => {
+    player.update()
+    player.draw()
+  })
+
   const bonfire = state.value.bonfire
 
   if (bonfire) {
@@ -305,6 +524,7 @@ const initCanvas = () => {
     height: canvas.height,
     particles: [],
     bonfire: null,
+    players: [],
   }
 
   resizeCanvas()

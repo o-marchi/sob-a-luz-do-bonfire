@@ -25,8 +25,6 @@ export const useCampaignStore = defineStore('campaign', () => {
       campaign.value = await getCurrentCampaign()
     }
 
-    console.log(campaign.value)
-
     currentGame.value = campaign?.value?.game as Game
 
     const user = auth.user
