@@ -15,7 +15,7 @@ const { electionActive, election: pool } = storeToRefs(campaignStore)
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 
-const loadingVote = ref<boolean | string>(false)
+const loadingVote = ref<boolean | number>(false)
 
 const didIVoteForThis = (players: User[]) => {
   return !!(players ?? []).find((player: User) => player?.id === user?.value?.id)
@@ -28,7 +28,7 @@ const undoVoteAction = async () => {
   loadingVote.value = false
 }
 
-const voteAction = async (option: string) => {
+const voteAction = async (option: number) => {
   loadingVote.value = option
   const newCampaignValue = await vote(option)
   await campaignStore.init(newCampaignValue)
@@ -43,6 +43,7 @@ const voteAction = async (option: string) => {
     <div class="election">
       <div
         v-for="option in pool?.options || []"
+        :key="option.id"
         class="election-option"
         :class="didIVoteForThis(option?.players || []) ? '--voted' : '--not-voted'"
       >

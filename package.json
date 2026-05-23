@@ -1,0 +1,34 @@
+{
+  "name": "sob-a-luz-do-bonfire-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Full-stack app for the Sob a Luz do Bonfire game club.",
+  "packageManager": "pnpm@10.29.3",
+  "scripts": {
+    "install:all": "pnpm install",
+    "dev": "pnpm --filter ./server start:dev & pnpm --filter ./client dev",
+    "dev:client": "pnpm --filter ./client dev",
+    "dev:server": "pnpm --filter ./server start:dev",
+    "db:up": "docker compose -f server/docker-compose.yml up -d",
+    "db:down": "docker compose -f server/docker-compose.yml down",
+    "db:sync:prod": "pnpm --filter ./server db:sync:prod",
+    "build": "pnpm --filter ./client build && pnpm --filter ./server build",
+    "build:client": "pnpm --filter ./client build",
+    "build:server": "pnpm --filter ./server build",
+    "type-check": "pnpm --filter ./client type-check",
+    "lint": "pnpm --filter ./server lint",
+    "format": "pnpm --filter ./client format && pnpm --filter ./server format",
+    "test": "pnpm --filter ./client test:run && pnpm --filter ./server test",
+    "test:client": "pnpm --filter ./client test:run",
+    "test:server": "pnpm --filter ./server test",
+    "test:cov": "pnpm --filter ./server test:cov",
+    "start:server": "pnpm --filter ./server start",
+    "start:server:prod": "pnpm --filter ./server start:prod",
+    "preview:client": "pnpm --filter ./client preview",
+    "ci": "pnpm run type-check && pnpm run build && pnpm run test"
+  },
+  "engines": {
+    "node": "22.x",
+    "pnpm": ">=10 <11"
+  }
+}

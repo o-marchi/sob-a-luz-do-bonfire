@@ -21,7 +21,7 @@ watch(
   () => {
     maybeCreatePlayers()
   },
-  { imediate: true },
+  { immediate: true },
 )
 
 interface CanvasState {
@@ -31,17 +31,23 @@ interface CanvasState {
   height: number
   particles: Particle[]
   bonfire: Bonfire | null
+  players: Player[]
+}
+
+interface Position {
+  x: number
+  y: number
 }
 
 class Particle {
-  x: number
-  y: number
-  radius: number
-  dx: number
-  dy: number
-  hue: number
-  opacity: number
-  saturation: number
+  x = 0
+  y = 0
+  radius = 0
+  dx = 0
+  dy = 0
+  hue = 0
+  opacity = 0
+  saturation = 0
 
   constructor() {
     this.reset()
@@ -100,7 +106,7 @@ class Player {
   x: number
   y: number
   loaded: boolean
-  img: Image
+  img: HTMLImageElement | null
   bobOffset: number
   bobPhase: number
   light: number
@@ -108,7 +114,7 @@ class Player {
   name: string
   avatar: string
 
-  constructor(order, name, avatar) {
+  constructor(order: number, name = '', avatar = '') {
     this.order = order
     this.debug = false
     this.x = 0
@@ -119,6 +125,7 @@ class Player {
     this.light = 54
     this.lightPulse = 0.1
     this.avatar = avatar
+    this.img = null
 
     this.name = name
 
@@ -152,6 +159,10 @@ class Player {
 
     const context: CanvasRenderingContext2D = state.value.context
     const playerPosition = playersPositions[this.order]
+
+    if (!playerPosition) {
+      return
+    }
 
     const centerY = getCenterY(state.value.width)
     const centerX = state.value.width / 2
@@ -203,7 +214,9 @@ class Player {
       context.arc(this.x, this.y, 20, 0, Math.PI * 2)
       context.closePath()
       context.clip()
-      context.drawImage(this.img, this.x - 20, this.y - 20, 40, 40)
+      if (this.img) {
+        context.drawImage(this.img, this.x - 20, this.y - 20, 40, 40)
+      }
       context.restore()
     }
 
@@ -347,7 +360,7 @@ class Bonfire {
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const animationFrame = ref<number | null>(null)
 
-const generatePlayerPositions = () => {
+const generatePlayerPositions = (): Position[] => {
   const bases = [
     { x: 220, y: 140 },
     { x: 170, y: 0 },
@@ -367,7 +380,7 @@ const generatePlayerPositions = () => {
     { x: 520, y: 140 },
   ]
 
-  return bases.reduce((acc, base, index) => {
+  return bases.reduce<Position[]>((acc, base) => {
     acc.push({ x: -base.x, y: base.y })
     acc.push({ x: base.x + 10, y: base.y })
     return acc
@@ -380,7 +393,7 @@ const random = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min) + min)
 }
 
-const getCenterY = (width) => {
+const getCenterY = (width: number) => {
   if (width <= 480) {
     return 390
   }
@@ -423,33 +436,38 @@ const createParticles = (count: number) => {
   }
 }
 
-const maybeCreatePlayers = () => {
-  if (!state || !state.value) {
+function maybeCreatePlayers() {
+  if (!state.value) {
     return
   }
 
-  if (!campaign?.value?.players || !campaign?.value?.players.length) {
+  if (!campaign.value?.players?.length) {
     return
   }
 
   createPlayers()
 }
 
-const createPlayers = () => {
-  state.value.players = []
+function createPlayers() {
+  if (!state.value) {
+    return
+  }
+
+  const currentState = state.value
+  currentState.players = []
 
   // playersPositions.forEach((position, index) => {
   //   const player = new Player(index, 'a')
   //   state.value.players.push(player)
   // })
 
-  campaign?.value?.players.forEach((campaignPlayer, index) => {
+  campaign.value?.players?.forEach((campaignPlayer, index) => {
     const player = new Player(
       index,
       campaignPlayer?.player?.name,
       campaignPlayer?.player?.discord?.avatar,
     )
-    state.value.players.push(player)
+    currentState.players.push(player)
   })
 }
 

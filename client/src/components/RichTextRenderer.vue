@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { h } from 'vue'
+import { h, type VNodeChild } from 'vue'
 
 interface TextNode {
   type: string
@@ -24,15 +24,13 @@ interface Node {
 
 interface Props {
   content: {
-    root: {
-      children: Node[]
-    }
+    root: Node
   }
 }
 
 defineProps<Props>()
 
-function renderNode(node: Node | TextNode): any {
+function renderNode(node: Node | TextNode): VNodeChild {
   if ('text' in node) {
     if (node.format === 1) {
       return h('b', {}, node.text)

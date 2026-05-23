@@ -7,22 +7,13 @@ import { GamesModule } from './games/games.module';
 import { PlayersModule } from './players/players.module';
 import { AuthModule } from './auth/auth.module';
 import { PoolModule } from './pool/pool.module';
+import { createTypeOrmModuleOptions } from './db/database.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
 
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DATABASE_HOST,
-      port: parseInt(process.env.DATABASE_PORT as string, 10) || 5432,
-      username: process.env.DATABASE_USER,
-      password: process.env.DATABASE_PASSWORD,
-      database: process.env.DATABASE_NAME,
-      autoLoadEntities: true,
-      migrations: ['db/migrations/*{.ts,.js}'],
-      synchronize: process.env.NODE_ENV !== 'production',
-    }),
+    TypeOrmModule.forRoot(createTypeOrmModuleOptions()),
 
     UsersModule,
     CampaignModule,

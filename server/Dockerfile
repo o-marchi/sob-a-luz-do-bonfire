@@ -2,11 +2,11 @@
 
 WORKDIR /app
 
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+COPY package.json ./
+RUN corepack enable && pnpm install
 
 COPY . .
 
-RUN yarn build
+RUN pnpm build
 
 CMD ["node", "dist/main.js"]
