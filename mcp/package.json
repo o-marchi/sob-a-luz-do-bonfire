@@ -1,0 +1,27 @@
+{
+  "name": "sob-a-luz-do-bonfire-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Sob a Luz do Bonfire monthly admin workflows",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "sob-a-luz-do-bonfire-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

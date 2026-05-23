@@ -25,7 +25,7 @@ export class Campaign {
   current: boolean;
 
   @Column({ nullable: true })
-  description: string;
+  description: string | null;
 
   @ManyToOne(() => Game, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'game_id' })

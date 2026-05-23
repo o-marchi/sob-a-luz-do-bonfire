@@ -7,6 +7,7 @@ import { GamesModule } from './games/games.module';
 import { PlayersModule } from './players/players.module';
 import { AuthModule } from './auth/auth.module';
 import { PoolModule } from './pool/pool.module';
+import { AdminModule } from './admin/admin.module';
 import { createTypeOrmModuleOptions } from './db/database.config';
 
 @Module({
@@ -21,6 +22,7 @@ import { createTypeOrmModuleOptions } from './db/database.config';
     GamesModule,
     AuthModule,
     PoolModule,
+    AdminModule,
   ],
   controllers: [],
   providers: [],
