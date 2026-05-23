@@ -9,14 +9,14 @@ export class Game {
   title!: string;
 
   @Column({ nullable: true })
-  cover?: string;
+  cover?: string | null;
 
   @Column({ default: false })
   suggestion: boolean;
 
   @Column({ nullable: true })
-  steam: string;
+  steam: string | null;
 
   @Column({ nullable: true })
-  trailer: string;
+  trailer: string | null;
 }
