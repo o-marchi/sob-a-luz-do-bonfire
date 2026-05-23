@@ -2,34 +2,36 @@
 import type { User } from '@/types/User.ts'
 
 export interface PoolOption {
-  id?: string
-  game?: Game
+  id: number
+  game: Game
   tokens?: number
   players?: User[]
 }
 
 export interface Pool {
+  id?: number
   options: PoolOption[]
 }
 
-export interface CampaignPlayer extends User {
-  player: number
+export interface CampaignPlayer {
+  id: number
+  player: User
   played_the_game: boolean
   finished_the_game: boolean
-  suggested_a_game: string
+  suggested_a_game: boolean
   partook_in_the_meeting: boolean
   tokens: number
 }
 
 export interface Campaign {
   id: number
-  month?: string
-  year?: string
+  month: string
+  year: string
   current: boolean
-  description?: string
-  electionActive?: boolean
-  pool?: Pool
-  game?: Game
+  description?: string | null
+  electionActive: boolean
+  pool?: Pool | null
+  game?: Game | null
   players?: CampaignPlayer[]
 }
 

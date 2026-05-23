@@ -18,7 +18,7 @@ onMounted(async () => {
     <div v-if="campaigns.length" class="campaign-timeline">
       <div v-for="campaign in campaigns" :key="campaign.id" class="campaign-timeline-item">
         <div class="campaign-timeline-item-left">
-          <div class="campaign-item">
+          <div v-if="campaign.game" class="campaign-item">
             <div class="campaign-item-cover">
               <div
                 class="campaign-item-cover-bg"

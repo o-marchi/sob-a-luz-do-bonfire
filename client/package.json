@@ -1,5 +1,5 @@
 {
-  "name": "sob-a-luz-do-bonfire",
+  "name": "sob-a-luz-do-bonfire-client",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "build": "vite build",
     "type-check": "vue-tsc --build",
+    "test": "vitest",
+    "test:run": "vitest run",
     "format": "prettier --write src/"
   },
   "dependencies": {
@@ -26,7 +28,9 @@
     "@tsconfig/node22": "^22.0.2",
     "@types/node": "^22.15.32",
     "@vitejs/plugin-vue": "^6.0.0",
+    "@vue/test-utils": "^2.4.10",
     "@vue/tsconfig": "^0.7.0",
+    "jsdom": "^29.1.1",
     "naive-ui": "^2.42.0",
     "npm-run-all2": "^8.0.4",
     "prettier": "3.5.3",
@@ -34,6 +38,7 @@
     "vfonts": "^0.0.3",
     "vite": "^7.0.0",
     "vite-plugin-vue-devtools": "^7.7.7",
+    "vitest": "^4.1.7",
     "vue-tsc": "^2.2.10"
   }
 }

@@ -1,9 +1,9 @@
 ﻿import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Campaign, CampaignPlayer, Pool } from '@/types/Campaign.ts'
-import type { Game } from '@/types/Game.ts'
-import { getCurrentCampaign } from '@/services/campaignService.ts'
-import { useAuthStore } from '@/stores/auth.ts'
+import type { Campaign, CampaignPlayer, Pool } from '@/types/Campaign'
+import type { Game } from '@/types/Game'
+import { getCurrentCampaign } from '@/services/campaignService'
+import { useAuthStore } from '@/stores/auth'
 
 export const useCampaignStore = defineStore('campaign', () => {
   // State

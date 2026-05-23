@@ -24,7 +24,9 @@ import { CurrentPlayer } from '../auth/decorators/current-player.decorator';
 import { Player } from '../players/entities/player.entity';
 import { UpdateGameInformationDto } from './dto/update-game-information.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('campaign')
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('campaign')
 export class CampaignController {
@@ -95,6 +97,7 @@ export class CampaignController {
   }
 
   @Put('update-player-game-information')
+  @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   async updatePlayerGameInformation(
     @Body() updateGameInformation: UpdateGameInformationDto,
@@ -109,6 +112,7 @@ export class CampaignController {
   }
 
   @Post('vote')
+  @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   async vote(
     @Body() body: { optionId: number },
@@ -118,6 +122,7 @@ export class CampaignController {
   }
 
   @Post('undo-vote')
+  @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   async undoVote(@CurrentPlayer() player: Player): Promise<Campaign> {
     return this.campaignService.undoVote(player);

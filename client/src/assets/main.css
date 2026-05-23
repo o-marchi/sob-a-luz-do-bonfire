@@ -94,9 +94,6 @@ body {
   -webkit-user-select: none;
   -ms-user-select: none; /* From IE10 only */
   user-select: none; /* Not valid CSS yet, as of July 2012 */
-
-  -webkit-user-drag: none; /* Prevents dragging of images/divs etc */
-  user-drag: none;
 }
 
 .luz-modal {
@@ -197,7 +194,7 @@ body {
     img {
       user-select: none;
       pointer-events: none;
-      -webkit-user-drag: none;
+
       margin: 0 auto;
       display: block;
       filter: saturate(0.6) contrast(1.1);
