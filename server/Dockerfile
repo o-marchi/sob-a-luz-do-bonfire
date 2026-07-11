@@ -1,9 +1,11 @@
-﻿FROM node:22
+FROM node:22
 
 WORKDIR /app
 
+RUN corepack enable
+
 COPY package.json ./
-RUN corepack enable && pnpm install
+RUN pnpm install --no-frozen-lockfile
 
 COPY . .
 
