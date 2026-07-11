@@ -8,6 +8,12 @@ export type AuthPlayer = Player & {
   accessToken: string;
 };
 
+type DiscordProfileDetails = Profile & {
+  email?: string | null;
+  global_name?: string | null;
+  avatar?: string | null;
+};
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -18,19 +24,22 @@ export class AuthService {
   async validateDiscordUser(
     profile: Profile,
     accessToken: string,
-    _refreshToken: string,
+    refreshToken: string,
   ): Promise<AuthPlayer> {
+    void refreshToken;
+
+    const discordProfile = profile as DiscordProfileDetails;
     const dto = {
-      email: (profile as any).email ?? null,
-      name: (profile as any).global_name ?? profile.username,
+      email: discordProfile.email ?? undefined,
+      name: discordProfile.global_name ?? discordProfile.username,
       discord: {
-        id: profile.id,
-        username: profile.username,
-        globalName: (profile as any).global_name ?? null,
-        avatar: (profile as any).avatar
+        id: discordProfile.id,
+        username: discordProfile.username,
+        globalName: discordProfile.global_name ?? null,
+        avatar: discordProfile.avatar
           ? this.playersService.buildDiscordAvatarUrl(
-              profile.id,
-              (profile as any).avatar,
+              discordProfile.id,
+              discordProfile.avatar,
             )
           : undefined,
       },

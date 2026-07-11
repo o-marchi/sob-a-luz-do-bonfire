@@ -21,10 +21,10 @@ export class Player {
   id: number;
 
   @Column({ nullable: true })
-  email?: string;
+  email?: string | null;
 
   @Column({ nullable: true })
-  name?: string;
+  name?: string | null;
 
   @Column(() => DiscordProfile, { prefix: false })
   discord?: DiscordProfile;

@@ -20,19 +20,15 @@ export const getCampaignHistory = async (): Promise<Campaign[] | null> => {
 export const updatePlayerGameInformation = async (
   playerGameInformation: PlayerGameInformation,
 ): Promise<Campaign> => {
-  const {
-    data: { campaign },
-  } = await api.put('/campaign/update-player-game-information', {
+  const { data: campaign } = await api.put<Campaign>('/campaign/update-player-game-information', {
     ...playerGameInformation,
   })
 
   return campaign
 }
 
-export const vote = async (option: string): Promise<Campaign> => {
-  const {
-    data: { campaign },
-  } = await api.post('/campaign/vote', {
+export const vote = async (option: number): Promise<Campaign> => {
+  const { data: campaign } = await api.post<Campaign>('/campaign/vote', {
     optionId: option,
   })
 
@@ -40,9 +36,7 @@ export const vote = async (option: string): Promise<Campaign> => {
 }
 
 export const undoVote = async (): Promise<Campaign> => {
-  const {
-    data: { campaign },
-  } = await api.post('/campaign/undo-vote')
+  const { data: campaign } = await api.post<Campaign>('/campaign/undo-vote')
 
   return campaign
 }

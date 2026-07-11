@@ -62,7 +62,7 @@ const switchPlayedTheGame = (value: boolean) => {
 }
 
 const formattedDescription = computed(() => {
-  return campaign.value?.description.replace(/\\n/g, '\n')
+  return campaign.value?.description?.replace(/\\n/g, '\n') ?? ''
 })
 
 const hasChanges = computed(() => {

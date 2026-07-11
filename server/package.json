@@ -19,7 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
-    "db:import": "docker exec -i server-db-1 sh -c 'pg_dump \"$PRODUCTION_DATABASE_URI\" | psql -U postgres -d sobaluz'"
+    "db:sync:prod": "ts-node -r tsconfig-paths/register src/db/sync-production-to-sqlite.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -29,6 +29,7 @@
     "@nestjs/mapped-types": "*",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.4.4",
     "@nestjs/typeorm": "^11.0.0",
     "@types/passport-jwt": "^4.0.1",
     "bcrypt": "^6.0.0",
@@ -41,6 +42,8 @@
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sql.js": "^1.14.1",
+    "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.25"
   },
   "devDependencies": {
@@ -51,7 +54,7 @@
     "@nestjs/testing": "^11.0.1",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
-    "@types/jest": "^30.0.0",
+    "@types/jest": "^29.5.14",
     "@types/node": "^22.10.7",
     "@types/passport-discord": "^0.1.14",
     "@types/supertest": "^6.0.2",
@@ -59,7 +62,7 @@
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
-    "jest": "^30.0.0",
+    "jest": "^29.7.0",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
@@ -90,6 +93,6 @@
   },
   "engines": {
     "node": "22.x",
-    "yarn": "1.x"
+    "pnpm": ">=10 <11"
   }
 }

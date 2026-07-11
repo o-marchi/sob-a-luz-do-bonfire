@@ -1,8 +1,8 @@
 ﻿export interface Game {
   id: number
-  title?: string
-  suggestion?: boolean
-  game?: string
-  trailer?: string
-  cover?: string
+  title: string
+  suggestion: boolean
+  steam?: string | null
+  trailer?: string | null
+  cover?: string | null
 }
