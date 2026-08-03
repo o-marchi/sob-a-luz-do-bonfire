@@ -3,6 +3,7 @@ import {
   IsArray,
   IsBoolean,
   IsEmail,
+  IsISO8601,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -38,6 +39,18 @@ export class AdminGameInputDto {
   @IsOptional()
   @IsString()
   trailer?: string;
+
+  @IsOptional()
+  @IsString()
+  summary?: string;
+
+  @IsOptional()
+  @IsString()
+  howLongToBeatUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  durationLabel?: string;
 }
 
 export class AdminCampaignInputDto {
@@ -64,6 +77,18 @@ export class AdminCampaignInputDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsISO8601()
+  meetingAt?: string;
+
+  @IsOptional()
+  @IsString()
+  meetingLocation?: string;
+
+  @IsOptional()
+  @IsString()
+  meetingUrl?: string;
 
   @IsOptional()
   @IsBoolean()

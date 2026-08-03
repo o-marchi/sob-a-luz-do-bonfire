@@ -171,7 +171,7 @@ server.registerTool(
   {
     title: "Update campaign",
     description:
-      "Updates campaign metadata such as description, game, pool, electionActive, or current status.",
+      "Updates campaign metadata such as description, meeting details, game, pool, electionActive, or current status.",
     inputSchema: updateCampaignSchema.shape,
   },
   async ({ campaignId, ...body }) =>

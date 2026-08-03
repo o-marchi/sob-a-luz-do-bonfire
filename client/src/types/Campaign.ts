@@ -29,6 +29,9 @@ export interface Campaign {
   year: string
   current: boolean
   description?: string | null
+  meetingAt?: string | null
+  meetingLocation?: string | null
+  meetingUrl?: string | null
   electionActive: boolean
   pool?: Pool | null
   game?: Game | null

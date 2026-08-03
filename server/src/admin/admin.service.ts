@@ -505,14 +505,44 @@ export class AdminService {
     }
 
     if (
-      Object.prototype.hasOwnProperty.call(input, 'description') &&
+      input.description !== undefined &&
       input.description !== campaign.description
     ) {
       changes.description = 'changed';
     }
 
     if (
-      Object.prototype.hasOwnProperty.call(input, 'electionActive') &&
+      input.meetingAt !== undefined &&
+      input.meetingAt !== campaign.meetingAt
+    ) {
+      changes.meetingAt = {
+        from: campaign.meetingAt ?? null,
+        to: input.meetingAt,
+      };
+    }
+
+    if (
+      input.meetingLocation !== undefined &&
+      input.meetingLocation !== campaign.meetingLocation
+    ) {
+      changes.meetingLocation = {
+        from: campaign.meetingLocation ?? null,
+        to: input.meetingLocation,
+      };
+    }
+
+    if (
+      input.meetingUrl !== undefined &&
+      input.meetingUrl !== campaign.meetingUrl
+    ) {
+      changes.meetingUrl = {
+        from: campaign.meetingUrl ?? null,
+        to: input.meetingUrl,
+      };
+    }
+
+    if (
+      input.electionActive !== undefined &&
       input.electionActive !== campaign.electionActive
     ) {
       changes.electionActive = {
@@ -763,20 +793,32 @@ export class AdminService {
         throw new BadRequestException('Cannot create a game without a title.');
       }
 
-      if (Object.prototype.hasOwnProperty.call(input, 'cover')) {
+      if (input.cover !== undefined) {
         game.cover = input.cover ?? null;
       }
 
-      if (Object.prototype.hasOwnProperty.call(input, 'suggestion')) {
+      if (input.suggestion !== undefined) {
         game.suggestion = input.suggestion ?? false;
       }
 
-      if (Object.prototype.hasOwnProperty.call(input, 'steam')) {
+      if (input.steam !== undefined) {
         game.steam = input.steam ?? null;
       }
 
-      if (Object.prototype.hasOwnProperty.call(input, 'trailer')) {
+      if (input.trailer !== undefined) {
         game.trailer = input.trailer ?? null;
+      }
+
+      if (input.summary !== undefined) {
+        game.summary = input.summary ?? null;
+      }
+
+      if (input.howLongToBeatUrl !== undefined) {
+        game.howLongToBeatUrl = input.howLongToBeatUrl ?? null;
+      }
+
+      if (input.durationLabel !== undefined) {
+        game.durationLabel = input.durationLabel ?? null;
       }
 
       const savedGame = await gameRepository.save(game);
@@ -810,6 +852,9 @@ export class AdminService {
       month: input.month,
       year: input.year,
       description: input.description,
+      meetingAt: input.meetingAt,
+      meetingLocation: input.meetingLocation,
+      meetingUrl: input.meetingUrl,
       current: input.current ?? input.setCurrent ?? true,
       electionActive: input.electionActive ?? false,
       players: [],
@@ -834,11 +879,23 @@ export class AdminService {
       campaign.year = input.year;
     }
 
-    if (Object.prototype.hasOwnProperty.call(input, 'description')) {
+    if (input.description !== undefined) {
       campaign.description = input.description ?? null;
     }
 
-    if (Object.prototype.hasOwnProperty.call(input, 'electionActive')) {
+    if (input.meetingAt !== undefined) {
+      campaign.meetingAt = input.meetingAt ?? null;
+    }
+
+    if (input.meetingLocation !== undefined) {
+      campaign.meetingLocation = input.meetingLocation ?? null;
+    }
+
+    if (input.meetingUrl !== undefined) {
+      campaign.meetingUrl = input.meetingUrl ?? null;
+    }
+
+    if (input.electionActive !== undefined) {
       campaign.electionActive = input.electionActive ?? false;
     }
 
@@ -1061,7 +1118,7 @@ export class AdminService {
       }
 
       for (const flag of participantFlags) {
-        if (Object.prototype.hasOwnProperty.call(participant, flag)) {
+        if (participant[flag] !== undefined) {
           campaignPlayer[flag] = participant[flag] ?? false;
         }
       }
@@ -1361,15 +1418,12 @@ export class AdminService {
       changes.title = { from: existingGame.title, to: input.title.trim() };
     }
 
-    if (
-      Object.prototype.hasOwnProperty.call(input, 'cover') &&
-      input.cover !== existingGame.cover
-    ) {
+    if (input.cover !== undefined && input.cover !== existingGame.cover) {
       changes.cover = { from: existingGame.cover ?? null, to: input.cover };
     }
 
     if (
-      Object.prototype.hasOwnProperty.call(input, 'suggestion') &&
+      input.suggestion !== undefined &&
       input.suggestion !== existingGame.suggestion
     ) {
       changes.suggestion = {
@@ -1378,20 +1432,41 @@ export class AdminService {
       };
     }
 
-    if (
-      Object.prototype.hasOwnProperty.call(input, 'steam') &&
-      input.steam !== existingGame.steam
-    ) {
+    if (input.steam !== undefined && input.steam !== existingGame.steam) {
       changes.steam = { from: existingGame.steam ?? null, to: input.steam };
     }
 
-    if (
-      Object.prototype.hasOwnProperty.call(input, 'trailer') &&
-      input.trailer !== existingGame.trailer
-    ) {
+    if (input.trailer !== undefined && input.trailer !== existingGame.trailer) {
       changes.trailer = {
         from: existingGame.trailer ?? null,
         to: input.trailer,
+      };
+    }
+
+    if (input.summary !== undefined && input.summary !== existingGame.summary) {
+      changes.summary = {
+        from: existingGame.summary ?? null,
+        to: input.summary,
+      };
+    }
+
+    if (
+      input.howLongToBeatUrl !== undefined &&
+      input.howLongToBeatUrl !== existingGame.howLongToBeatUrl
+    ) {
+      changes.howLongToBeatUrl = {
+        from: existingGame.howLongToBeatUrl ?? null,
+        to: input.howLongToBeatUrl,
+      };
+    }
+
+    if (
+      input.durationLabel !== undefined &&
+      input.durationLabel !== existingGame.durationLabel
+    ) {
+      changes.durationLabel = {
+        from: existingGame.durationLabel ?? null,
+        to: input.durationLabel,
       };
     }
 
@@ -1406,7 +1481,7 @@ export class AdminService {
 
     for (const flag of participantFlags) {
       if (
-        Object.prototype.hasOwnProperty.call(participant, flag) &&
+        participant[flag] !== undefined &&
         participant[flag] !== campaignPlayer[flag]
       ) {
         changes[flag] = {
@@ -1425,7 +1500,7 @@ export class AdminService {
     const flags: Record<string, boolean> = {};
 
     for (const flag of participantFlags) {
-      if (Object.prototype.hasOwnProperty.call(participant, flag)) {
+      if (participant[flag] !== undefined) {
         flags[flag] = participant[flag] ?? false;
       }
     }

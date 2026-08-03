@@ -5,4 +5,7 @@
   steam?: string | null
   trailer?: string | null
   cover?: string | null
+  summary?: string | null
+  howLongToBeatUrl?: string | null
+  durationLabel?: string | null
 }
