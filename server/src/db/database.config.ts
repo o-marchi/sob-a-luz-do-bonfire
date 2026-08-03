@@ -2,11 +2,13 @@ import type { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import type { DataSourceOptions } from 'typeorm';
 import { AdminAutomation1763760000000 } from './migrations/1763760000000-AdminAutomation';
 import { SiteContent1785729600000 } from './migrations/1785729600000-SiteContent';
+import { CurrentGameDetails1785736800000 } from './migrations/1785736800000-CurrentGameDetails';
 
 const sqlitePath = process.env.DATABASE_SQLITE_PATH || 'data/local.sqlite';
 const safeRuntimeMigrations = [
   AdminAutomation1763760000000,
   SiteContent1785729600000,
+  CurrentGameDetails1785736800000,
 ];
 
 const getDatabasePort = (): number => {

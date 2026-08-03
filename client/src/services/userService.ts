@@ -7,6 +7,31 @@ export interface TokenBreakdownItem {
   applied: boolean
 }
 
+export type JourneyStatus = 'not-started' | 'playing' | 'finished'
+
+export const getJourneyStatus = (user: CampaignPlayer): JourneyStatus => {
+  if (user.finished_the_game) {
+    return 'finished'
+  }
+
+  return user.played_the_game ? 'playing' : 'not-started'
+}
+
+export const getJourneyFlags = (status: JourneyStatus) => ({
+  played_the_game: status !== 'not-started',
+  finished_the_game: status === 'finished',
+})
+
+export const formatJourneyCount = (count: number): string => {
+  return `${count} ${count === 1 ? 'pessoa' : 'pessoas'} na jornada`
+}
+
+export const getJourneyPlayers = (players: CampaignPlayer[]): CampaignPlayer[] => {
+  return players
+    .filter((player) => getJourneyStatus(player) !== 'not-started')
+    .sort((left, right) => left.player.id - right.player.id)
+}
+
 export const getUserTokenBreakdown = (user: CampaignPlayer): TokenBreakdownItem[] => [
   {
     key: 'base',

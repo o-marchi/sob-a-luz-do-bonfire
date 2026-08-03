@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsISO8601,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -45,6 +46,18 @@ export class CreateCampaignDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsISO8601()
+  @IsOptional()
+  meetingAt?: string;
+
+  @IsString()
+  @IsOptional()
+  meetingLocation?: string;
+
+  @IsString()
+  @IsOptional()
+  meetingUrl?: string;
 
   @IsOptional()
   @IsInt()

@@ -2,18 +2,18 @@
 
 ## Tool selection
 
-| Task | Preferred tool |
-| --- | --- |
-| Read current state | `get_admin_state`, `get_current_campaign` |
-| Resolve records | `list_games`, `list_players` |
-| Combined monthly change | `preview_monthly_plan`, then `apply_monthly_plan` |
-| Standalone game upsert | `upsert_games` |
-| Standalone pool creation | `create_pool_from_games` |
-| Attach existing pool | `attach_pool_to_campaign` |
-| Campaign-only update | `update_campaign` |
-| Attendance and participant flags | `bulk_update_campaign_participants` |
-| Read election totals | `get_election_result` |
-| Assign winner and close voting | `finalize_election` |
+| Task                             | Preferred tool                                    |
+| -------------------------------- | ------------------------------------------------- |
+| Read current state               | `get_admin_state`, `get_current_campaign`         |
+| Resolve records                  | `list_games`, `list_players`                      |
+| Combined monthly change          | `preview_monthly_plan`, then `apply_monthly_plan` |
+| Standalone game upsert           | `upsert_games`                                    |
+| Standalone pool creation         | `create_pool_from_games`                          |
+| Attach existing pool             | `attach_pool_to_campaign`                         |
+| Campaign-only update             | `update_campaign`                                 |
+| Attendance and participant flags | `bulk_update_campaign_participants`               |
+| Read election totals             | `get_election_result`                             |
+| Assign winner and close voting   | `finalize_election`                               |
 
 ## Monthly plan shape
 
@@ -22,6 +22,9 @@
   "campaign": {
     "id": 16,
     "description": "Markdown in Portuguese",
+    "meetingAt": "2026-08-27T20:00:00-03:00",
+    "meetingLocation": "Discord",
+    "meetingUrl": "https://discord.com/events/example",
     "electionActive": true
   },
   "games": [
@@ -30,7 +33,10 @@
       "cover": "https://example.com/banner.jpg",
       "suggestion": true,
       "steam": "https://store.steampowered.com/app/123/Example/",
-      "trailer": "https://www.youtube.com/watch?v=example"
+      "trailer": "https://www.youtube.com/watch?v=example",
+      "summary": "Resumo curto para o destaque do jogo atual.",
+      "howLongToBeatUrl": "https://howlongtobeat.com/game/example",
+      "durationLabel": "11 a 18 horas"
     }
   ],
   "pool": {

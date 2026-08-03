@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getGameCover } from '../gameService'
+import { formatDurationLabel, getGameCover } from '../gameService'
 import type { Game } from '@/types/Game'
 
 describe('getGameCover', () => {
@@ -24,5 +24,18 @@ describe('getGameCover', () => {
         suggestion: false,
       }),
     ).toBe('')
+  })
+})
+
+describe('formatDurationLabel', () => {
+  it('rounds half-hour estimates up to whole hours', () => {
+    expect(formatDurationLabel('8½–13½ h')).toBe('9–14 h')
+    expect(formatDurationLabel('8.5 a 13,5 horas')).toBe('9 a 14 horas')
+  })
+
+  it('preserves whole-hour estimates and empty values', () => {
+    expect(formatDurationLabel('11–18 h')).toBe('11–18 h')
+    expect(formatDurationLabel(null)).toBe('')
+    expect(formatDurationLabel()).toBe('')
   })
 })
