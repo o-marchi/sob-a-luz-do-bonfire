@@ -1,0 +1,4 @@
+interface:
+  display_name: "Check Bonfire Railway"
+  short_description: "Diagnose Bonfire production deployments safely"
+  default_prompt: "Use $check-bonfire-railway to inspect the current production deployment and diagnose failures."

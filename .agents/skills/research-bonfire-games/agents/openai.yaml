@@ -1,0 +1,4 @@
+interface:
+  display_name: "Research Bonfire Games"
+  short_description: "Research and prepare eligible game records"
+  default_prompt: "Use $research-bonfire-games to research and prepare this game for the Bonfire database."
