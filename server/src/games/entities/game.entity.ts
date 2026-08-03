@@ -8,15 +8,15 @@ export class Game {
   @Column()
   title!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   cover?: string | null;
 
   @Column({ default: false })
   suggestion: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   steam: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   trailer: string | null;
 }

@@ -20,10 +20,10 @@ export class Player {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   email?: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   name?: string | null;
 
   @Column(() => DiscordProfile, { prefix: false })
