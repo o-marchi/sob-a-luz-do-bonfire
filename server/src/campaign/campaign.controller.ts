@@ -1,10 +1,12 @@
 import {
+  BadRequestException,
   Body,
   ClassSerializerInterceptor,
   Controller,
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Put,
@@ -25,6 +27,7 @@ import { Player } from '../players/entities/player.entity';
 import { UpdateGameInformationDto } from './dto/update-game-information.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { VoteDto } from './dto/vote.dto';
 
 @ApiTags('campaign')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -44,7 +47,7 @@ export class CampaignController {
 
   @Get('current')
   @UseGuards(OptionalJwtAuthGuard)
-  current(@CurrentPlayer() player: Player | null): Promise<Campaign | null> {
+  current(@CurrentPlayer() player: Player | null): Promise<Campaign> {
     return this.campaignService.current(player);
   }
 
@@ -61,39 +64,39 @@ export class CampaignController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Promise<Campaign | null> {
-    return this.campaignService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<Campaign | null> {
+    return this.campaignService.findOne(id);
   }
 
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateCampaignDto: UpdateCampaignDto,
   ): Promise<Campaign> {
-    return this.campaignService.update(+id, updateCampaignDto);
+    return this.campaignService.update(id, updateCampaignDto);
   }
 
   @Patch('description/:id')
   async updateDescription(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Req() req: express.Request,
   ): Promise<Campaign | null> {
     if (!req.readable) {
-      throw new Error('Request not readable');
+      throw new BadRequestException('Request body is not readable');
     }
 
     const body: string = (await rawbody(req, {})).toString().trim();
 
     if (!body) {
-      throw new Error('No description provided');
+      throw new BadRequestException('No description provided');
     }
 
-    return this.campaignService.update(+id, { description: body });
+    return this.campaignService.update(id, { description: body });
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string): Promise<DeleteResult> {
-    return this.campaignService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number): Promise<DeleteResult> {
+    return this.campaignService.remove(id);
   }
 
   @Put('update-player-game-information')
@@ -115,7 +118,7 @@ export class CampaignController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   async vote(
-    @Body() body: { optionId: number },
+    @Body() body: VoteDto,
     @CurrentPlayer() player: Player,
   ): Promise<Campaign> {
     return this.campaignService.vote(player, body.optionId);

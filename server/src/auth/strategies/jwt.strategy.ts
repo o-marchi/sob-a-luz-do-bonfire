@@ -17,17 +17,17 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: any): Promise<Player> {
-    try {
-      const player = await this.playerService.findOne(payload.id);
-
-      if (!player) {
-        throw new UnauthorizedException();
-      }
-
-      return player;
-    } catch (error) {
+  async validate(payload: { id?: unknown }): Promise<Player> {
+    if (!Number.isInteger(payload.id)) {
       throw new UnauthorizedException();
     }
+
+    const player = await this.playerService.findOne(payload.id as number);
+
+    if (!player) {
+      throw new UnauthorizedException();
+    }
+
+    return player;
   }
 }

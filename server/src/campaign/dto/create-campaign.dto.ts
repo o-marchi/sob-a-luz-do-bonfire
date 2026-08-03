@@ -6,7 +6,28 @@ import {
   IsString,
   Min,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, type TransformFnParams } from 'class-transformer';
+
+const useLegacyId = (
+  value: unknown,
+  object: unknown,
+  legacyKey: string,
+): unknown => {
+  if (value !== undefined && value !== null) {
+    return value;
+  }
+
+  if (typeof object !== 'object' || object === null) {
+    return value;
+  }
+
+  return (object as Record<string, unknown>)[legacyKey];
+};
+
+const transformLegacyId =
+  (legacyKey: string) =>
+  ({ value, obj }: TransformFnParams): unknown =>
+    useLegacyId(value, obj, legacyKey);
 
 export class CreateCampaignDto {
   @IsString()
@@ -27,7 +48,7 @@ export class CreateCampaignDto {
 
   @IsOptional()
   @IsInt()
-  @Transform(({ value, obj }) => value ?? obj?.game_id, { toClassOnly: true })
+  @Transform(transformLegacyId('game_id'), { toClassOnly: true })
   @Min(1)
   gameId?: number;
 
@@ -37,7 +58,7 @@ export class CreateCampaignDto {
 
   @IsOptional()
   @IsInt()
-  @Transform(({ value, obj }) => value ?? obj?.pool_id, { toClassOnly: true })
+  @Transform(transformLegacyId('pool_id'), { toClassOnly: true })
   @Min(1)
   poolId?: number;
 }

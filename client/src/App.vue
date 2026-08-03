@@ -6,6 +6,7 @@ import { ref, h } from 'vue'
 import Canvas from '@/components/Canvas.vue'
 import {
   type GlobalThemeOverrides,
+  type MenuOption,
   darkTheme,
   datePtBR,
   ptBR,
@@ -23,7 +24,7 @@ function getMenuKeyByPath(path: string) {
 
 const activeMenu = ref<string | null>(getMenuKeyByPath(window.location.pathname))
 
-const menuOptions: any[] = [
+const menuOptions: MenuOption[] = [
   {
     label: () => h(RouterLink, { to: '/' }, 'Home'),
     key: 'home',

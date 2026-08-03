@@ -1,14 +1,15 @@
-import { IsArray, IsNumber, ValidateNested } from 'class-validator';
+import { IsArray, IsInt, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreatePoolOptionDto {
-  @IsNumber()
-  gameId: number;
+  @IsInt()
+  @Min(1)
+  gameId!: number;
 }
 
 export class CreatePoolDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreatePoolOptionDto)
-  options: CreatePoolOptionDto[];
+  options!: CreatePoolOptionDto[];
 }

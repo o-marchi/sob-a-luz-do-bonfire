@@ -12,7 +12,7 @@ import { createTypeOrmModuleOptions } from './db/database.config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({ isGlobal: true, cache: true }),
 
     TypeOrmModule.forRoot(createTypeOrmModuleOptions()),
 

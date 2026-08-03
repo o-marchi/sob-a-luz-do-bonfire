@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,7 +13,9 @@ export class PlayersService {
   ) {}
 
   create(createPlayerDto: CreatePlayerDto): Promise<Player> {
-    const entity: Player = this.playerRepository.create(createPlayerDto);
+    const entity: Player = this.playerRepository.create(
+      this.normalizePlayerDto(createPlayerDto),
+    );
     return this.playerRepository.save(entity);
   }
 
@@ -40,11 +42,11 @@ export class PlayersService {
   async update(id: number, updatePlayerDto: UpdatePlayerDto): Promise<Player> {
     const entity: Player | undefined = await this.playerRepository.preload({
       id,
-      ...updatePlayerDto,
+      ...this.normalizePlayerDto(updatePlayerDto),
     });
 
     if (!entity) {
-      throw new Error('Player not found');
+      throw new NotFoundException(`Player #${id} not found`);
     }
 
     return this.playerRepository.save(entity);
@@ -58,5 +60,23 @@ export class PlayersService {
     const isAnimated: boolean = avatarHash.startsWith('a_');
     const extension: 'gif' | 'png' = isAnimated ? 'gif' : 'png';
     return `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.${extension}`;
+  }
+
+  private normalizePlayerDto(
+    playerDto: CreatePlayerDto | UpdatePlayerDto,
+  ): CreatePlayerDto | UpdatePlayerDto {
+    if (!playerDto.discord) {
+      return playerDto;
+    }
+
+    const { global_name, ...discord } = playerDto.discord;
+
+    return {
+      ...playerDto,
+      discord: {
+        ...discord,
+        globalName: discord.globalName ?? global_name,
+      },
+    };
   }
 }

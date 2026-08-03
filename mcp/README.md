@@ -24,9 +24,8 @@ MCP_ADMIN_TOKEN=replace-with-a-long-random-secret
 2. Install and build the MCP package locally:
 
 ```sh
-cd mcp
-npm install
-npm run build
+pnpm install
+pnpm run build:mcp
 ```
 
 3. Configure Zed or another MCP client to launch the local stdio server:

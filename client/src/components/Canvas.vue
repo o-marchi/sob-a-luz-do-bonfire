@@ -464,7 +464,7 @@ function createPlayers() {
   campaign.value?.players?.forEach((campaignPlayer, index) => {
     const player = new Player(
       index,
-      campaignPlayer?.player?.name,
+      campaignPlayer?.player?.name ?? undefined,
       campaignPlayer?.player?.discord?.avatar,
     )
     currentState.players.push(player)

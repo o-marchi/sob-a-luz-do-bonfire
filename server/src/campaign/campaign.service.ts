@@ -1,17 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Campaign } from './entities/campaign.entity';
-import { DeleteResult, Repository } from 'typeorm';
-import { PlayersService } from '../players/players.service';
+import {
+  DataSource,
+  DeleteResult,
+  DeepPartial,
+  EntityManager,
+  Repository,
+} from 'typeorm';
 import { CampaignPlayer } from './entities/campaign-player.entity';
 import { Player } from '../players/entities/player.entity';
 import { UpdateGameInformationDto } from './dto/update-game-information.dto';
 import { PoolOption } from '../pool/entities/pool-option.entity';
 
-const sortCampaigns = (campaigns: Campaign[]): Campaign[] => {
-  const months = [
+const MONTH_ORDER = new Map(
+  [
     'Janeiro',
     'Fevereiro',
     'Março',
@@ -24,21 +33,29 @@ const sortCampaigns = (campaigns: Campaign[]): Campaign[] => {
     'Outubro',
     'Novembro',
     'Dezembro',
-  ];
+  ].map((month, index) => [month, index]),
+);
 
-  return campaigns.sort((a, b) => {
-    // sort by year
-    if (a.year !== b.year) {
-      return +a.year - +b.year;
+const sortCampaigns = (campaigns: Campaign[]): Campaign[] =>
+  [...campaigns].sort((a, b) => {
+    const yearDifference = Number(a.year) - Number(b.year);
+
+    if (Number.isFinite(yearDifference) && yearDifference !== 0) {
+      return yearDifference;
     }
 
-    // sort by month
-    const indexA = months.findIndex((month) => month === a.month);
-    const indexB = months.findIndex((month) => month === b.month);
+    const monthA = MONTH_ORDER.get(a.month);
+    const monthB = MONTH_ORDER.get(b.month);
 
-    return indexA - indexB;
+    if (monthA !== undefined && monthB !== undefined) {
+      return monthA - monthB;
+    }
+
+    if (monthA !== undefined) return -1;
+    if (monthB !== undefined) return 1;
+
+    return a.month.localeCompare(b.month, 'pt-BR');
   });
-};
 
 @Injectable()
 export class CampaignService {
@@ -47,12 +64,10 @@ export class CampaignService {
     private campaignRepository: Repository<Campaign>,
     @InjectRepository(CampaignPlayer)
     private campaignPlayerRepository: Repository<CampaignPlayer>,
-    @InjectRepository(PoolOption)
-    private poolOptionRepository: Repository<PoolOption>,
-    private playersService: PlayersService,
+    private readonly dataSource: DataSource,
   ) {}
 
-  private defaultRelations: string[] = [
+  private readonly defaultRelations: string[] = [
     'game',
     'players',
     'players.player',
@@ -63,7 +78,13 @@ export class CampaignService {
   ];
 
   async create(createCampaignDto: CreateCampaignDto): Promise<Campaign> {
-    const entity: Campaign = this.campaignRepository.create(createCampaignDto);
+    const { gameId, poolId, ...campaignFields } = createCampaignDto;
+    const entity: Campaign = this.campaignRepository.create({
+      ...campaignFields,
+      game: gameId ? { id: gameId } : undefined,
+      pool: poolId ? { id: poolId } : undefined,
+    });
+
     return this.campaignRepository.save(entity);
   }
 
@@ -83,33 +104,36 @@ export class CampaignService {
     return this.campaignRepository.findOneBy({ id });
   }
 
-  findOneOrFail(id: number): Promise<Campaign | null> {
-    return this.campaignRepository.findOneByOrFail({ id });
+  async findOneOrFail(id: number): Promise<Campaign> {
+    const campaign = await this.findOne(id);
+
+    if (!campaign) {
+      throw new NotFoundException(`Campaign #${id} not found`);
+    }
+
+    return campaign;
   }
 
   async update(
     id: number,
     updateCampaignDto: UpdateCampaignDto,
   ): Promise<Campaign> {
-    const payload: any = { id, ...updateCampaignDto };
+    const { gameId, poolId, ...campaignFields } = updateCampaignDto;
+    const payload: DeepPartial<Campaign> = { id, ...campaignFields };
 
     if (Object.prototype.hasOwnProperty.call(updateCampaignDto, 'gameId')) {
-      payload.game = updateCampaignDto.gameId
-        ? { id: updateCampaignDto.gameId }
-        : null;
+      payload.game = gameId ? { id: gameId } : null;
     }
 
     if (Object.prototype.hasOwnProperty.call(updateCampaignDto, 'poolId')) {
-      payload.pool = updateCampaignDto.poolId
-        ? { id: updateCampaignDto.poolId }
-        : null;
+      payload.pool = poolId ? { id: poolId } : null;
     }
 
     const entity: Campaign | undefined =
       await this.campaignRepository.preload(payload);
 
     if (!entity) {
-      throw new Error('Campaign not found');
+      throw new NotFoundException(`Campaign #${id} not found`);
     }
 
     await this.campaignRepository.save(entity);
@@ -125,7 +149,7 @@ export class CampaignService {
   }
 
   async addPlayer(campaign: Campaign, player: Player): Promise<boolean> {
-    if (campaign.players.some((cp) => cp.player.id === player.id)) {
+    if (campaign.players?.some((cp) => cp.player.id === player.id)) {
       return false;
     }
 
@@ -140,7 +164,22 @@ export class CampaignService {
       },
     );
 
-    await this.campaignPlayerRepository.save(campaignPlayer);
+    try {
+      await this.campaignPlayerRepository.save(campaignPlayer);
+    } catch (error: unknown) {
+      const existingMembership = await this.campaignPlayerRepository.findOne({
+        where: {
+          campaign: { id: campaign.id },
+          player: { id: player.id },
+        },
+      });
+
+      if (existingMembership) {
+        return false;
+      }
+
+      throw error;
+    }
 
     return true;
   }
@@ -183,7 +222,16 @@ export class CampaignService {
     );
 
     if (!campaignPlayer) {
-      throw new Error('Player not in campaign');
+      throw new NotFoundException('Player is not part of the current campaign');
+    }
+
+    if (
+      updateGameInformation.finished_the_game &&
+      !updateGameInformation.played_the_game
+    ) {
+      throw new BadRequestException(
+        'A game cannot be finished before it has been started',
+      );
     }
 
     campaignPlayer.played_the_game = updateGameInformation.played_the_game;
@@ -193,66 +241,58 @@ export class CampaignService {
   }
 
   async undoVote(player: Player): Promise<Campaign> {
-    const currentCampaign: Campaign | null = await this.current();
+    await this.dataSource.transaction(async (manager) => {
+      const currentCampaign = await this.findCurrentCampaignOrFail(manager);
+      const pool = currentCampaign.pool;
 
-    if (!currentCampaign) {
-      throw new Error('No campaign found');
-    }
+      if (!pool) {
+        throw new BadRequestException('Current campaign has no election pool');
+      }
 
-    const pool = currentCampaign.pool;
+      const changedOptions = pool.options.filter((option) => {
+        const hadVote = option.players.some((voter) => voter.id === player.id);
+        option.players = option.players.filter(
+          (voter) => voter.id !== player.id,
+        );
+        return hadVote;
+      });
 
-    if (!pool) {
-      throw new Error('No pool found');
-    }
-
-    for (const option of pool.options) {
-      option.players = option.players.filter((p) => p.id !== player.id);
-
-      await this.poolOptionRepository.save(option);
-    }
+      if (changedOptions.length > 0) {
+        await manager.getRepository(PoolOption).save(changedOptions);
+      }
+    });
 
     return this.current();
   }
 
   async vote(player: Player, optionId: number): Promise<Campaign> {
-    const currentCampaign: Campaign | null = await this.current();
+    await this.dataSource.transaction(async (manager) => {
+      const currentCampaign = await this.findCurrentCampaignOrFail(manager);
+      const pool = currentCampaign.pool;
 
-    if (!currentCampaign) {
-      throw new Error('No campaign found');
-    }
-
-    const pool = currentCampaign.pool;
-
-    if (!pool) {
-      throw new Error('No pool found');
-    }
-
-    for (const option of pool.options) {
-      option.players = option.players.filter((p) => p.id !== player.id);
-
-      await this.poolOptionRepository.save(option);
-    }
-
-    currentCampaign.pool?.options.forEach((option) => {
-      if (option.id === optionId) {
-        const alreadyVoted = option.players.some((p) => p.id === player.id);
-
-        if (!alreadyVoted) {
-          option.players.push(player);
-        }
-      } else {
-        option.players = option.players.filter((p) => p.id !== player.id);
+      if (!pool) {
+        throw new BadRequestException('Current campaign has no election pool');
       }
+
+      const selectedOption = pool.options.find(
+        (option) => option.id === optionId,
+      );
+
+      if (!selectedOption) {
+        throw new BadRequestException(
+          `Pool option #${optionId} does not belong to the current campaign`,
+        );
+      }
+
+      for (const option of pool.options) {
+        option.players = option.players.filter(
+          (voter) => voter.id !== player.id,
+        );
+      }
+
+      selectedOption.players.push(player);
+      await manager.getRepository(PoolOption).save(pool.options);
     });
-
-    const selectedOption = await this.poolOptionRepository.findOneOrFail({
-      where: { id: optionId },
-      relations: ['players'],
-    });
-
-    selectedOption.players.push(player);
-
-    await this.poolOptionRepository.save(selectedOption);
 
     return this.current();
   }
@@ -260,16 +300,12 @@ export class CampaignService {
   async recalculateElectionResult(): Promise<
     { optionId: number; game: string; tokens: number }[]
   > {
-    const currentCampaign: Campaign | null = await this.current();
-
-    if (!currentCampaign) {
-      throw new Error('No campaign found');
-    }
+    const currentCampaign: Campaign = await this.current();
 
     const pool = currentCampaign.pool;
 
     if (!pool) {
-      throw new Error('No pool found');
+      throw new BadRequestException('Current campaign has no election pool');
     }
 
     const electionResult: { optionId: number; game: string; tokens: number }[] =
@@ -298,5 +334,20 @@ export class CampaignService {
     }
 
     return electionResult;
+  }
+
+  private async findCurrentCampaignOrFail(
+    manager: EntityManager,
+  ): Promise<Campaign> {
+    const campaign = await manager.getRepository(Campaign).findOne({
+      where: { current: true },
+      relations: this.defaultRelations,
+    });
+
+    if (!campaign) {
+      throw new NotFoundException('No current campaign found');
+    }
+
+    return campaign;
   }
 }

@@ -7,17 +7,17 @@ export class CreateGameDto {
 
   @IsString()
   @IsOptional()
-  cover: string;
+  cover?: string;
 
   @IsBoolean()
   @IsOptional()
-  suggestion: boolean;
+  suggestion?: boolean;
 
   @IsString()
   @IsOptional()
-  steam: string;
+  steam?: string;
 
   @IsString()
   @IsOptional()
-  trailer: string;
+  trailer?: string;
 }

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
 } from '@nestjs/common';
@@ -30,20 +31,20 @@ export class GamesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Promise<Game | null> {
-    return this.gamesService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<Game | null> {
+    return this.gamesService.findOne(id);
   }
 
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateGameDto: UpdateGameDto,
   ): Promise<Game> {
-    return this.gamesService.update(+id, updateGameDto);
+    return this.gamesService.update(id, updateGameDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string): Promise<DeleteResult> {
-    return this.gamesService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number): Promise<DeleteResult> {
+    return this.gamesService.remove(id);
   }
 }

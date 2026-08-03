@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import * as bcrypt from 'bcrypt';
+
+export type PublicUser = Omit<User, 'password'>;
 
 @Injectable()
 export class UsersService {
@@ -13,7 +15,7 @@ export class UsersService {
     private userRepository: Repository<User>,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
+  async create(createUserDto: CreateUserDto): Promise<PublicUser> {
     const password: string = await bcrypt.hash(createUserDto.password, 12);
 
     const entity: User = this.userRepository.create({
@@ -21,31 +23,29 @@ export class UsersService {
       password,
     });
 
-    const saved: User = await this.userRepository.save(entity);
-    const { password: _hidden, ...safe } = saved;
-
-    return safe;
+    return this.toPublicUser(await this.userRepository.save(entity));
   }
 
-  findAll(): Promise<User[]> {
-    return this.userRepository.find();
+  async findAll(): Promise<PublicUser[]> {
+    const users = await this.userRepository.find();
+    return users.map((user) => this.toPublicUser(user));
   }
 
-  async findOne(id: number): Promise<User> {
+  async findOne(id: number): Promise<PublicUser> {
     const user = await this.userRepository.findOneBy({ id });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException(`User #${id} not found`);
     }
 
-    return user;
+    return this.toPublicUser(user);
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto) {
+  async update(id: number, updateUserDto: UpdateUserDto): Promise<PublicUser> {
     const user = await this.userRepository.findOneBy({ id });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException(`User #${id} not found`);
     }
 
     if (updateUserDto.password) {
@@ -55,6 +55,12 @@ export class UsersService {
       Object.assign(user, updateUserDto);
     }
 
-    return this.userRepository.save(user);
+    return this.toPublicUser(await this.userRepository.save(user));
+  }
+
+  private toPublicUser(user: User): PublicUser {
+    const { password, ...publicUser } = user;
+    void password;
+    return publicUser;
   }
 }

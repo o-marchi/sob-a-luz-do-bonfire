@@ -27,18 +27,18 @@ export class AuthController {
     @Req() req: express.Request,
     @Res() res: express.Response,
   ) {
-    const authPlayer = req.user as AuthPlayer;
+    const player = req.user as AuthPlayer;
     const clientUrl: string =
       this.config.getOrThrow<string>('PUBLIC_CLIENT_URL');
 
-    if (!authPlayer) {
+    if (!player) {
       return res.redirect(302, `${clientUrl}?authentication_error=true`);
     }
 
-    const token: string = await this.authService.signToken(authPlayer);
+    const token: string = await this.authService.signToken(player);
     const redirectUrl = new URL('/auth/callback', clientUrl);
     redirectUrl.searchParams.append('jwt', token);
-    redirectUrl.searchParams.append('access_token', authPlayer.accessToken);
+    redirectUrl.searchParams.append('access_token', player.accessToken);
 
     return res.redirect(302, redirectUrl.toString());
   }
