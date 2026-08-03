@@ -110,4 +110,37 @@ describe('CampaignService voting', () => {
     });
     expect(memberships).toHaveLength(1);
   });
+
+  it('orders campaign history newest-first across Portuguese and English months', async () => {
+    const campaignRepository = dataSource.getRepository(Campaign);
+    await campaignRepository.save([
+      campaignRepository.create({ month: 'Dezembro', year: '2025' }),
+      campaignRepository.create({ month: 'January', year: '2026' }),
+      campaignRepository.create({ month: 'Setembro', year: '2026' }),
+    ]);
+
+    const history = await service.findAllHistory();
+
+    expect(history.map(({ month, year }) => `${month} ${year}`)).toEqual([
+      'Setembro 2026',
+      'Agosto 2026',
+      'January 2026',
+      'Dezembro 2025',
+    ]);
+  });
+
+  it('includes players and their profiles in campaign history', async () => {
+    await service.current(player);
+    await service.updatePlayerGameInformation(player, {
+      played_the_game: true,
+      finished_the_game: false,
+    });
+
+    const currentCampaign = (await service.findAllHistory()).find(
+      (campaign) => campaign.current,
+    );
+
+    expect(currentCampaign?.players).toHaveLength(1);
+    expect(currentCampaign?.players[0].player.name).toBe('Player');
+  });
 });

@@ -28,6 +28,10 @@ describe('ContentService', () => {
       key: RULES_CONTENT_KEY,
       content: DEFAULT_RULES_MARKDOWN,
     });
+    expect(rules.content).toContain('**20 horas em Main + Extras**');
+    expect(rules.content).toContain('**todos os seus Tokens restantes**');
+    expect(rules.content).not.toContain('15 horas');
+    expect(rules.content).not.toContain('preferencialmente');
     await expect(dataSource.getRepository(SiteContent).count()).resolves.toBe(
       1,
     );

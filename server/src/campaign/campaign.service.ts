@@ -19,42 +19,54 @@ import { Player } from '../players/entities/player.entity';
 import { UpdateGameInformationDto } from './dto/update-game-information.dto';
 import { PoolOption } from '../pool/entities/pool-option.entity';
 
-const MONTH_ORDER = new Map(
+const normalizeMonth = (month: string): string =>
+  month
+    .trim()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLocaleLowerCase('pt-BR');
+
+const MONTH_ORDER = new Map<string, number>(
   [
-    'Janeiro',
-    'Fevereiro',
-    'Março',
-    'Abril',
-    'Maio',
-    'Junho',
-    'Julho',
-    'Agosto',
-    'Setembro',
-    'Outubro',
-    'Novembro',
-    'Dezembro',
-  ].map((month, index) => [month, index]),
+    ['janeiro', 'january', 'jan'],
+    ['fevereiro', 'february', 'feb'],
+    ['marco', 'march', 'mar'],
+    ['abril', 'april', 'apr'],
+    ['maio', 'may'],
+    ['junho', 'june', 'jun'],
+    ['julho', 'july', 'jul'],
+    ['agosto', 'august', 'aug'],
+    ['setembro', 'september', 'sep', 'sept'],
+    ['outubro', 'october', 'oct'],
+    ['novembro', 'november', 'nov'],
+    ['dezembro', 'december', 'dec'],
+  ].flatMap((aliases, index) => aliases.map((alias) => [alias, index])),
 );
 
 const sortCampaigns = (campaigns: Campaign[]): Campaign[] =>
   [...campaigns].sort((a, b) => {
-    const yearDifference = Number(a.year) - Number(b.year);
+    const yearA = Number(a.year);
+    const yearB = Number(b.year);
 
-    if (Number.isFinite(yearDifference) && yearDifference !== 0) {
-      return yearDifference;
+    if (Number.isFinite(yearA) && Number.isFinite(yearB) && yearA !== yearB) {
+      return yearB - yearA;
     }
 
-    const monthA = MONTH_ORDER.get(a.month);
-    const monthB = MONTH_ORDER.get(b.month);
+    if (Number.isFinite(yearA) !== Number.isFinite(yearB)) {
+      return Number.isFinite(yearA) ? -1 : 1;
+    }
+
+    const monthA = MONTH_ORDER.get(normalizeMonth(a.month));
+    const monthB = MONTH_ORDER.get(normalizeMonth(b.month));
 
     if (monthA !== undefined && monthB !== undefined) {
-      return monthA - monthB;
+      return monthB - monthA || b.id - a.id;
     }
 
     if (monthA !== undefined) return -1;
     if (monthB !== undefined) return 1;
 
-    return a.month.localeCompare(b.month, 'pt-BR');
+    return a.month.localeCompare(b.month, 'pt-BR') || b.id - a.id;
   });
 
 @Injectable()
@@ -94,7 +106,7 @@ export class CampaignService {
 
   async findAllHistory(): Promise<Campaign[]> {
     const campaigns = await this.campaignRepository.find({
-      relations: ['game'],
+      relations: ['game', 'players', 'players.player'],
     });
 
     return sortCampaigns(campaigns);

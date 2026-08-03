@@ -32,7 +32,11 @@ onBeforeUnmount(() => {
 
 const themeOverrides: GlobalThemeOverrides = {
   Tooltip: {
-    color: '#141215',
+    color: '#24181b',
+    textColor: '#f7ded0',
+    borderRadius: '6px',
+    padding: '8px 11px',
+    boxShadow: '0 12px 30px rgba(0, 0, 0, 0.42)',
   },
   common: {
     primaryColor: '#8192FF',
