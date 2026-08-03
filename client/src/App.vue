@@ -1,43 +1,34 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { computed, onBeforeUnmount, watch } from 'vue'
+import { RouterView } from 'vue-router'
+import { useRoute } from 'vue-router'
 import Title from './components/Title.vue'
-import Login from '@/components/Login.vue'
-import { ref, h } from 'vue'
 import Canvas from '@/components/Canvas.vue'
+import TopNavigation from '@/components/TopNavigation.vue'
 import {
   type GlobalThemeOverrides,
-  type MenuOption,
   darkTheme,
   datePtBR,
   ptBR,
   NConfigProvider,
-  NMenu,
   NMessageProvider,
 } from 'naive-ui'
 
-function getMenuKeyByPath(path: string) {
-  if (path === '/') return 'home'
-  if (path.startsWith('/campanhas')) return 'campanhas'
-  if (path.startsWith('/regras')) return 'regras'
-  return null
-}
+const route = useRoute()
+const pageTitle = computed(() => route.meta.pageTitle as string | undefined)
+const isInnerPage = computed(() => Boolean(pageTitle.value))
 
-const activeMenu = ref<string | null>(getMenuKeyByPath(window.location.pathname))
+watch(
+  isInnerPage,
+  (innerPage) => {
+    document.body.classList.toggle('bonfire-inner-page', innerPage)
+  },
+  { immediate: true },
+)
 
-const menuOptions: MenuOption[] = [
-  {
-    label: () => h(RouterLink, { to: '/' }, 'Home'),
-    key: 'home',
-  },
-  {
-    label: () => h(RouterLink, { to: '/campanhas' }, 'Campanhas'),
-    key: 'campanhas',
-  },
-  {
-    label: () => h(RouterLink, { to: '/regras' }, 'Regras'),
-    key: 'regras',
-  },
-]
+onBeforeUnmount(() => {
+  document.body.classList.remove('bonfire-inner-page')
+})
 
 const themeOverrides: GlobalThemeOverrides = {
   Tooltip: {
@@ -67,30 +58,34 @@ const themeOverrides: GlobalThemeOverrides = {
     :date-locale="datePtBR"
     :theme-overrides="themeOverrides"
   >
-    <Canvas />
+    <Canvas :compact="isInnerPage" />
 
-    <header>
-      <div class="wrapper">
-        <Login />
-        <Title />
-
-        <div class="main-menu-wrapper">
-          <n-menu
-            class="main-menu"
-            :options="menuOptions"
-            v-model:value="activeMenu"
-            mode="horizontal"
-          ></n-menu>
-        </div>
-      </div>
+    <header class="site-header">
+      <TopNavigation />
     </header>
 
-    <main>
-      <n-message-provider>
-        <RouterView />
-      </n-message-provider>
+    <n-message-provider>
+      <RouterView v-slot="{ Component, route: activeRoute }">
+        <div class="route-viewport">
+          <Transition name="route-page" mode="out-in">
+            <div :key="activeRoute.path" class="route-stage">
+              <section v-if="activeRoute.meta.pageTitle" class="page-intro">
+                <p v-if="activeRoute.meta.pageKicker" class="page-intro__kicker">
+                  {{ activeRoute.meta.pageKicker }}
+                </p>
+                <h1>{{ activeRoute.meta.pageTitle }}</h1>
+              </section>
 
-      <p>&nbsp;</p>
-    </main>
+              <Title v-else />
+
+              <main :class="{ 'main--inner-page': Boolean(activeRoute.meta.pageTitle) }">
+                <component :is="Component" />
+                <p>&nbsp;</p>
+              </main>
+            </div>
+          </Transition>
+        </div>
+      </RouterView>
+    </n-message-provider>
   </n-config-provider>
 </template>

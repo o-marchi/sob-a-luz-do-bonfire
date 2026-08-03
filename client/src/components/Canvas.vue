@@ -4,6 +4,10 @@ import { useCampaignStore } from '@/stores/campaign.ts'
 import bonfireSprite from '@/assets/bonfire-sprite.png'
 import { storeToRefs } from 'pinia'
 
+const props = withDefaults(defineProps<{ compact?: boolean }>(), {
+  compact: false,
+})
+
 const campaignStore = useCampaignStore()
 const { campaign } = storeToRefs(campaignStore)
 
@@ -22,6 +26,14 @@ watch(
     maybeCreatePlayers()
   },
   { immediate: true },
+)
+
+watch(
+  () => props.compact,
+  () => {
+    resizeCanvas()
+    maybeCreatePlayers()
+  },
 )
 
 interface CanvasState {
@@ -164,7 +176,7 @@ class Player {
       return
     }
 
-    const centerY = getCenterY(state.value.width)
+    const centerY = state.value.bonfire?.y ?? getCenterY(state.value.width)
     const centerX = state.value.width / 2
 
     this.x = centerX + playerPosition.x + this.bobOffset
@@ -259,7 +271,7 @@ class Bonfire {
     this.image = image
     this.frame = frame
 
-    this.y = 495
+    this.y = getCenterY(state.value?.width ?? window.innerWidth)
     this.currentFrame = 0
     this.frameTimer = 0
     this.frameInterval = 500
@@ -394,6 +406,10 @@ const random = (min: number, max: number) => {
 }
 
 const getCenterY = (width: number) => {
+  if (props.compact) {
+    return width <= 480 ? -220 : -245
+  }
+
   if (width <= 480) {
     return 390
   }
@@ -411,7 +427,7 @@ const resizeCanvas = () => {
   }
 
   const width = window.innerWidth
-  const height = 1350
+  const height = props.compact ? 420 : 1350
 
   state.value.width = width
   state.value.height = height
@@ -420,7 +436,7 @@ const resizeCanvas = () => {
   state.value.canvas.style.width = `${width}px`
   state.value.canvas.style.height = `${height}px`
 
-  createParticles(150)
+  createParticles(props.compact ? 36 : 150)
 }
 
 const createParticles = (count: number) => {
@@ -438,6 +454,11 @@ const createParticles = (count: number) => {
 
 function maybeCreatePlayers() {
   if (!state.value) {
+    return
+  }
+
+  if (props.compact) {
+    state.value.players = []
     return
   }
 
