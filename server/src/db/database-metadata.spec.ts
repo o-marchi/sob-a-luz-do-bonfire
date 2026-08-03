@@ -15,22 +15,54 @@ class MetadataDataSource extends DataSource {
   }
 }
 
-describe('PostgreSQL entity metadata', () => {
-  it('uses supported column types for every entity', async () => {
-    const dataSource = new MetadataDataSource({
-      type: 'postgres',
-      entities: [
-        AdminAuditLog,
-        Campaign,
-        CampaignPlayer,
-        Game,
-        Player,
-        Pool,
-        PoolOption,
-        User,
-      ],
+const entities = [
+  AdminAuditLog,
+  Campaign,
+  CampaignPlayer,
+  Game,
+  Player,
+  Pool,
+  PoolOption,
+  User,
+];
+
+describe('entity metadata', () => {
+  it.each(['postgres', 'sqljs'] as const)(
+    'uses supported column types for %s',
+    async (type) => {
+      const dataSource = new MetadataDataSource({ type, entities });
+
+      await expect(dataSource.validateMetadata()).resolves.toBeUndefined();
+    },
+  );
+
+  it('round-trips audit log JSON with SQL.js', async () => {
+    const dataSource = new DataSource({
+      type: 'sqljs',
+      entities: [AdminAuditLog],
+      synchronize: true,
     });
 
-    await expect(dataSource.validateMetadata()).resolves.toBeUndefined();
+    await dataSource.initialize();
+
+    try {
+      const repository = dataSource.getRepository(AdminAuditLog);
+      const saved = await repository.save(
+        repository.create({
+          action: 'test',
+          payload: { campaignId: 1 },
+          result: { created: true },
+        }),
+      );
+
+      await expect(
+        repository.findOneByOrFail({ id: saved.id }),
+      ).resolves.toMatchObject({
+        payload: { campaignId: 1 },
+        result: { created: true },
+      });
+    } finally {
+      await dataSource.destroy();
+    }
   });
 });
