@@ -9,6 +9,8 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { CampaignPlayer } from '../campaign/entities/campaign-player.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
+import { ContentService } from '../content/content.service';
+import { SiteContent } from '../content/entities/site-content.entity';
 import { Game } from '../games/entities/game.entity';
 import { Player } from '../players/entities/player.entity';
 import { PoolOption } from '../pool/entities/pool-option.entity';
@@ -30,6 +32,7 @@ import {
   ApplyMonthlyPlanDto,
   MonthlyPlanDto,
 } from './dto/monthly-plan.dto';
+import { UpdateRulesDto } from './dto/update-rules.dto';
 import { AdminAuditLog } from './entities/admin-audit-log.entity';
 
 type ParticipantFlag =
@@ -124,6 +127,7 @@ export class AdminService {
     private readonly poolRepository: Repository<Pool>,
     private readonly dataSource: DataSource,
     private readonly config: ConfigService,
+    private readonly contentService: ContentService,
   ) {}
 
   async getState(): Promise<{
@@ -180,6 +184,23 @@ export class AdminService {
         value ? normalizeText(value).includes(normalizedQuery) : false,
       ),
     );
+  }
+
+  getRules(): Promise<SiteContent> {
+    return this.contentService.getRules();
+  }
+
+  async updateRules(dto: UpdateRulesDto): Promise<SiteContent> {
+    return this.dataSource.transaction(async (manager) => {
+      const rules = await this.contentService.updateRules(dto.content, manager);
+
+      await this.writeAuditLog(manager, 'rules_updated', dto, {
+        key: rules.key,
+        updatedAt: rules.updatedAt,
+      });
+
+      return rules;
+    });
   }
 
   async previewMonthlyPlan(plan: MonthlyPlanDto): Promise<MonthlyPlanPreview> {

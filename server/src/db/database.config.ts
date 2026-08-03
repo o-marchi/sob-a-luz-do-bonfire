@@ -1,7 +1,13 @@
 import type { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import type { DataSourceOptions } from 'typeorm';
+import { AdminAutomation1763760000000 } from './migrations/1763760000000-AdminAutomation';
+import { SiteContent1785729600000 } from './migrations/1785729600000-SiteContent';
 
 const sqlitePath = process.env.DATABASE_SQLITE_PATH || 'data/local.sqlite';
+const safeRuntimeMigrations = [
+  AdminAutomation1763760000000,
+  SiteContent1785729600000,
+];
 
 const getDatabasePort = (): number => {
   const port = Number(process.env.DATABASE_PORT);
@@ -27,7 +33,8 @@ export function createTypeOrmModuleOptions(): TypeOrmModuleOptions {
     password: process.env.DATABASE_PASSWORD,
     database: process.env.DATABASE_NAME,
     autoLoadEntities: true,
-    migrations: ['db/migrations/*{.ts,.js}'],
+    migrations: safeRuntimeMigrations,
+    migrationsRun: process.env.NODE_ENV === 'production',
     synchronize: process.env.NODE_ENV !== 'production',
   };
 }

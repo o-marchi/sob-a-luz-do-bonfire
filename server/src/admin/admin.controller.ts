@@ -19,6 +19,7 @@ import {
   UpsertGamesDto,
 } from './dto/admin-operations.dto';
 import { ApplyMonthlyPlanDto, MonthlyPlanDto } from './dto/monthly-plan.dto';
+import { UpdateRulesDto } from './dto/update-rules.dto';
 import { AdminApiKeyGuard } from './guards/admin-api-key.guard';
 import { AdminService } from './admin.service';
 
@@ -40,6 +41,16 @@ export class AdminController {
   @Get('players')
   listPlayers(@Query() query: CampaignQueryDto) {
     return this.adminService.listPlayers(query.query);
+  }
+
+  @Get('rules')
+  getRules() {
+    return this.adminService.getRules();
+  }
+
+  @Patch('rules')
+  updateRules(@Body() body: UpdateRulesDto) {
+    return this.adminService.updateRules(body);
   }
 
   @Post('monthly-plan/preview')

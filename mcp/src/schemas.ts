@@ -91,3 +91,12 @@ export const finalizeElectionSchema = campaignIdSchema.extend({
 export const querySchema = z.object({
   query: z.string().optional(),
 });
+
+export const updateRulesSchema = z.object({
+  content: z
+    .string()
+    .max(100_000)
+    .refine((value) => value.trim().length > 0, {
+      message: "Rules must contain visible text",
+    }),
+});

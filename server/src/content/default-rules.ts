@@ -1,5 +1,7 @@
+export const RULES_CONTENT_KEY = 'rules';
+export const RULES_MAX_LENGTH = 100_000;
 
-<br>
+export const DEFAULT_RULES_MARKDOWN = `<br>
 
 ## Regras do sistema de votos:
 
@@ -21,3 +23,4 @@
 
 Nós não temos regras específicas para recomendar jogos.
 Porém nós recomendamos jogos curtos, no máximo 15 horas (main + extras) segundo o [How Long To Beat](https://howlongtobeat.com/), mas preferencialmente de 5 a 10 horas.
+`;

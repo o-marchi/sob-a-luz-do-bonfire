@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { PoolModule } from './pool/pool.module';
 import { AdminModule } from './admin/admin.module';
 import { createTypeOrmModuleOptions } from './db/database.config';
+import { ContentModule } from './content/content.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { createTypeOrmModuleOptions } from './db/database.config';
     GamesModule,
     AuthModule,
     PoolModule,
+    ContentModule,
     AdminModule,
   ],
   controllers: [],
