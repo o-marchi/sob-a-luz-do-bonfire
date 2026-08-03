@@ -12,6 +12,7 @@ import {
   monthlyPlanSchema,
   querySchema,
   updateCampaignSchema,
+  updateRulesSchema,
   upsertGamesSchema,
 } from "./schemas.js";
 
@@ -84,6 +85,28 @@ server.registerTool(
 );
 
 server.registerTool(
+  "get_rules",
+  {
+    title: "Get website rules",
+    description:
+      "Returns the Markdown rules currently shown on the public website.",
+    inputSchema: {},
+  },
+  async () => jsonContent(await adminApi.get("/admin/rules")),
+);
+
+server.registerTool(
+  "update_rules",
+  {
+    title: "Update website rules",
+    description:
+      "Replaces the Markdown rules shown on the public website. Only use after explicit user confirmation.",
+    inputSchema: updateRulesSchema.shape,
+  },
+  async (input) => jsonContent(await adminApi.patch("/admin/rules", input)),
+);
+
+server.registerTool(
   "preview_monthly_plan",
   {
     title: "Preview monthly plan",
@@ -148,7 +171,7 @@ server.registerTool(
   {
     title: "Update campaign",
     description:
-      "Updates campaign metadata such as description, game, pool, electionActive, or current status.",
+      "Updates campaign metadata such as description, meeting details, game, pool, electionActive, or current status.",
     inputSchema: updateCampaignSchema.shape,
   },
   async ({ campaignId, ...body }) =>
@@ -230,27 +253,24 @@ server.registerResource(
   "token_rules",
   "sobaluz://rules/tokens",
   {
-    title: "Token rules",
+    title: "Website rules",
     description:
-      "Explains how Sob a Luz do Bonfire voting tokens are calculated.",
-    mimeType: "text/plain",
+      "Rules currently published on the Sob a Luz do Bonfire website.",
+    mimeType: "text/markdown",
   },
-  async (uri) => ({
-    contents: [
-      {
-        uri: uri.href,
-        mimeType: "text/plain",
-        text: [
-          "Sob a Luz do Bonfire token rules:",
-          "- Base participation: 1 token",
-          "- played_the_game: +1 token",
-          "- finished_the_game: +1 token",
-          "- partook_in_the_meeting: +1 token",
-          "- suggested_a_game: -1 token",
-        ].join("\n"),
-      },
-    ],
-  }),
+  async (uri) => {
+    const rules = await adminApi.get<{ content: string }>("/admin/rules");
+
+    return {
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "text/markdown",
+          text: rules.content,
+        },
+      ],
+    };
+  },
 );
 
 server.registerPrompt(

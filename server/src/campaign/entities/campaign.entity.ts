@@ -27,6 +27,15 @@ export class Campaign {
   @Column({ type: 'varchar', nullable: true })
   description: string | null;
 
+  @Column({ name: 'meeting_at', type: 'varchar', nullable: true })
+  meetingAt: string | null;
+
+  @Column({ name: 'meeting_location', type: 'varchar', nullable: true })
+  meetingLocation: string | null;
+
+  @Column({ name: 'meeting_url', type: 'varchar', nullable: true })
+  meetingUrl: string | null;
+
   @ManyToOne(() => Game, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'game_id' })
   game?: Game | null;

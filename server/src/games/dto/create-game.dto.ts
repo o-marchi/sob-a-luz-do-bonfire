@@ -20,4 +20,16 @@ export class CreateGameDto {
   @IsString()
   @IsOptional()
   trailer?: string;
+
+  @IsString()
+  @IsOptional()
+  summary?: string;
+
+  @IsString()
+  @IsOptional()
+  howLongToBeatUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  durationLabel?: string;
 }

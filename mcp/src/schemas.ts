@@ -7,6 +7,9 @@ export const gameInputSchema = z.object({
   suggestion: z.boolean().optional(),
   steam: z.string().optional(),
   trailer: z.string().optional(),
+  summary: z.string().optional(),
+  howLongToBeatUrl: z.string().optional(),
+  durationLabel: z.string().optional(),
 });
 
 export const campaignInputSchema = z.object({
@@ -15,6 +18,9 @@ export const campaignInputSchema = z.object({
   month: z.string().min(1).optional(),
   year: z.string().min(1).optional(),
   description: z.string().optional(),
+  meetingAt: z.string().datetime({ offset: true }).optional(),
+  meetingLocation: z.string().optional(),
+  meetingUrl: z.string().optional(),
   electionActive: z.boolean().optional(),
   gameId: z.number().int().positive().optional(),
   gameTitle: z.string().min(1).optional(),
@@ -90,4 +96,13 @@ export const finalizeElectionSchema = campaignIdSchema.extend({
 
 export const querySchema = z.object({
   query: z.string().optional(),
+});
+
+export const updateRulesSchema = z.object({
+  content: z
+    .string()
+    .max(100_000)
+    .refine((value) => value.trim().length > 0, {
+      message: "Rules must contain visible text",
+    }),
 });
