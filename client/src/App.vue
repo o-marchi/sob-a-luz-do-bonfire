@@ -72,7 +72,11 @@ const themeOverrides: GlobalThemeOverrides = {
       <RouterView v-slot="{ Component, route: activeRoute }">
         <div class="route-viewport">
           <Transition name="route-page" mode="out-in">
-            <div :key="activeRoute.path" class="route-stage">
+            <div
+              :key="activeRoute.path"
+              class="route-stage"
+              :class="{ 'route-stage--grounded': activeRoute.name === 'brasas' }"
+            >
               <section v-if="activeRoute.meta.pageTitle" class="page-intro">
                 <p v-if="activeRoute.meta.pageKicker" class="page-intro__kicker">
                   {{ activeRoute.meta.pageKicker }}
@@ -84,7 +88,7 @@ const themeOverrides: GlobalThemeOverrides = {
 
               <main :class="{ 'main--inner-page': Boolean(activeRoute.meta.pageTitle) }">
                 <component :is="Component" />
-                <p>&nbsp;</p>
+                <p v-if="activeRoute.name !== 'brasas'">&nbsp;</p>
               </main>
             </div>
           </Transition>

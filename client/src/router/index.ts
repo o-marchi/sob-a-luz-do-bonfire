@@ -30,6 +30,19 @@ const router = createRouter({
       },
     },
     {
+      path: '/brasas',
+      name: 'brasas',
+      component: () => import('../views/Backlog.vue'),
+      meta: {
+        pageTitle: 'Brasas',
+        pageKicker: 'Jogos que ainda podem acender a fogueira',
+      },
+    },
+    {
+      path: '/lenha',
+      redirect: '/brasas',
+    },
+    {
       path: '/auth/callback',
       name: 'auth-callback',
       component: AuthCallbackPage,

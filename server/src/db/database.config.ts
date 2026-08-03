@@ -3,12 +3,16 @@ import type { DataSourceOptions } from 'typeorm';
 import { AdminAutomation1763760000000 } from './migrations/1763760000000-AdminAutomation';
 import { SiteContent1785729600000 } from './migrations/1785729600000-SiteContent';
 import { CurrentGameDetails1785736800000 } from './migrations/1785736800000-CurrentGameDetails';
+import { GameRecommendations1785795104186 } from './migrations/1785795104186-GameRecommendations';
+import { GameRecommendationRegistry1785796200000 } from './migrations/1785796200000-GameRecommendationRegistry';
 
 const sqlitePath = process.env.DATABASE_SQLITE_PATH || 'data/local.sqlite';
 const safeRuntimeMigrations = [
   AdminAutomation1763760000000,
   SiteContent1785729600000,
   CurrentGameDetails1785736800000,
+  GameRecommendations1785795104186,
+  GameRecommendationRegistry1785796200000,
 ];
 
 const getDatabasePort = (): number => {

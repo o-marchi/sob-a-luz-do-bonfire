@@ -12,6 +12,7 @@ import { Campaign } from '../campaign/entities/campaign.entity';
 import { ContentService } from '../content/content.service';
 import { SiteContent } from '../content/entities/site-content.entity';
 import { Game } from '../games/entities/game.entity';
+import { GameRecommendation } from '../games/entities/game-recommendation.entity';
 import { Player } from '../players/entities/player.entity';
 import { PoolOption } from '../pool/entities/pool-option.entity';
 import { Pool } from '../pool/entities/pool.entity';
@@ -25,6 +26,7 @@ import {
 } from './dto/admin-operations.dto';
 import {
   AdminCampaignInputDto,
+  AdminGameRecommendationInputDto,
   AdminGameInputDto,
   AdminParticipantInputDto,
   AdminPlayerReferenceDto,
@@ -66,10 +68,16 @@ export interface ElectionResultOption {
   voters: string[];
 }
 
+interface SuggestedGameReference {
+  id?: number;
+  title: string;
+}
+
 const campaignRelations = [
   'game',
   'players',
   'players.player',
+  'players.suggestedGame',
   'pool',
   'pool.options',
   'pool.options.game',
@@ -121,6 +129,8 @@ export class AdminService {
     private readonly campaignPlayerRepository: Repository<CampaignPlayer>,
     @InjectRepository(Game)
     private readonly gameRepository: Repository<Game>,
+    @InjectRepository(GameRecommendation)
+    private readonly gameRecommendationRepository: Repository<GameRecommendation>,
     @InjectRepository(Player)
     private readonly playerRepository: Repository<Player>,
     @InjectRepository(Pool)
@@ -212,6 +222,7 @@ export class AdminService {
     await this.previewGames(plan.games ?? [], actions, warnings, errors);
     await this.previewPool(plan, actions, warnings, errors);
     await this.previewParticipants(plan, actions, warnings, errors);
+    await this.previewRecommendations(plan, actions, warnings, errors);
 
     return {
       valid: errors.length === 0,
@@ -290,6 +301,13 @@ export class AdminService {
         manager,
         savedCampaign,
         plan.participants ?? [],
+        savedGames,
+      );
+
+      await this.applyRecommendations(
+        manager,
+        plan.recommendations ?? [],
+        savedGames,
       );
 
       await this.writeAuditLog(manager, 'monthly_plan_applied', plan, {
@@ -700,6 +718,15 @@ export class AdminService {
     const campaign = await this.resolveCampaignForPreview(plan.campaign);
 
     for (const participant of plan.participants ?? []) {
+      const suggestedGame = await this.resolveSuggestedGameForPreview(
+        participant,
+        plan.games ?? [],
+        errors,
+      );
+      const providedDetails = this.getProvidedParticipantDetails(
+        participant,
+        suggestedGame,
+      );
       const player = await this.resolvePlayerForPreview(
         participant.player,
         warnings,
@@ -714,7 +741,7 @@ export class AdminService {
             type: 'create',
             entity: 'campaign_player',
             label,
-            details: this.getProvidedParticipantFlags(participant),
+            details: providedDetails,
           });
         }
         continue;
@@ -725,7 +752,7 @@ export class AdminService {
           type: 'update',
           entity: 'campaign_player',
           label,
-          details: this.getProvidedParticipantFlags(participant),
+          details: providedDetails,
         });
         continue;
       }
@@ -735,6 +762,7 @@ export class AdminService {
           campaign: { id: campaign.id },
           player: { id: player.id },
         },
+        relations: ['suggestedGame'],
       });
 
       if (!campaignPlayer) {
@@ -742,7 +770,7 @@ export class AdminService {
           type: 'create',
           entity: 'campaign_player',
           label,
-          details: this.getProvidedParticipantFlags(participant),
+          details: providedDetails,
         });
         continue;
       }
@@ -750,6 +778,7 @@ export class AdminService {
       const changes = this.describeParticipantChanges(
         campaignPlayer,
         participant,
+        suggestedGame,
       );
 
       actions.push(
@@ -765,6 +794,58 @@ export class AdminService {
               entity: 'campaign_player',
               label,
               details: { reason: 'already up to date' },
+            },
+      );
+    }
+  }
+
+  private async previewRecommendations(
+    plan: MonthlyPlanDto,
+    actions: PreviewAction[],
+    warnings: string[],
+    errors: string[],
+  ): Promise<void> {
+    for (const recommendation of plan.recommendations ?? []) {
+      const game = await this.resolveRecommendationGameForPreview(
+        recommendation,
+        plan.games ?? [],
+        errors,
+      );
+      const player = await this.resolvePlayerForPreview(
+        recommendation.player,
+        warnings,
+        errors,
+      );
+
+      if (!game || !player) {
+        continue;
+      }
+
+      const label = `${game.title} — ${this.describePlayerRef(
+        recommendation.player,
+        player,
+      )}`;
+      const existing = game.id
+        ? await this.gameRecommendationRepository.findOne({
+            where: {
+              game: { id: game.id },
+              player: { id: player.id },
+            },
+          })
+        : null;
+
+      actions.push(
+        existing
+          ? {
+              type: 'skip',
+              entity: 'game_recommendation',
+              label,
+              details: { reason: 'already recorded' },
+            }
+          : {
+              type: 'create',
+              entity: 'game_recommendation',
+              label,
             },
       );
     }
@@ -1089,21 +1170,139 @@ export class AdminService {
     return compact(planGames.map((game) => game.title));
   }
 
+  private async resolveSuggestedGameForPreview(
+    participant: AdminParticipantInputDto,
+    planGames: AdminGameInputDto[],
+    errors: string[],
+  ): Promise<SuggestedGameReference | undefined> {
+    try {
+      this.validateSuggestedGameInput(participant);
+    } catch (error: unknown) {
+      errors.push(
+        error instanceof Error ? error.message : 'Invalid suggested game.',
+      );
+      return undefined;
+    }
+
+    if (participant.suggestedGameId) {
+      const game = await this.gameRepository.findOneBy({
+        id: participant.suggestedGameId,
+      });
+
+      if (!game) {
+        errors.push(
+          `Could not find suggested game #${participant.suggestedGameId}.`,
+        );
+        return undefined;
+      }
+
+      return game;
+    }
+
+    if (!participant.suggestedGameTitle) {
+      return undefined;
+    }
+
+    const existingGame = await this.findGameByTitle(
+      this.dataSource.manager,
+      participant.suggestedGameTitle,
+    );
+
+    if (existingGame) {
+      return existingGame;
+    }
+
+    const plannedGame = planGames.find(
+      (game) =>
+        game.title &&
+        normalizeText(game.title) ===
+          normalizeText(participant.suggestedGameTitle ?? ''),
+    );
+
+    if (plannedGame?.title) {
+      return { id: plannedGame.id, title: plannedGame.title };
+    }
+
+    errors.push(
+      `Could not find suggested game '${participant.suggestedGameTitle}'.`,
+    );
+    return undefined;
+  }
+
+  private async resolveRecommendationGameForPreview(
+    recommendation: AdminGameRecommendationInputDto,
+    planGames: AdminGameInputDto[],
+    errors: string[],
+  ): Promise<SuggestedGameReference | undefined> {
+    const hasGameId = recommendation.gameId !== undefined;
+    const hasGameTitle = recommendation.gameTitle !== undefined;
+
+    if (hasGameId === hasGameTitle) {
+      errors.push(
+        'Every recommendation must provide exactly one of gameId or gameTitle.',
+      );
+      return undefined;
+    }
+
+    if (recommendation.gameId) {
+      const game = await this.gameRepository.findOneBy({
+        id: recommendation.gameId,
+      });
+
+      if (!game) {
+        errors.push(
+          `Could not find recommended game #${recommendation.gameId}.`,
+        );
+      }
+
+      return game ?? undefined;
+    }
+
+    const title = recommendation.gameTitle ?? '';
+    const existingGame = await this.findGameByTitle(
+      this.dataSource.manager,
+      title,
+    );
+
+    if (existingGame) {
+      return existingGame;
+    }
+
+    const plannedGame = planGames.find(
+      (game) =>
+        game.title && normalizeText(game.title) === normalizeText(title),
+    );
+
+    if (plannedGame?.title) {
+      return { id: plannedGame.id, title: plannedGame.title };
+    }
+
+    errors.push(`Could not find recommended game '${title}'.`);
+    return undefined;
+  }
+
   private async applyParticipants(
     manager: EntityManager,
     campaign: Campaign,
     participants: AdminParticipantInputDto[],
+    savedGames: Map<string, Game> = new Map(),
   ): Promise<void> {
     const campaignPlayerRepository = manager.getRepository(CampaignPlayer);
 
     for (const participant of participants) {
       const player = await this.resolvePlayer(manager, participant.player);
+      const suggestedGame = await this.resolveSuggestedGame(
+        manager,
+        participant,
+        savedGames,
+      );
 
       let campaignPlayer = await campaignPlayerRepository.findOne({
         where: {
           campaign: { id: campaign.id },
           player: { id: player.id },
         },
+        relations: ['suggestedGame'],
       });
 
       if (!campaignPlayer) {
@@ -1114,6 +1313,7 @@ export class AdminService {
           finished_the_game: false,
           partook_in_the_meeting: false,
           suggested_a_game: false,
+          suggestedGame: null,
         });
       }
 
@@ -1123,7 +1323,135 @@ export class AdminService {
         }
       }
 
+      if (suggestedGame) {
+        campaignPlayer.suggestedGame = suggestedGame;
+        campaignPlayer.suggested_a_game = true;
+        await this.ensureGameRecommendation(manager, suggestedGame, player);
+      } else if (participant.suggested_a_game === false) {
+        campaignPlayer.suggestedGame = null;
+      }
+
       await campaignPlayerRepository.save(campaignPlayer);
+    }
+  }
+
+  private async applyRecommendations(
+    manager: EntityManager,
+    recommendations: AdminGameRecommendationInputDto[],
+    savedGames: Map<string, Game>,
+  ): Promise<void> {
+    for (const recommendation of recommendations) {
+      const player = await this.resolvePlayer(manager, recommendation.player);
+      const game = await this.resolveRecommendationGame(
+        manager,
+        recommendation,
+        savedGames,
+      );
+      await this.ensureGameRecommendation(manager, game, player);
+    }
+  }
+
+  private async ensureGameRecommendation(
+    manager: EntityManager,
+    game: Game,
+    player: Player,
+  ): Promise<void> {
+    const repository = manager.getRepository(GameRecommendation);
+    const existing = await repository.findOne({
+      where: { game: { id: game.id }, player: { id: player.id } },
+    });
+
+    if (!existing) {
+      await repository.save(repository.create({ game, player }));
+    }
+  }
+
+  private async resolveSuggestedGame(
+    manager: EntityManager,
+    participant: AdminParticipantInputDto,
+    savedGames: Map<string, Game>,
+  ): Promise<Game | undefined> {
+    this.validateSuggestedGameInput(participant);
+
+    if (participant.suggestedGameId) {
+      const game = await manager.getRepository(Game).findOneBy({
+        id: participant.suggestedGameId,
+      });
+
+      if (!game) {
+        throw new BadRequestException(
+          `Could not find suggested game #${participant.suggestedGameId}.`,
+        );
+      }
+
+      return game;
+    }
+
+    if (participant.suggestedGameTitle) {
+      const game =
+        savedGames.get(normalizeText(participant.suggestedGameTitle)) ??
+        (await this.findGameByTitle(manager, participant.suggestedGameTitle));
+
+      if (!game) {
+        throw new BadRequestException(
+          `Could not find suggested game '${participant.suggestedGameTitle}'.`,
+        );
+      }
+
+      return game;
+    }
+
+    return undefined;
+  }
+
+  private async resolveRecommendationGame(
+    manager: EntityManager,
+    recommendation: AdminGameRecommendationInputDto,
+    savedGames: Map<string, Game>,
+  ): Promise<Game> {
+    const hasGameId = recommendation.gameId !== undefined;
+    const hasGameTitle = recommendation.gameTitle !== undefined;
+
+    if (hasGameId === hasGameTitle) {
+      throw new BadRequestException(
+        'Every recommendation must provide exactly one of gameId or gameTitle.',
+      );
+    }
+
+    const game = recommendation.gameId
+      ? await manager
+          .getRepository(Game)
+          .findOneBy({ id: recommendation.gameId })
+      : (savedGames.get(normalizeText(recommendation.gameTitle ?? '')) ??
+        (await this.findGameByTitle(manager, recommendation.gameTitle ?? '')));
+
+    if (!game) {
+      throw new BadRequestException(
+        recommendation.gameId
+          ? `Could not find recommended game #${recommendation.gameId}.`
+          : `Could not find recommended game '${recommendation.gameTitle}'.`,
+      );
+    }
+
+    return game;
+  }
+
+  private validateSuggestedGameInput(
+    participant: AdminParticipantInputDto,
+  ): void {
+    const hasGameId = participant.suggestedGameId !== undefined;
+    const hasGameTitle = participant.suggestedGameTitle !== undefined;
+
+    if (hasGameId && hasGameTitle) {
+      throw new BadRequestException(
+        'Provide either suggestedGameId or suggestedGameTitle, not both.',
+      );
+    }
+
+    if ((hasGameId || hasGameTitle) && participant.suggested_a_game === false) {
+      throw new BadRequestException(
+        'A suggested game cannot be attached when suggested_a_game is false.',
+      );
     }
   }
 
@@ -1476,36 +1804,73 @@ export class AdminService {
   private describeParticipantChanges(
     campaignPlayer: CampaignPlayer,
     participant: AdminParticipantInputDto,
+    suggestedGame?: SuggestedGameReference,
   ): Record<string, unknown> {
     const changes: Record<string, unknown> = {};
 
     for (const flag of participantFlags) {
-      if (
-        participant[flag] !== undefined &&
-        participant[flag] !== campaignPlayer[flag]
-      ) {
+      const targetValue =
+        flag === 'suggested_a_game' && suggestedGame ? true : participant[flag];
+
+      if (targetValue !== undefined && targetValue !== campaignPlayer[flag]) {
         changes[flag] = {
           from: campaignPlayer[flag],
-          to: participant[flag],
+          to: targetValue,
         };
       }
+    }
+
+    if (suggestedGame) {
+      const currentGame = campaignPlayer.suggestedGame;
+      const isSameGame = suggestedGame.id
+        ? currentGame?.id === suggestedGame.id
+        : currentGame
+          ? normalizeText(currentGame.title) ===
+            normalizeText(suggestedGame.title)
+          : false;
+
+      if (!isSameGame) {
+        changes.suggestedGame = {
+          from: currentGame
+            ? { id: currentGame.id, title: currentGame.title }
+            : null,
+          to: suggestedGame,
+        };
+      }
+    } else if (
+      participant.suggested_a_game === false &&
+      campaignPlayer.suggestedGame
+    ) {
+      changes.suggestedGame = {
+        from: {
+          id: campaignPlayer.suggestedGame.id,
+          title: campaignPlayer.suggestedGame.title,
+        },
+        to: null,
+      };
     }
 
     return changes;
   }
 
-  private getProvidedParticipantFlags(
+  private getProvidedParticipantDetails(
     participant: AdminParticipantInputDto,
-  ): Record<string, boolean> {
-    const flags: Record<string, boolean> = {};
+    suggestedGame?: SuggestedGameReference,
+  ): Record<string, unknown> {
+    const details: Record<string, unknown> = {};
 
     for (const flag of participantFlags) {
       if (participant[flag] !== undefined) {
-        flags[flag] = participant[flag] ?? false;
+        details[flag] = participant[flag] ?? false;
       }
     }
 
-    return flags;
+    if (suggestedGame) {
+      details.suggested_a_game = true;
+      details.suggestedGame = suggestedGame;
+    }
+
+    return details;
   }
 
   private describePlayerRef(
@@ -1553,6 +1918,7 @@ export class AdminService {
       games: dto.games,
       pool: dto.pool,
       participants: dto.participants,
+      recommendations: dto.recommendations,
     };
   }
 

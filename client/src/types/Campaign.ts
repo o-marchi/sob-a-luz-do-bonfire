@@ -19,6 +19,7 @@ export interface CampaignPlayer {
   played_the_game: boolean
   finished_the_game: boolean
   suggested_a_game: boolean
+  suggestedGame?: Game | null
   partook_in_the_meeting: boolean
   tokens: number
 }
