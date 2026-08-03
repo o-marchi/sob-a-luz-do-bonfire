@@ -8,4 +8,22 @@
   summary?: string | null
   howLongToBeatUrl?: string | null
   durationLabel?: string | null
+  recommendedBy?: GameRecommender[]
+}
+
+export interface GameRecommender {
+  id: number
+  name: string
+  avatar?: string | null
+}
+
+export interface BacklogGame extends Game {
+  electionAppearances: number
+  recommendedBy: GameRecommender[]
+}
+
+export interface GameBacklog {
+  games: BacklogGame[]
+  rubble: BacklogGame[]
+  retirementThreshold: number
 }

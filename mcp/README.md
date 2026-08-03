@@ -81,8 +81,16 @@ pnpm run build:mcp
       "partook_in_the_meeting": true,
       "played_the_game": true,
       "finished_the_game": false,
-      "suggested_a_game": false
+      "suggestedGameTitle": "Hades"
+    }
+  ],
+  "recommendations": [
+    {
+      "player": { "playerId": 3 },
+      "gameTitle": "Outer Wilds"
     }
   ]
 }
 ```
+
+Use `recommendations` for verified historical game-to-person provenance when the original campaign is unknown. It updates the game's recommender registry without inventing a campaign participation.

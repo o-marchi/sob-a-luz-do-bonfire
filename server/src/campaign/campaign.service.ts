@@ -83,6 +83,7 @@ export class CampaignService {
     'game',
     'players',
     'players.player',
+    'players.suggestedGame',
     'pool',
     'pool.options',
     'pool.options.game',
@@ -106,7 +107,7 @@ export class CampaignService {
 
   async findAllHistory(): Promise<Campaign[]> {
     const campaigns = await this.campaignRepository.find({
-      relations: ['game', 'players', 'players.player'],
+      relations: ['game', 'players', 'players.player', 'players.suggestedGame'],
     });
 
     return sortCampaigns(campaigns);
@@ -173,6 +174,7 @@ export class CampaignService {
         finished_the_game: false,
         partook_in_the_meeting: false,
         suggested_a_game: false,
+        suggestedGame: null,
       },
     );
 

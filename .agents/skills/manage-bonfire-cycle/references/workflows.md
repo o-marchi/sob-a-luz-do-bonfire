@@ -47,13 +47,21 @@
     {
       "player": { "name": "Existing Player" },
       "partook_in_the_meeting": true,
-      "suggested_a_game": true
+      "suggestedGameTitle": "Example Game"
+    }
+  ],
+  "recommendations": [
+    {
+      "player": { "name": "Existing Player" },
+      "gameTitle": "Older Recommendation"
     }
   ]
 }
 ```
 
-Omit fields that should remain unchanged. Use IDs after resolution when names are ambiguous.
+Omit fields that should remain unchanged. Use IDs after resolution when names are ambiguous. `suggestedGameId` or `suggestedGameTitle` automatically sets `suggested_a_game: true`; use the boolean alone only when the historical game is unknown.
+
+Top-level `recommendations` records verified game-to-person provenance without claiming it happened in the selected campaign. Use this for historical backfills whose original meeting is unknown.
 
 ## Start an election
 

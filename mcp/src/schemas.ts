@@ -50,6 +50,14 @@ export const participantInputSchema = z.object({
   finished_the_game: z.boolean().optional(),
   partook_in_the_meeting: z.boolean().optional(),
   suggested_a_game: z.boolean().optional(),
+  suggestedGameId: z.number().int().positive().optional(),
+  suggestedGameTitle: z.string().min(1).optional(),
+});
+
+export const gameRecommendationInputSchema = z.object({
+  player: playerReferenceSchema,
+  gameId: z.number().int().positive().optional(),
+  gameTitle: z.string().min(1).optional(),
 });
 
 export const monthlyPlanSchema = z.object({
@@ -57,6 +65,7 @@ export const monthlyPlanSchema = z.object({
   games: z.array(gameInputSchema).optional(),
   pool: poolInputSchema.optional(),
   participants: z.array(participantInputSchema).optional(),
+  recommendations: z.array(gameRecommendationInputSchema).optional(),
 });
 
 export const applyMonthlyPlanSchema = monthlyPlanSchema.extend({

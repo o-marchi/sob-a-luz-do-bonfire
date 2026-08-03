@@ -5,6 +5,7 @@ import { CampaignPlayer } from '../campaign/entities/campaign-player.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { ContentModule } from '../content/content.module';
 import { Game } from '../games/entities/game.entity';
+import { GameRecommendation } from '../games/entities/game-recommendation.entity';
 import { Player } from '../players/entities/player.entity';
 import { PoolOption } from '../pool/entities/pool-option.entity';
 import { Pool } from '../pool/entities/pool.entity';
@@ -21,6 +22,7 @@ import { AdminApiKeyGuard } from './guards/admin-api-key.guard';
       Campaign,
       CampaignPlayer,
       Game,
+      GameRecommendation,
       Player,
       Pool,
       PoolOption,

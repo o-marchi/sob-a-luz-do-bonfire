@@ -51,6 +51,7 @@ const logout = async () => {
       <div class="top-navigation__links">
         <RouterLink to="/" class="top-navigation__link">Início</RouterLink>
         <RouterLink to="/campanhas" class="top-navigation__link">Campanhas</RouterLink>
+        <RouterLink to="/brasas" class="top-navigation__link">Brasas</RouterLink>
         <RouterLink to="/regras" class="top-navigation__link">Regras</RouterLink>
       </div>
 
