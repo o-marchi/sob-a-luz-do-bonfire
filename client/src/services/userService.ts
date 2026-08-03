@@ -26,10 +26,41 @@ export const formatJourneyCount = (count: number): string => {
   return `${count} ${count === 1 ? 'pessoa' : 'pessoas'} na jornada`
 }
 
+export const formatJourneyCompanionCount = (count: number): string => {
+  if (count === 0) {
+    return 'Ninguém te acompanha ainda'
+  }
+
+  return `${count} ${count === 1 ? 'pessoa te acompanha' : 'pessoas te acompanham'}`
+}
+
+export const getPlayerName = (campaignPlayer: CampaignPlayer): string => {
+  return (
+    campaignPlayer.player.name?.trim() ||
+    campaignPlayer.player.discord?.globalName?.trim() ||
+    campaignPlayer.player.discord?.username?.trim() ||
+    'Participante'
+  )
+}
+
 export const getJourneyPlayers = (players: CampaignPlayer[]): CampaignPlayer[] => {
   return players
     .filter((player) => getJourneyStatus(player) !== 'not-started')
     .sort((left, right) => left.player.id - right.player.id)
+}
+
+export const calculateJourneyRosterSpacing = (
+  containerWidth: number,
+  playerCount: number,
+  playerWidth = 32,
+  preferredSpacing = 28,
+): number => {
+  if (containerWidth <= 0 || playerCount <= 1) {
+    return 0
+  }
+
+  const availableSpacing = (containerWidth - playerCount * playerWidth) / (playerCount - 1)
+  return Math.min(preferredSpacing, availableSpacing)
 }
 
 export const getUserTokenBreakdown = (user: CampaignPlayer): TokenBreakdownItem[] => [

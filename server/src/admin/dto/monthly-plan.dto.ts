@@ -189,6 +189,34 @@ export class AdminParticipantInputDto {
   @IsOptional()
   @IsBoolean()
   suggested_a_game?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  suggestedGameId?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  suggestedGameTitle?: string;
+}
+
+export class AdminGameRecommendationInputDto {
+  @ValidateNested()
+  @Type(() => AdminPlayerReferenceDto)
+  player!: AdminPlayerReferenceDto;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  gameId?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  gameTitle?: string;
 }
 
 export class MonthlyPlanDto {
@@ -213,6 +241,12 @@ export class MonthlyPlanDto {
   @ValidateNested({ each: true })
   @Type(() => AdminParticipantInputDto)
   participants?: AdminParticipantInputDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AdminGameRecommendationInputDto)
+  recommendations?: AdminGameRecommendationInputDto[];
 }
 
 export class ApplyMonthlyPlanDto extends MonthlyPlanDto {

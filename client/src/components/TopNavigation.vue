@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { NIcon, NPopover } from 'naive-ui'
-import { ChevronDown, LogOut } from '@vicons/ionicons5'
+import { ChevronDown, TrailSignOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '@/stores/auth'
 import { useCampaignStore } from '@/stores/campaign'
 import { getUserTokenBreakdown } from '@/services/userService'
@@ -51,6 +51,7 @@ const logout = async () => {
       <div class="top-navigation__links">
         <RouterLink to="/" class="top-navigation__link">Início</RouterLink>
         <RouterLink to="/campanhas" class="top-navigation__link">Campanhas</RouterLink>
+        <RouterLink to="/brasas" class="top-navigation__link">Brasas</RouterLink>
         <RouterLink to="/regras" class="top-navigation__link">Regras</RouterLink>
       </div>
 
@@ -131,7 +132,7 @@ const logout = async () => {
 
             <button class="user-menu-card__logout" type="button" @click="logout">
               <span>Deixar a fogueira</span>
-              <n-icon size="17"><LogOut /></n-icon>
+              <n-icon size="18"><TrailSignOutline /></n-icon>
             </button>
           </div>
         </n-popover>

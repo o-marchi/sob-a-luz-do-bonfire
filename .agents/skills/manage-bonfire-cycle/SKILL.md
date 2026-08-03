@@ -36,7 +36,9 @@ Use the narrower MCP tools only for isolated operations. Still read state first 
 - A backlog game is eligible when it has never won and has appeared in fewer than three prior election pools.
 - After three unsuccessful appearances, exclude it until a participant explicitly recommends it again in a later meeting.
 - A game that already won a campaign is not backlog-eligible.
-- Mark only actual recommenders with `suggested_a_game: true` and only actual attendees with `partook_in_the_meeting: true`.
+- Mark only actual recommenders with `suggested_a_game: true`. When the game is known, also provide exactly one of `suggestedGameId` or `suggestedGameTitle`; the game reference automatically implies the boolean. Preserve legacy boolean-only records when the title is unknown.
+- Use top-level `recommendations` for verified historical game-to-person provenance when the original campaign is unknown. Do not invent a campaign association merely to populate a game's recommender list.
+- Mark only actual attendees with `partook_in_the_meeting: true`.
 - Preserve unrelated participant flags by omitting them from updates.
 - Use Portuguese for campaign announcements unless the user requests another language.
 

@@ -14,6 +14,7 @@ import { UpdateGameDto } from './dto/update-game.dto';
 import { Game } from './entities/game.entity';
 import { DeleteResult } from 'typeorm';
 import { ApiTags } from '@nestjs/swagger';
+import { GameBacklog, GameWithRecommenders } from './games.service';
 
 @ApiTags('games')
 @Controller('games')
@@ -30,8 +31,15 @@ export class GamesController {
     return this.gamesService.findAll();
   }
 
+  @Get('backlog')
+  findBacklog(): Promise<GameBacklog> {
+    return this.gamesService.findBacklog();
+  }
+
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number): Promise<Game | null> {
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<GameWithRecommenders | null> {
     return this.gamesService.findOne(id);
   }
 

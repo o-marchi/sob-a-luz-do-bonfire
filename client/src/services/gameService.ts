@@ -1,4 +1,10 @@
-﻿import type { Game } from '@/types/Game'
+﻿import api from './api'
+import type { Game, GameBacklog } from '@/types/Game'
+
+export const getGameBacklog = async (): Promise<GameBacklog> => {
+  const { data } = await api.get<GameBacklog>('/games/backlog')
+  return data
+}
 
 export const getGameCover = (game?: Game | null): string => {
   return game?.cover || ''

@@ -25,9 +25,11 @@ onMounted(async () => {
 
 <template>
   <div>
-    <div class="main-block">
-      <div class="main-block-content">
-        <n-spin v-if="loading" size="large" />
+    <div class="main-block rules-block">
+      <div class="main-block-content rules-block__content" :aria-busy="loading">
+        <div v-if="loading" class="rules-loading" role="status" aria-live="polite">
+          <n-spin :size="30" :stroke-width="16" stroke="#e7a06c" />
+        </div>
         <vue-markdown
           v-else-if="rules"
           :source="formattedRules"

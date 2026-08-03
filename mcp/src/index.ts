@@ -111,7 +111,7 @@ server.registerTool(
   {
     title: "Preview monthly plan",
     description:
-      "Validates a full monthly campaign update and returns a safe diff plus confirmation token. This does not modify data.",
+      "Validates a full monthly campaign update, including historical game recommender provenance, and returns a safe diff plus confirmation token. This does not modify data.",
     inputSchema: monthlyPlanSchema.shape,
   },
   async (input) =>
@@ -183,7 +183,7 @@ server.registerTool(
   {
     title: "Bulk update campaign participants",
     description:
-      "Adds or updates campaign participant flags: meeting attendance, played, finished, and suggested game.",
+      "Adds or updates campaign participant flags and optionally records the exact suggested game by ID or title.",
     inputSchema: bulkParticipantsSchema.shape,
   },
   async ({ campaignId, participants }) =>
