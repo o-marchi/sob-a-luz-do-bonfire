@@ -3,7 +3,7 @@ import { useCampaignStore } from '@/stores/campaign.ts'
 import { storeToRefs } from 'pinia'
 import { getGameCover } from '@/services/gameService.ts'
 import { LogoSteam, LogoYoutube } from '@vicons/ionicons5'
-import { NButton, NIcon, NSpace, NSpin, NTooltip } from 'naive-ui'
+import { NButton, NIcon, NSpace, NSpin, NTooltip, useMessage } from 'naive-ui'
 import { useAuthStore } from '@/stores/auth.ts'
 import type { User } from '@/types/User.ts'
 import { undoVote, vote } from '@/services/campaignService.ts'
@@ -16,6 +16,7 @@ const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 
 const loadingVote = ref<boolean | number>(false)
+const message = useMessage()
 
 const didIVoteForThis = (players: User[]) => {
   return !!(players ?? []).find((player: User) => player?.id === user?.value?.id)
@@ -23,16 +24,28 @@ const didIVoteForThis = (players: User[]) => {
 
 const undoVoteAction = async () => {
   loadingVote.value = true
-  const newCampaignValue = await undoVote()
-  await campaignStore.init(newCampaignValue)
-  loadingVote.value = false
+
+  try {
+    const newCampaignValue = await undoVote()
+    await campaignStore.init(newCampaignValue)
+  } catch {
+    message.error('Não foi possível retirar o voto. Tente novamente.')
+  } finally {
+    loadingVote.value = false
+  }
 }
 
 const voteAction = async (option: number) => {
   loadingVote.value = option
-  const newCampaignValue = await vote(option)
-  await campaignStore.init(newCampaignValue)
-  loadingVote.value = false
+
+  try {
+    const newCampaignValue = await vote(option)
+    await campaignStore.init(newCampaignValue)
+  } catch {
+    message.error('Não foi possível registrar o voto. Tente novamente.')
+  } finally {
+    loadingVote.value = false
+  }
 }
 </script>
 

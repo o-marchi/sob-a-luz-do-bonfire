@@ -55,13 +55,11 @@ export class AuthService {
       player = await this.playersService.update(player.id, dto);
     }
 
-    return {
-      ...player,
-      accessToken,
-    };
+    return { ...player, accessToken };
   }
 
-  async signToken(authPlayer: AuthPlayer): Promise<string> {
-    return this.jwtService.signAsync(authPlayer);
+  async signToken(player: Player): Promise<string> {
+    const { id, email, name, discord } = player;
+    return this.jwtService.signAsync({ id, email, name, discord });
   }
 }

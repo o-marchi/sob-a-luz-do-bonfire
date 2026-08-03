@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { getCampaignHistory } from '@/services/campaignService'
 import type { Campaign } from '@/types/Campaign'
-import { NTimeline, NTimelineItem, NButton, NSpace } from 'naive-ui'
+import { NButton, NSpace, useMessage } from 'naive-ui'
 import { ref, onMounted } from 'vue'
 import { getGameCover } from '@/services/gameService.ts'
 import { LogoSteam, LogoYoutube } from '@vicons/ionicons5'
 
 const campaigns = ref<Campaign[]>([])
+const message = useMessage()
 
 onMounted(async () => {
-  campaigns.value = ((await getCampaignHistory()) || []).reverse()
+  try {
+    campaigns.value = (await getCampaignHistory()).reverse()
+  } catch {
+    message.error('Não foi possível carregar o histórico de campanhas.')
+  }
 })
 </script>
 

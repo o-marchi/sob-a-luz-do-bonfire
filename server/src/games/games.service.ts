@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -32,7 +32,7 @@ export class GamesService {
     });
 
     if (!entity) {
-      throw new Error('Game not found');
+      throw new NotFoundException(`Game #${id} not found`);
     }
 
     return this.gameRepository.save(entity);

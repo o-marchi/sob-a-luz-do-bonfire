@@ -14,13 +14,6 @@ import VueMarkdown from 'vue-markdown-render'
 const campaignStore = useCampaignStore()
 const { campaign, currentGame, campaignUser } = storeToRefs(campaignStore)
 
-const lockedDate = ref(new Date(2025, 6, 31))
-const targetDateString = '2025-7-31'
-
-function onUpdateMonth(date: Date) {
-  lockedDate.value = new Date(2025, 6, 31)
-}
-
 const initialState = ref({
   finished_the_game: false,
   played_the_game: false,
@@ -30,23 +23,29 @@ const played_the_game = ref<boolean>(false)
 const finished_the_game = ref<boolean>(false)
 
 const saveInformationLoading = ref<boolean>(false)
+const message = useMessage()
 
 onMounted(async () => {
-  await campaignStore.init()
+  try {
+    await campaignStore.init()
+  } catch {
+    message.error('Não foi possível carregar a campanha. Tente novamente.')
+    return
+  }
 
   played_the_game.value = Boolean(campaignUser.value?.played_the_game)
   finished_the_game.value = Boolean(campaignUser.value?.finished_the_game)
 
   initialState.value = {
-    finished_the_game: Boolean(campaignUser.value?.played_the_game),
-    played_the_game: Boolean(campaignUser.value?.finished_the_game),
+    finished_the_game: Boolean(campaignUser.value?.finished_the_game),
+    played_the_game: Boolean(campaignUser.value?.played_the_game),
   }
 })
 
 const params = new URLSearchParams(window.location.search)
 
 if (params.get('authentication_error') === 'true') {
-  useMessage().error('Autenticação falhou. Tente novamente (ou desista).', {
+  message.error('Autenticação falhou. Tente novamente (ou desista).', {
     duration: 5000,
   })
 
@@ -75,21 +74,29 @@ const hasChanges = computed(() => {
 const saveInformation = async () => {
   saveInformationLoading.value = true
 
-  const newCampaignValue = await updatePlayerGameInformation({
-    played_the_game: played_the_game.value,
-    finished_the_game: finished_the_game.value,
-  })
+  try {
+    const newCampaignValue = await updatePlayerGameInformation({
+      played_the_game: played_the_game.value,
+      finished_the_game: finished_the_game.value,
+    })
 
-  initialState.value.played_the_game = played_the_game.value
-  initialState.value.finished_the_game = finished_the_game.value
+    initialState.value.played_the_game = played_the_game.value
+    initialState.value.finished_the_game = finished_the_game.value
 
-  await campaignStore.init(newCampaignValue)
-
-  saveInformationLoading.value = false
+    await campaignStore.init(newCampaignValue)
+  } catch {
+    message.error('Não foi possível salvar a informação. Tente novamente.')
+  } finally {
+    saveInformationLoading.value = false
+  }
 }
 
 const recalculateElection = async () => {
-  recalculateElectionResult()
+  try {
+    await recalculateElectionResult()
+  } catch {
+    message.error('Não foi possível recalcular a eleição.')
+  }
 }
 </script>
 
@@ -132,7 +139,11 @@ const recalculateElection = async () => {
           </n-space>
         </n-space>
         <n-space>
-          <n-button type="primary" @click="saveInformation()">
+          <n-button
+            type="primary"
+            :disabled="!hasChanges || saveInformationLoading"
+            @click="saveInformation()"
+          >
             <n-spin stroke="#18131C" size="small" v-show="saveInformationLoading" />
             <span v-show="!saveInformationLoading">Salvar informação</span>
           </n-button>

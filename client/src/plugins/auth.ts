@@ -6,9 +6,9 @@ export default {
     const auth = useAuthStore()
 
     // Initialize auth state
-    auth.init()
+    void auth.init()
 
     // Make auth store available globally
     app.provide('auth', auth)
-  }
+  },
 }

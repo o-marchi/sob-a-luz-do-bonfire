@@ -2,17 +2,17 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { CampaignPlayer } from '../../campaign/entities/campaign-player.entity';
 
 export class DiscordProfile {
-  @Column({ name: 'discordId', nullable: true })
-  id?: string;
+  @Column({ name: 'discordId', type: 'varchar', nullable: true })
+  id?: string | null;
 
-  @Column({ name: 'username', nullable: true })
-  username?: string;
+  @Column({ name: 'username', type: 'varchar', nullable: true })
+  username?: string | null;
 
-  @Column({ name: 'global_name', nullable: true })
-  globalName?: string;
+  @Column({ name: 'global_name', type: 'varchar', nullable: true })
+  globalName?: string | null;
 
-  @Column({ name: 'avatar', nullable: true })
-  avatar?: string;
+  @Column({ name: 'avatar', type: 'varchar', nullable: true })
+  avatar?: string | null;
 }
 
 @Entity('players')

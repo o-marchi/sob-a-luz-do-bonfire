@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
 } from '@nestjs/common';
@@ -30,20 +31,20 @@ export class PoolController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Promise<Pool | null> {
-    return this.poolService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<Pool | null> {
+    return this.poolService.findOne(id);
   }
 
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updatePoolDto: UpdatePoolDto,
   ): Promise<Pool> {
-    return this.poolService.update(+id, updatePoolDto);
+    return this.poolService.update(id, updatePoolDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string): Promise<DeleteResult> {
-    return this.poolService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number): Promise<DeleteResult> {
+    return this.poolService.remove(id);
   }
 }

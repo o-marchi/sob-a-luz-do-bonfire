@@ -1,7 +1,7 @@
 ﻿import api from './api'
 import type { Campaign, PlayerGameInformation } from '@/types/Campaign.ts'
 
-export const getCurrentCampaign = async (): Promise<Campaign | null> => {
+export const getCurrentCampaign = async (): Promise<Campaign> => {
   const { data: campaign } = await api.get<Campaign>('/campaign/current', {
     params: {
       includePlayerInCampaign: true,
@@ -11,7 +11,7 @@ export const getCurrentCampaign = async (): Promise<Campaign | null> => {
   return campaign
 }
 
-export const getCampaignHistory = async (): Promise<Campaign[] | null> => {
+export const getCampaignHistory = async (): Promise<Campaign[]> => {
   const { data: campaigns } = await api.get<Campaign[]>('/campaign/history')
 
   return campaigns

@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import type { User } from '@/types/User'
 import { jwtDecode } from 'jwt-decode'
 
+type AuthenticatedUser = User & { exp?: number }
+
 export const useAuthStore = defineStore('auth', () => {
   // State
   const jwt = ref<string | null>(null)
@@ -16,32 +18,43 @@ export const useAuthStore = defineStore('auth', () => {
   async function handleAuthCallback() {
     const params = new URLSearchParams(window.location.search)
     const accessTokenParam = params.get('access_token')
-    const jwt = params.get('jwt')
+    const jwtParam = params.get('jwt')
 
-    if (!accessTokenParam || !jwt) {
+    if (!accessTokenParam || !jwtParam) {
       throw new Error('Failed to fetch user')
     }
 
-    const user = jwtDecode(jwt)
+    const user = jwtDecode<AuthenticatedUser>(jwtParam)
 
     if (!user) {
       throw new Error('Failed to fetch user')
     }
 
-    localStorage.setItem('jwt', jwt)
+    localStorage.setItem('jwt', jwtParam)
     localStorage.setItem('user', JSON.stringify(user))
     localStorage.setItem('access_token', accessTokenParam)
 
-    await init()
+    await init(true)
   }
 
-  async function init() {
+  async function init(force = false) {
+    if (!loading.value && !force) {
+      return
+    }
+
     try {
       jwt.value = localStorage.getItem('jwt')
       accessToken.value = localStorage.getItem('access_token')
       user.value = JSON.parse(localStorage.getItem('user') || 'null') as User | null
 
       if (jwt.value) {
+        const payload = jwtDecode<AuthenticatedUser>(jwt.value)
+
+        if (payload.exp && payload.exp * 1000 <= Date.now()) {
+          await logout()
+          return
+        }
+
         isAuthenticated.value = true
       }
     } catch (err) {

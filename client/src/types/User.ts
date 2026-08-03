@@ -1,11 +1,11 @@
 ﻿export interface User {
   id: number
-  name: string
-  email: string
-  discord: {
-    username: string
-    global_name: string
-    discordId: string
-    avatar: string
+  name?: string | null
+  email?: string | null
+  discord?: {
+    id?: string
+    username?: string
+    globalName?: string
+    avatar?: string
   }
 }

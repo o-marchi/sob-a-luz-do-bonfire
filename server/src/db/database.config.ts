@@ -3,6 +3,11 @@ import type { DataSourceOptions } from 'typeorm';
 
 const sqlitePath = process.env.DATABASE_SQLITE_PATH || 'data/local.sqlite';
 
+const getDatabasePort = (): number => {
+  const port = Number(process.env.DATABASE_PORT);
+  return Number.isInteger(port) && port > 0 && port <= 65_535 ? port : 5432;
+};
+
 export function createTypeOrmModuleOptions(): TypeOrmModuleOptions {
   if (process.env.DATABASE_TYPE === 'sqljs') {
     return {
@@ -17,7 +22,7 @@ export function createTypeOrmModuleOptions(): TypeOrmModuleOptions {
   return {
     type: 'postgres',
     host: process.env.DATABASE_HOST,
-    port: parseInt(process.env.DATABASE_PORT as string, 10) || 5432,
+    port: getDatabasePort(),
     username: process.env.DATABASE_USER,
     password: process.env.DATABASE_PASSWORD,
     database: process.env.DATABASE_NAME,
@@ -41,7 +46,7 @@ export function createTypeOrmDataSourceOptions(): DataSourceOptions {
   return {
     type: 'postgres',
     host: process.env.DATABASE_HOST,
-    port: parseInt(process.env.DATABASE_PORT as string, 10) || 5432,
+    port: getDatabasePort(),
     username: process.env.DATABASE_USER,
     password: process.env.DATABASE_PASSWORD,
     database: process.env.DATABASE_NAME,

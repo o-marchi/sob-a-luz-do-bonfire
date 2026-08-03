@@ -12,22 +12,20 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${auth.jwt}`
   }
 
-  config.headers['Content-Type'] = 'application/json'
-
   return config
 })
 
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  async (error: unknown) => {
     const auth = useAuthStore()
 
-    if (error.response?.status === 401 && auth.jwt) {
+    if (axios.isAxiosError(error) && error.response?.status === 401 && auth.jwt) {
       await auth.logout()
       window.location.href = '/?authentication_error=true'
     }
 
-    return Promise.reject()
+    return Promise.reject(error)
   },
 )
 

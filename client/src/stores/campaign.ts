@@ -16,32 +16,23 @@ export const useCampaignStore = defineStore('campaign', () => {
 
   // Actions
   async function init(campaignValue?: Campaign) {
-    const auth = useAuthStore()
-    await auth.init()
+    loadingCampaign.value = true
 
-    if (campaignValue) {
-      campaign.value = campaignValue
-    } else {
-      campaign.value = await getCurrentCampaign()
-    }
+    try {
+      const auth = useAuthStore()
+      await auth.init()
 
-    currentGame.value = campaign?.value?.game as Game
-
-    const user = auth.user
-
-    campaignUser.value = null
-
-    if (user) {
+      campaign.value = campaignValue ?? (await getCurrentCampaign())
+      currentGame.value = campaign.value?.game ?? null
       campaignUser.value =
         campaign.value?.players?.find(
-          (player: CampaignPlayer) => player?.player?.id === user?.id,
+          (entry: CampaignPlayer) => entry.player?.id === auth.user?.id,
         ) ?? null
+      electionActive.value = campaign.value?.electionActive ?? false
+      pool.value = campaign.value?.pool ?? null
+    } finally {
+      loadingCampaign.value = false
     }
-
-    electionActive.value = campaign.value?.electionActive || false
-    pool.value = campaign.value?.pool || null
-
-    loadingCampaign.value = false
   }
 
   return {

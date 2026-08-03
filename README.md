@@ -2,10 +2,11 @@
 
 A full-stack web app for managing the **Sob a Luz do Bonfire** game club: current campaigns, past campaigns, game information, Discord login, player progress, and voting/election flow for upcoming games.
 
-The repository is split into two applications:
+The repository is split into three workspace packages:
 
 - `client/` — Vue 3 + Vite + TypeScript frontend.
 - `server/` — NestJS + TypeORM API backed by PostgreSQL.
+- `mcp/` — MCP server for guarded monthly administration workflows.
 
 ## Tech stack
 
@@ -63,6 +64,7 @@ The repository is split into two applications:
 │   ├── src/pool/            # Election pool logic
 │   ├── src/users/           # User CRUD
 │   └── src/db/migrations/   # TypeORM migrations
+├── mcp/                     # MCP tools backed by the admin API
 ├── package.json             # Root pnpm workspace scripts
 ├── pnpm-lock.yaml           # Workspace lockfile
 ├── pnpm-workspace.yaml      # pnpm workspace definition
@@ -163,9 +165,10 @@ All commands below are available from the repository root.
 | `pnpm run dev` | Start server watch mode and Vite dev server. |
 | `pnpm run dev:client` | Start only the frontend. |
 | `pnpm run dev:server` | Start only the API in watch mode. |
-| `pnpm run build` | Build frontend and backend. |
+| `pnpm run build` | Build frontend, backend, and MCP server. |
+| `pnpm run build:mcp` | Build only the MCP server. |
 | `pnpm run type-check` | Run Vue TypeScript checks. |
-| `pnpm run lint` | Run server ESLint. |
+| `pnpm run lint` | Check server source with ESLint. |
 | `pnpm run format` | Format client and server source files. |
 | `pnpm run test` | Run client and server tests. |
 | `pnpm run test:client` | Run only client tests. |
@@ -173,7 +176,7 @@ All commands below are available from the repository root.
 | `pnpm run test:cov` | Run server tests with coverage. |
 | `pnpm run preview:client` | Preview the built frontend. |
 | `pnpm run start:server:prod` | Run the built NestJS server. |
-| `pnpm run ci` | Run type-check, build, and tests locally. |
+| `pnpm run ci` | Run type-check, lint, build, and tests locally. |
 
 ## API overview
 
@@ -236,13 +239,13 @@ Unset `DATABASE_TYPE` or set it to `postgres` to use the Postgres configuration 
 GitHub Actions runs on pull requests and pushes to `main`:
 
 1. Install dependencies with pnpm.
-2. Run frontend type-checking.
-3. Build client and server.
+2. Run frontend type-checking and server linting.
+3. Build client, server, and MCP packages.
 4. Run client and server tests.
 
 ## Recommended next steps
 
-- Add more meaningful client component/store tests and server service/controller tests around campaign voting.
+- Add more client component/store tests and server controller tests.
 - Add DTO/entity Swagger decorators for richer request/response schemas in `/docs`.
 - Add route guards/authorization for admin-like CRUD endpoints if those should not be public.
 - Review production security settings, especially CORS, JWT secret handling, database migrations, and which endpoints require authentication.

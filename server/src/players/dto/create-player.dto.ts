@@ -4,19 +4,23 @@ import { Type } from 'class-transformer';
 export class DiscordProfileDto {
   @IsOptional()
   @IsString()
-  id?: string;
+  id?: string | null;
 
   @IsOptional()
   @IsString()
-  username?: string;
+  username?: string | null;
 
   @IsOptional()
   @IsString()
-  global_name?: string;
+  global_name?: string | null;
 
   @IsOptional()
   @IsString()
-  avatar?: string;
+  globalName?: string | null;
+
+  @IsOptional()
+  @IsString()
+  avatar?: string | null;
 }
 
 export class CreatePlayerDto {
