@@ -25,6 +25,9 @@ importers:
       markdown-it:
         specifier: ^14.1.0
         version: 14.1.1
+      naive-ui:
+        specifier: ^2.42.0
+        version: 2.44.1(vue@3.5.34(typescript@5.8.3))
       pinia:
         specifier: ^3.0.3
         version: 3.0.4(typescript@5.8.3)(vue@3.5.34(typescript@5.8.3))
@@ -56,9 +59,6 @@ importers:
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1(@noble/hashes@1.8.0)
-      naive-ui:
-        specifier: ^2.42.0
-        version: 2.44.1(vue@3.5.34(typescript@5.8.3))
       npm-run-all2:
         specifier: ^8.0.4
         version: 8.0.4

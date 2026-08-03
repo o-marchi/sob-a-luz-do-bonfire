@@ -5,7 +5,13 @@ import { CalendarOutline, LogoSteam, LogoYoutube, TimeOutline } from '@vicons/io
 import type { Campaign, CampaignPlayer } from '@/types/Campaign'
 import type { Game } from '@/types/Game'
 import { formatDurationLabel, getGameCover } from '@/services/gameService'
-import { formatJourneyCount, getJourneyPlayers, type JourneyStatus } from '@/services/userService'
+import {
+  formatJourneyCompanionCount,
+  formatJourneyCount,
+  getJourneyPlayers,
+  type JourneyStatus,
+} from '@/services/userService'
+import JourneyRoster from '@/components/JourneyRoster.vue'
 
 type SaveState = 'idle' | 'saving' | 'saved'
 
@@ -32,6 +38,14 @@ const journeyPlayers = computed(() => {
 })
 
 const journeyHeading = computed(() => {
+  if (props.campaignUser) {
+    const companionCount = journeyPlayers.value.filter(
+      ({ player }) => player.id !== props.campaignUser?.player.id,
+    ).length
+
+    return formatJourneyCompanionCount(companionCount)
+  }
+
   return formatJourneyCount(journeyPlayers.value.length)
 })
 
@@ -68,19 +82,6 @@ const coverStyle = computed(() => {
 })
 
 const durationLabel = computed(() => formatDurationLabel(props.game.durationLabel))
-
-const playerName = (campaignPlayer: CampaignPlayer) => {
-  return (
-    campaignPlayer.player.name?.trim() ||
-    campaignPlayer.player.discord?.globalName?.trim() ||
-    campaignPlayer.player.discord?.username?.trim() ||
-    'Participante'
-  )
-}
-
-const isCurrentPlayer = (campaignPlayer: CampaignPlayer) => {
-  return campaignPlayer.player.id === props.campaignUser?.player.id
-}
 </script>
 
 <template>
@@ -146,7 +147,7 @@ const isCurrentPlayer = (campaignPlayer: CampaignPlayer) => {
         <h3 id="progress-heading">
           {{ campaignUser ? 'Sua jornada' : 'A jornada do grupo' }}
         </h3>
-        <span v-if="journeyPlayers.length" id="group-progress-heading">
+        <span v-if="campaignUser || journeyPlayers.length" id="group-progress-heading">
           {{ journeyHeading }}
         </span>
       </header>
@@ -181,27 +182,7 @@ const isCurrentPlayer = (campaignPlayer: CampaignPlayer) => {
           class="group-progress"
           aria-labelledby="group-progress-heading"
         >
-          <div class="journey-roster">
-            <div
-              v-for="campaignPlayer in journeyPlayers"
-              :key="campaignPlayer.id"
-              class="player-chip"
-              :class="{
-                'player-chip--current': isCurrentPlayer(campaignPlayer),
-                'player-chip--finished': campaignPlayer.finished_the_game,
-              }"
-              :title="`${playerName(campaignPlayer)} · ${campaignPlayer.finished_the_game ? 'Concluiu' : 'A caminho'}`"
-            >
-              <img
-                v-if="campaignPlayer.player.discord?.avatar"
-                :src="campaignPlayer.player.discord.avatar"
-                :alt="playerName(campaignPlayer)"
-              />
-              <span v-else class="player-chip__initial" aria-hidden="true">
-                {{ playerName(campaignPlayer).charAt(0).toUpperCase() }}
-              </span>
-            </div>
-          </div>
+          <JourneyRoster :players="journeyPlayers" :current-player-id="campaignUser?.player.id" />
         </section>
       </div>
     </div>

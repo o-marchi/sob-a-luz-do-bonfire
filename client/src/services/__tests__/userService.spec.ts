@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  calculateJourneyRosterSpacing,
   calculateUserTokens,
+  formatJourneyCompanionCount,
   formatJourneyCount,
   getJourneyFlags,
   getJourneyPlayers,
@@ -79,6 +81,14 @@ describe('campaign journey status', () => {
     expect(formatJourneyCount(count)).toBe(label)
   })
 
+  it.each([
+    [0, 'Ninguém te acompanha ainda'],
+    [1, '1 pessoa te acompanha'],
+    [12, '12 pessoas te acompanham'],
+  ])('formats a companion count of %i for a logged-in player', (count, label) => {
+    expect(formatJourneyCompanionCount(count)).toBe(label)
+  })
+
   it('keeps players ordered by stable player id when progress changes', () => {
     const players = [
       createCampaignPlayer({
@@ -103,5 +113,11 @@ describe('campaign journey status', () => {
 
     players[1]!.finished_the_game = true
     expect(getJourneyPlayers(players).map(({ player }) => player.id)).toEqual([2, 7, 9])
+  })
+
+  it('keeps roster spacing generous until the faces need to tighten or overlap', () => {
+    expect(calculateJourneyRosterSpacing(400, 4)).toBe(28)
+    expect(calculateJourneyRosterSpacing(320, 10)).toBe(0)
+    expect(calculateJourneyRosterSpacing(280, 10)).toBeCloseTo(-4.44, 2)
   })
 })
