@@ -147,6 +147,9 @@ importers:
       discord-oauth2:
         specifier: ^2.12.1
         version: 2.12.1
+      dotenv:
+        specifier: ^16.6.1
+        version: 16.6.1
       passport:
         specifier: ^0.7.0
         version: 0.7.0
@@ -159,6 +162,9 @@ importers:
       pg:
         specifier: ^8.16.3
         version: 8.21.0
+      raw-body:
+        specifier: ^3.0.2
+        version: 3.0.2
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
