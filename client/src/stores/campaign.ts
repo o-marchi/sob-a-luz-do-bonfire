@@ -13,9 +13,10 @@ export const useCampaignStore = defineStore('campaign', () => {
   const campaignUser = ref<CampaignPlayer | null>(null)
   const electionActive = ref<boolean>(false)
   const pool = ref<Pool | null>(null)
+  let initializationPromise: Promise<void> | null = null
 
   // Actions
-  async function init(campaignValue?: Campaign) {
+  async function loadCampaign(campaignValue?: Campaign) {
     loadingCampaign.value = true
 
     try {
@@ -33,6 +34,21 @@ export const useCampaignStore = defineStore('campaign', () => {
     } finally {
       loadingCampaign.value = false
     }
+  }
+
+  async function init(campaignValue?: Campaign) {
+    if (campaignValue) {
+      await loadCampaign(campaignValue)
+      return
+    }
+
+    if (!initializationPromise) {
+      initializationPromise = loadCampaign().finally(() => {
+        initializationPromise = null
+      })
+    }
+
+    await initializationPromise
   }
 
   return {

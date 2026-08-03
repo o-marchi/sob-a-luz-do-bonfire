@@ -13,4 +13,6 @@ app.use(createPinia())
 app.use(authPlugin)
 app.use(router)
 
-app.mount('#app')
+router.isReady().then(() => {
+  app.mount('#app')
+})
