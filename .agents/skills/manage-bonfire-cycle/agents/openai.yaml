@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage Bonfire Cycle"
+  short_description: "Run safe monthly campaign and election workflows"
+  default_prompt: "Use $manage-bonfire-cycle to prepare and safely apply the next campaign cycle."

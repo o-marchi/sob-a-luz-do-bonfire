@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sync Bonfire Production DB"
+  short_description: "Refresh the safe local production snapshot"
+  default_prompt: "Use $sync-bonfire-production-db to refresh my local database from production safely."
