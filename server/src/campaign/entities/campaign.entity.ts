@@ -24,7 +24,7 @@ export class Campaign {
   @Column({ default: false })
   current: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   description: string | null;
 
   @ManyToOne(() => Game, { nullable: true, onDelete: 'SET NULL' })
