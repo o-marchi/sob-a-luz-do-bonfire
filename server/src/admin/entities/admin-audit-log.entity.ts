@@ -16,10 +16,10 @@ export class AdminAuditLog {
   @Column({ default: 'mcp' })
   actor!: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'json', nullable: true })
   payload!: Record<string, unknown> | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'json', nullable: true })
   result!: Record<string, unknown> | null;
 
   @CreateDateColumn()

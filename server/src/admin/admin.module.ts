@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CampaignPlayer } from '../campaign/entities/campaign-player.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
+import { ContentModule } from '../content/content.module';
 import { Game } from '../games/entities/game.entity';
 import { Player } from '../players/entities/player.entity';
 import { PoolOption } from '../pool/entities/pool-option.entity';
@@ -15,6 +16,7 @@ import { AdminApiKeyGuard } from './guards/admin-api-key.guard';
 @Module({
   imports: [
     ConfigModule,
+    ContentModule,
     TypeOrmModule.forFeature([
       Campaign,
       CampaignPlayer,

@@ -39,7 +39,7 @@ The repository is split into three workspace packages:
 
 - View the current game campaign.
 - View campaign history.
-- Render rules and campaign descriptions from Markdown.
+- Render database-backed rules and campaign descriptions from Markdown.
 - Login with Discord.
 - Track whether an authenticated player started or finished the current game.
 - Vote and undo votes in campaign election pools.
@@ -59,6 +59,7 @@ The repository is split into three workspace packages:
 ├── server/                  # NestJS API
 │   ├── src/auth/            # Discord OAuth and JWT auth
 │   ├── src/campaign/        # Campaign logic and voting endpoints
+│   ├── src/content/         # Public, database-backed website content
 │   ├── src/games/           # Game CRUD
 │   ├── src/players/         # Player CRUD/profile logic
 │   ├── src/pool/            # Election pool logic
@@ -186,11 +187,17 @@ The server exposes routes for:
 
 - `GET /campaign/current` — current campaign, optionally enriched with authenticated player data.
 - `GET /campaign/history` — campaign history.
+- `GET /content/rules` — Markdown rules currently published on the website.
 - `PUT /campaign/update-player-game-information` — update authenticated player's current campaign progress.
 - `POST /campaign/vote` and `POST /campaign/undo-vote` — campaign voting actions.
 - `GET /auth/discord` — start Discord OAuth flow.
 - `GET /auth/discord/callback` — Discord OAuth callback.
 - CRUD-style routes under `/campaign`, `/games`, `/players`, `/pool`, and `/users`.
+
+The MCP/admin API also exposes guarded `GET /admin/rules` and
+`PATCH /admin/rules` endpoints. The `get_rules` and `update_rules` MCP tools use
+these endpoints so the published Markdown can be reviewed and changed without a
+code deployment.
 
 ## Testing
 
@@ -224,6 +231,10 @@ pnpm run db:sync:prod
 
 The generated SQLite file lives at `server/data/local.sqlite` by default and is ignored by Git.
 
+Website rules are stored in the `site_content` table under the `rules` key. The
+initial migration preserves the rules that were previously bundled with the
+frontend, and later updates take effect as soon as the Rules page is refreshed.
+
 PostgreSQL is still available for local development through `server/docker-compose.yml` if needed:
 
 - Host: `localhost`
@@ -236,7 +247,7 @@ Unset `DATABASE_TYPE` or set it to `postgres` to use the Postgres configuration 
 
 ## CI
 
-GitHub Actions runs on pull requests and pushes to `main`:
+GitHub Actions runs on pull requests and pushes to `develop` and `master`:
 
 1. Install dependencies with pnpm.
 2. Run frontend type-checking and server linting.
