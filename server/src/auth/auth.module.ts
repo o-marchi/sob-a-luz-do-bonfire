@@ -8,11 +8,13 @@ import { AuthService } from './auth.service';
 import { DiscordStrategy } from './strategies/discord.strategy';
 import { PlayersModule } from '../players/players.module';
 import { JwtStrategy } from './strategies/jwt.strategy'; // assumes you have this
+import { MediaModule } from '../media/media.module';
 
 @Module({
   imports: [
     ConfigModule,
     PlayersModule,
+    MediaModule,
     PassportModule.register({ defaultStrategy: 'discord', session: false }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
