@@ -4,6 +4,7 @@ import { LogoSteam, LogoYoutube, TimeOutline } from '@vicons/ionicons5'
 import { NIcon, NModal, NSpin, NTooltip } from 'naive-ui'
 import { formatDurationLabel, getGameBacklog, getGameCover } from '@/services/gameService'
 import type { BacklogGame, GameBacklog, GameRecommender } from '@/types/Game'
+import BacklogGameCard from '@/components/BacklogGameCard.vue'
 
 const backlog = ref<GameBacklog | null>(null)
 const loading = ref(true)
@@ -18,6 +19,14 @@ const backlogCountLabel = computed(() => {
   const count = backlog.value?.games.length ?? 0
   return `${count} ${count === 1 ? 'jogo' : 'jogos'} à espera da fogueira`
 })
+
+const isGuaranteedNextVote = (game: BacklogGame) => game.guaranteedNextVote
+
+const nextVoteGames = computed(() => backlog.value?.games.filter(isGuaranteedNextVote) ?? [])
+
+const returningGames = computed(
+  () => backlog.value?.games.filter((game) => !isGuaranteedNextVote(game)) ?? [],
+)
 
 const appearanceLabel = (count: number) => {
   if (count === 0) return 'Ainda não passou'
@@ -470,111 +479,65 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <div class="backlog-grid" aria-label="Jogos que ainda guardam calor">
-        <article v-for="game in backlog.games" :key="game.id" class="backlog-card">
-          <div class="backlog-card__art" :style="coverStyle(game)">
-            <div class="backlog-card__shade"></div>
-
-            <span class="backlog-card__count">
-              <strong>{{ game.electionAppearances }}</strong>
-              / {{ backlog.retirementThreshold }}
-            </span>
-
-            <header class="backlog-card__title">
-              <h3>{{ game.title }}</h3>
-            </header>
+      <section
+        v-if="nextVoteGames.length"
+        class="backlog-shelf backlog-shelf--next-vote"
+        aria-labelledby="next-vote-heading"
+      >
+        <header class="backlog-shelf__heading">
+          <div>
+            <span class="backlog-eyebrow">Lugar garantido</span>
+            <h2 id="next-vote-heading">Na próxima votação</h2>
           </div>
+          <p>Estas sugestões já estão confirmadas para a próxima rodada.</p>
+        </header>
 
-          <footer class="backlog-card__footer">
-            <div class="backlog-card__history">
-              <div
-                class="backlog-embers"
-                :aria-label="`${appearanceLabel(game.electionAppearances)} de ${backlog.retirementThreshold} antes de virar cinza`"
-              >
-                <span
-                  v-for="position in backlog.retirementThreshold"
-                  :key="position"
-                  :class="{ 'backlog-ember--lit': position <= game.electionAppearances }"
-                  aria-hidden="true"
-                ></span>
-              </div>
-              <span>{{ appearanceLabel(game.electionAppearances) }}</span>
+        <div class="backlog-grid backlog-grid--next-vote">
+          <BacklogGameCard
+            v-for="game in nextVoteGames"
+            :key="game.id"
+            :game="game"
+            :retirement-threshold="backlog.retirementThreshold"
+            next-vote
+          />
+
+          <article v-if="backlog.nextVoteFillCount" class="next-vote-fill-card">
+            <span class="next-vote-fill-card__count">+{{ backlog.nextVoteFillCount }}</span>
+            <div>
+              <h3>
+                {{ backlog.nextVoteFillCount === 1 ? 'jogo das Brasas' : 'jogos das Brasas' }}
+              </h3>
+              <p>
+                para chegar o mais perto possível de {{ backlog.targetPoolSize }} jogos na votação
+              </p>
             </div>
+          </article>
+        </div>
+      </section>
 
-            <div
-              v-if="game.recommendedBy?.length"
-              class="backlog-card__recommenders"
-              aria-label="Pessoas que apresentaram este jogo ao grupo"
-            >
-              <n-tooltip
-                v-for="recommender in visibleRecommenders(game)"
-                :key="recommender.id"
-                placement="top"
-              >
-                <template #trigger>
-                  <span
-                    class="backlog-recommender"
-                    tabindex="0"
-                    :aria-label="`Apresentado por ${recommender.name}`"
-                  >
-                    <img
-                      v-if="hasRecommenderAvatar(game, recommender)"
-                      :src="recommender.avatar ?? undefined"
-                      alt=""
-                      @error="markRecommenderAvatarFailed(game, recommender)"
-                    />
-                    <span v-else aria-hidden="true">{{ recommenderInitial(recommender) }}</span>
-                  </span>
-                </template>
-                Apresentado por {{ recommender.name }}
-              </n-tooltip>
+      <section
+        v-if="returningGames.length"
+        class="backlog-shelf"
+        :aria-labelledby="nextVoteGames.length ? 'returning-games-heading' : undefined"
+        :aria-label="nextVoteGames.length ? undefined : 'Jogos que ainda guardam calor'"
+      >
+        <header v-if="nextVoteGames.length" class="backlog-shelf__heading">
+          <div>
+            <span class="backlog-eyebrow">Ainda nas Brasas</span>
+            <h2 id="returning-games-heading">Outros jogos nas Brasas</h2>
+          </div>
+          <p>Jogos que continuam disponíveis para as próximas rodadas.</p>
+        </header>
 
-              <n-tooltip v-if="game.recommendedBy.length > 3" placement="top">
-                <template #trigger>
-                  <span
-                    class="backlog-recommender backlog-recommender--more"
-                    tabindex="0"
-                    :aria-label="`Mais ${game.recommendedBy.length - 3} pessoas apresentaram este jogo`"
-                  >
-                    +{{ game.recommendedBy.length - 3 }}
-                  </span>
-                </template>
-                Também apresentado por {{ hiddenRecommenderNames(game) }}
-              </n-tooltip>
-            </div>
-
-            <nav class="backlog-card__links" :aria-label="`Links de ${game.title}`">
-              <a
-                v-if="game.steam"
-                :href="game.steam"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Abrir na Steam"
-              >
-                <n-icon size="17"><LogoSteam /></n-icon>
-              </a>
-              <a
-                v-if="game.trailer"
-                :href="game.trailer"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Assistir ao trailer"
-              >
-                <n-icon size="17"><LogoYoutube /></n-icon>
-              </a>
-              <a
-                v-if="game.howLongToBeatUrl"
-                :href="game.howLongToBeatUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                :aria-label="`Ver duração${formatDurationLabel(game.durationLabel) ? `: ${formatDurationLabel(game.durationLabel)}` : ''}`"
-              >
-                <n-icon size="17"><TimeOutline /></n-icon>
-              </a>
-            </nav>
-          </footer>
-        </article>
-      </div>
+        <div class="backlog-grid" aria-label="Jogos que ainda guardam calor">
+          <BacklogGameCard
+            v-for="game in returningGames"
+            :key="game.id"
+            :game="game"
+            :retirement-threshold="backlog.retirementThreshold"
+          />
+        </div>
+      </section>
 
       <section
         v-if="backlog.rubble.length"

@@ -9,10 +9,13 @@ import {
 } from '@/services/campaignService.ts'
 import ElectionView from '@/components/ElectionView.vue'
 import CurrentGameHearth from '@/components/CurrentGameHearth.vue'
+import GameRecommendation from '@/components/GameRecommendation.vue'
 import { getJourneyFlags, getJourneyStatus, type JourneyStatus } from '@/services/userService'
+import { useAuthStore } from '@/stores/auth'
 
 const campaignStore = useCampaignStore()
 const { campaign, currentGame, campaignUser } = storeToRefs(campaignStore)
+const { isAuthenticated } = storeToRefs(useAuthStore())
 
 const journeyStatus = ref<JourneyStatus>('not-started')
 const saveState = ref<'idle' | 'saving' | 'saved'>('idle')
@@ -106,5 +109,6 @@ const recalculateElection = async () => {
       @change-journey="changeJourney"
     />
 
+    <GameRecommendation v-if="campaign && isAuthenticated" :campaign-user="campaignUser" />
   </div>
 </template>

@@ -28,4 +28,13 @@ export class Game {
 
   @Column({ name: 'duration_label', type: 'varchar', nullable: true })
   durationLabel: string | null;
+
+  @Column({ name: 'main_hours', type: 'float', nullable: true })
+  mainHours: number | null;
+
+  @Column({ name: 'main_extra_hours', type: 'float', nullable: true })
+  mainExtraHours: number | null;
+
+  @Column({ name: 'how_long_to_beat_title', type: 'varchar', nullable: true })
+  howLongToBeatTitle: string | null;
 }

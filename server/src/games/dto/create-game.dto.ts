@@ -1,4 +1,11 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class CreateGameDto {
   @IsString()
@@ -32,4 +39,18 @@ export class CreateGameDto {
   @IsString()
   @IsOptional()
   durationLabel?: string;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  mainHours?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  mainExtraHours?: number;
+
+  @IsString()
+  @IsOptional()
+  howLongToBeatTitle?: string;
 }

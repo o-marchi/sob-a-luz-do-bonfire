@@ -10,6 +10,7 @@ import { Pool } from './entities/pool.entity';
 import { DataSource, DeleteResult, EntityManager, Repository } from 'typeorm';
 import { PoolOption } from './entities/pool-option.entity';
 import { Game } from '../games/entities/game.entity';
+import { buildNextVotePoolGames } from '../games/games.service';
 
 @Injectable()
 export class PoolService {
@@ -79,7 +80,7 @@ export class PoolService {
     const gameRepository = manager.getRepository(Game);
     const optionRepository = manager.getRepository(PoolOption);
 
-    return Promise.all(
+    const requestedGames = await Promise.all(
       createPoolDto.options.map(async ({ gameId }) => {
         const game = await gameRepository.findOneBy({ id: gameId });
 
@@ -87,8 +88,13 @@ export class PoolService {
           throw new BadRequestException(`Game #${gameId} not found`);
         }
 
-        return optionRepository.create({ game, players: [] });
+        return game;
       }),
+    );
+    const poolGames = await buildNextVotePoolGames(manager, requestedGames);
+
+    return poolGames.map((game) =>
+      optionRepository.create({ game, players: [] }),
     );
   }
 }
