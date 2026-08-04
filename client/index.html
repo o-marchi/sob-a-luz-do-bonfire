@@ -10,7 +10,7 @@
       content="Acompanhe o jogo do mês, as campanhas, as regras e os próximos jogos do clube Sob a Luz do Bonfire."
     />
     <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://sob-a-luz-do-bonfire.onrender.com/" />
+    <link rel="canonical" href="https://sobaluzdobonfire.com.br/" />
 
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="pt_BR" />
@@ -20,10 +20,10 @@
       property="og:description"
       content="Acompanhe o jogo do mês, as campanhas, as regras e os próximos jogos do clube Sob a Luz do Bonfire."
     />
-    <meta property="og:url" content="https://sob-a-luz-do-bonfire.onrender.com/" />
+    <meta property="og:url" content="https://sobaluzdobonfire.com.br/" />
     <meta
       property="og:image"
-      content="https://sob-a-luz-do-bonfire.onrender.com/src/assets/bonfire.png"
+      content="https://sobaluzdobonfire.com.br/src/assets/bonfire.png"
     />
     <meta property="og:image:alt" content="Fogueira do Sob a Luz do Bonfire" />
 
@@ -35,7 +35,7 @@
     />
     <meta
       name="twitter:image"
-      content="https://sob-a-luz-do-bonfire.onrender.com/src/assets/bonfire.png"
+      content="https://sobaluzdobonfire.com.br/src/assets/bonfire.png"
     />
     <title>Sob a Luz do Bonfire</title>
 
@@ -44,8 +44,17 @@
         "@context": "https://schema.org",
         "@type": "WebSite",
         "name": "Sob a Luz do Bonfire",
-        "url": "https://sob-a-luz-do-bonfire.onrender.com/",
+        "url": "https://sobaluzdobonfire.com.br/",
         "inLanguage": "pt-BR"
+      }
+    </script>
+
+    <script>
+      if (window.location.hostname === 'sob-a-luz-do-bonfire.onrender.com') {
+        const canonicalUrl = new URL(window.location.href)
+        canonicalUrl.protocol = 'https:'
+        canonicalUrl.host = 'sobaluzdobonfire.com.br'
+        window.location.replace(canonicalUrl.toString())
       }
     </script>
 
