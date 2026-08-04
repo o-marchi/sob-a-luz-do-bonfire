@@ -6,6 +6,7 @@ import {
   IsISO8601,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   Min,
@@ -51,6 +52,22 @@ export class AdminGameInputDto {
   @IsOptional()
   @IsString()
   durationLabel?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  mainHours?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  mainExtraHours?: number;
+
+  @IsOptional()
+  @IsString()
+  howLongToBeatTitle?: string;
 }
 
 export class AdminCampaignInputDto {

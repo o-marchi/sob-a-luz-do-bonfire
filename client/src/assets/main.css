@@ -1948,9 +1948,9 @@ a.meeting-callout:focus-visible {
 
 .backlog-limit strong {
   color: #f2a45c;
-  font-family: 'Cinzel Decorative', cursive;
+  font-family: 'Mulish', sans-serif;
   font-size: 51px;
-  font-weight: 500;
+  font-weight: 800;
   line-height: 1;
   text-shadow: 0 5px 20px rgba(182, 65, 30, 0.26);
 }
@@ -1962,6 +1962,59 @@ a.meeting-callout:focus-visible {
   letter-spacing: 0.1em;
   line-height: 1.5;
   text-transform: uppercase;
+}
+
+.backlog-shelf {
+  min-width: 0;
+}
+
+.backlog-shelf + .backlog-shelf {
+  margin-top: 66px;
+}
+
+.backlog-shelf--next-vote {
+  position: relative;
+  padding: 27px;
+  background:
+    radial-gradient(ellipse 68% 190px at 50% 0, rgba(192, 91, 47, 0.11), transparent 76%),
+    rgba(16, 13, 19, 0.58);
+  border: 1px solid rgba(242, 164, 92, 0.14);
+  border-radius: 9px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
+}
+
+.backlog-shelf__heading {
+  display: flex;
+  margin-bottom: 22px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.backlog-shelf__heading > div {
+  flex: 0 0 auto;
+}
+
+.backlog-shelf__heading h2,
+.backlog-shelf__heading p {
+  margin: 0;
+}
+
+.backlog-shelf__heading h2 {
+  color: rgba(255, 255, 255, 0.91);
+  font-family: 'Mulish', sans-serif;
+  font-size: clamp(21px, 2.6vw, 28px);
+  font-weight: 820;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+}
+
+.backlog-shelf__heading p {
+  max-width: 520px;
+  color: rgba(255, 255, 255, 0.44);
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: right;
 }
 
 .backlog-grid {
@@ -1981,6 +2034,54 @@ a.meeting-callout:focus-visible {
     0 -10px 28px rgba(174, 65, 32, 0.07),
     0 13px 28px rgba(0, 0, 0, 0.22),
     inset 0 1px rgba(255, 220, 190, 0.05);
+}
+
+.backlog-card--next-vote {
+  border-top-color: rgba(245, 181, 117, 0.26);
+  box-shadow:
+    0 15px 30px rgba(0, 0, 0, 0.24),
+    inset 0 1px rgba(255, 224, 194, 0.035);
+}
+
+.next-vote-fill-card {
+  display: flex;
+  min-height: 234px;
+  padding: 24px;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: rgba(255, 255, 255, 0.5);
+  background:
+    linear-gradient(180deg, rgba(242, 164, 92, 0.035), transparent 58%), rgba(8, 7, 10, 0.28);
+  border: 1px dashed rgba(242, 164, 92, 0.22);
+  border-radius: 8px;
+}
+
+.next-vote-fill-card__count {
+  color: #f2a45c;
+  font-family: 'Mulish', sans-serif;
+  font-size: 39px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.next-vote-fill-card h3,
+.next-vote-fill-card p {
+  margin: 0;
+}
+
+.next-vote-fill-card h3 {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.next-vote-fill-card p {
+  max-width: 190px;
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .backlog-card__art {
@@ -2019,6 +2120,33 @@ a.meeting-callout:focus-visible {
 .backlog-card__count strong {
   color: #f2a45c;
   font-size: 12px;
+}
+
+.backlog-card__count--aside {
+  right: 12px;
+  left: auto;
+}
+
+.backlog-card__next-vote {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+  display: inline-flex;
+  min-height: 29px;
+  padding: 6px 9px;
+  align-items: center;
+  gap: 5px;
+  color: #f5b575;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  background: rgba(24, 14, 13, 0.86);
+  border: 1px solid rgba(245, 181, 117, 0.28);
+  border-radius: 5px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.28);
+  text-transform: uppercase;
+  backdrop-filter: blur(6px);
 }
 
 .backlog-card__title {
@@ -2461,6 +2589,24 @@ a.meeting-callout:focus-visible {
 
   .backlog-limit strong {
     font-size: 42px;
+  }
+
+  .backlog-shelf--next-vote {
+    padding: 21px;
+  }
+
+  .backlog-shelf__heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .backlog-shelf__heading p {
+    text-align: left;
+  }
+
+  .backlog-shelf__heading h2 {
+    white-space: normal;
   }
 
   .backlog-rubble {
