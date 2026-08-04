@@ -7,7 +7,7 @@
     "dev": "vite",
     "build-with-type-check": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
-    "build": "vite build",
+    "build": "vite build && node scripts/generate-static-pages.mjs",
     "type-check": "vue-tsc --build",
     "test": "vitest",
     "test:run": "vitest run",

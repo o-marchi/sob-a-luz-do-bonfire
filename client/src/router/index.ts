@@ -47,6 +47,15 @@ const router = createRouter({
       name: 'auth-callback',
       component: AuthCallbackPage,
     },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('../views/NotFound.vue'),
+      meta: {
+        pageTitle: 'Página não encontrada',
+        pageKicker: 'Nem toda brasa continua acesa',
+      },
+    },
   ],
 })
 
