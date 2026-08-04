@@ -185,4 +185,20 @@ describe('AdminService game recommendations', () => {
       dataSource.getRepository(CampaignPlayer).count(),
     ).resolves.toBe(0);
   });
+
+  it('automatically includes pristine recommendations when creating a pool', async () => {
+    await dataSource
+      .getRepository(GameRecommendation)
+      .save(
+        dataSource.getRepository(GameRecommendation).create({ game, player }),
+      );
+
+    const pool = await service.createPoolFromGames({});
+
+    expect(pool.options).toHaveLength(1);
+    expect(pool.options[0].game).toMatchObject({
+      id: game.id,
+      title: 'Known recommendation',
+    });
+  });
 });

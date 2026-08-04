@@ -7,10 +7,19 @@ import { Pool } from '../pool/entities/pool.entity';
 import { Game } from './entities/game.entity';
 import { GameRecommendation } from './entities/game-recommendation.entity';
 import { GamesService } from './games.service';
+import { GameResearchService } from './game-research.service';
 
 describe('GamesService backlog', () => {
   let dataSource: DataSource;
   let service: GamesService;
+  let researchService: Pick<
+    GameResearchService,
+    | 'verifyAssessmentToken'
+    | 'searchSteam'
+    | 'assessSteamGame'
+    | 'assessResearchedGame'
+    | 'issueAssessmentToken'
+  >;
 
   beforeEach(async () => {
     dataSource = new DataSource({
@@ -28,11 +37,20 @@ describe('GamesService backlog', () => {
     });
     await dataSource.initialize();
 
+    researchService = {
+      verifyAssessmentToken: jest.fn(),
+      searchSteam: jest.fn(),
+      assessSteamGame: jest.fn(),
+      assessResearchedGame: jest.fn(),
+      issueAssessmentToken: jest.fn(),
+    };
     service = new GamesService(
       dataSource.getRepository(Game),
       dataSource.getRepository(PoolOption),
       dataSource.getRepository(Campaign),
       dataSource.getRepository(GameRecommendation),
+      dataSource,
+      researchService as GameResearchService,
     );
   });
 
@@ -165,6 +183,272 @@ describe('GamesService backlog', () => {
     ]);
     expect(details?.recommendedBy).toEqual(backlog.games[0].recommendedBy);
     expect(backlog.games[0].recommendedBy[0]).not.toHaveProperty('email');
+  });
+
+  it('returns matching catalog games before Steam results without duplicates', async () => {
+    await saveGames([
+      {
+        title: 'Hidden Treasure',
+        suggestion: false,
+        steam: 'https://store.steampowered.com/app/42/',
+        cover: 'https://example.com/local.jpg',
+      },
+    ]);
+    jest.mocked(researchService.searchSteam).mockResolvedValue([
+      {
+        steamAppId: 42,
+        title: 'Hidden Treasure',
+        image: 'https://example.com/remote.jpg',
+        source: 'steam',
+      },
+      {
+        steamAppId: 77,
+        title: 'Hidden Treasure II',
+        image: null,
+        source: 'steam',
+      },
+    ]);
+
+    await expect(service.searchRecommendations('hidden')).resolves.toEqual([
+      {
+        steamAppId: 42,
+        title: 'Hidden Treasure',
+        image: 'https://example.com/local.jpg',
+        source: 'catalog',
+      },
+      {
+        steamAppId: 77,
+        title: 'Hidden Treasure II',
+        image: null,
+        source: 'steam',
+      },
+    ]);
+  });
+
+  it('assesses a fully cached game without refetching research', async () => {
+    const playerRepository = dataSource.getRepository(Player);
+    const player = await playerRepository.save(
+      playerRepository.create({ name: 'Ana' }),
+    );
+    const game = (
+      await saveGames([
+        {
+          title: 'Cached Game',
+          suggestion: false,
+          steam: 'https://store.steampowered.com/app/42/',
+          cover: 'https://example.com/header.jpg',
+          trailer: 'https://example.com/trailer',
+          howLongToBeatUrl: 'https://howlongtobeat.com/game/42',
+          durationLabel: '12–18 h',
+          mainHours: 12,
+          mainExtraHours: 18,
+          howLongToBeatTitle: 'Cached Game',
+        },
+      ])
+    )[0];
+    const campaign = await dataSource.getRepository(Campaign).save(
+      dataSource.getRepository(Campaign).create({
+        month: 'Agosto',
+        year: '2026',
+        current: true,
+        players: [],
+      }),
+    );
+    await dataSource.getRepository(CampaignPlayer).save(
+      dataSource.getRepository(CampaignPlayer).create({
+        campaign,
+        player,
+        suggested_a_game: false,
+      }),
+    );
+    jest
+      .mocked(researchService.assessResearchedGame)
+      .mockImplementation((cachedGame) => ({
+        eligible: true,
+        reason: 'eligible',
+        limitHours: 20,
+        game: cachedGame,
+      }));
+    jest
+      .mocked(researchService.issueAssessmentToken)
+      .mockReturnValue('cached-token');
+
+    const assessment = await service.assessRecommendation(42, player);
+
+    expect(assessment).toMatchObject({
+      eligible: true,
+      assessmentToken: 'cached-token',
+      game: { title: game.title, mainExtraHours: 18 },
+    });
+    expect(researchService.assessResearchedGame).toHaveBeenCalledTimes(1);
+    expect(researchService.assessSteamGame).not.toHaveBeenCalled();
+  });
+
+  it('stores a researched recommendation and charges the current campaign token atomically', async () => {
+    const playerRepository = dataSource.getRepository(Player);
+    const player = await playerRepository.save(
+      playerRepository.create({ name: 'Ana' }),
+    );
+    const campaign = await dataSource.getRepository(Campaign).save(
+      dataSource.getRepository(Campaign).create({
+        month: 'Agosto',
+        year: '2026',
+        current: true,
+        players: [],
+      }),
+    );
+    await dataSource.getRepository(CampaignPlayer).save(
+      dataSource.getRepository(CampaignPlayer).create({
+        campaign,
+        player,
+        played_the_game: false,
+        finished_the_game: false,
+        partook_in_the_meeting: false,
+        suggested_a_game: false,
+        suggestedGame: null,
+      }),
+    );
+    jest.mocked(researchService.verifyAssessmentToken).mockReturnValue({
+      steamAppId: 42,
+      title: 'Example Game',
+      cover: 'https://example.com/header.jpg',
+      steam: 'https://store.steampowered.com/app/42/',
+      trailer: 'https://www.youtube.com/watch?v=example',
+      summary: 'A compact adventure.',
+      howLongToBeatUrl: 'https://howlongtobeat.com/game/99',
+      durationLabel: '12–18 h',
+      mainHours: 12,
+      mainExtraHours: 18,
+      howLongToBeatTitle: 'Example Game',
+    });
+
+    const result = await service.recommend('signed-token', player);
+
+    expect(result).toMatchObject({
+      created: true,
+      alreadyRecommended: false,
+      electionAppearances: 0,
+      game: {
+        title: 'Example Game',
+        suggestion: true,
+        recommendedBy: [{ id: player.id, name: 'Ana', avatar: null }],
+      },
+    });
+    await expect(
+      dataSource.getRepository(CampaignPlayer).findOneOrFail({
+        where: { campaign: { id: campaign.id }, player: { id: player.id } },
+        relations: ['suggestedGame'],
+      }),
+    ).resolves.toMatchObject({
+      suggested_a_game: true,
+      suggestedGame: { title: 'Example Game' },
+    });
+    await expect(
+      dataSource.getRepository(GameRecommendation).count(),
+    ).resolves.toBe(1);
+    await expect(service.findBacklog()).resolves.toMatchObject({
+      games: [
+        {
+          title: 'Example Game',
+          electionAppearances: 0,
+          recommendedBy: [{ id: player.id, name: 'Ana', avatar: null }],
+        },
+      ],
+    });
+  });
+
+  it('keeps an explicitly re-suggested ashes game in the next-vote shelf', async () => {
+    const game = (
+      await saveGames([{ title: 'A Return From Ashes', suggestion: true }])
+    )[0];
+    await addAppearances(game, 3);
+    const player = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Ana' }));
+    const campaign = await dataSource.getRepository(Campaign).save(
+      dataSource.getRepository(Campaign).create({
+        month: 'Agosto',
+        year: '2026',
+        current: true,
+        players: [],
+      }),
+    );
+    await dataSource.getRepository(CampaignPlayer).save(
+      dataSource.getRepository(CampaignPlayer).create({
+        campaign,
+        player,
+        suggested_a_game: true,
+        suggestedGame: game,
+      }),
+    );
+
+    const backlog = await service.findBacklog();
+
+    expect(backlog.rubble).toHaveLength(0);
+    expect(backlog.games).toContainEqual(
+      expect.objectContaining({
+        title: 'A Return From Ashes',
+        electionAppearances: 3,
+        guaranteedNextVote: true,
+      }),
+    );
+  });
+
+  it('withdraws a fresh suggestion without deleting its researched game', async () => {
+    const game = (
+      await saveGames([
+        {
+          title: 'Preserved Game',
+          suggestion: true,
+          cover: 'https://example.com/cover.jpg',
+          trailer: 'https://example.com/trailer',
+          mainExtraHours: 12,
+        },
+      ])
+    )[0];
+    const player = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Ana' }));
+    const campaign = await dataSource.getRepository(Campaign).save(
+      dataSource.getRepository(Campaign).create({
+        month: 'Agosto',
+        year: '2026',
+        current: true,
+        players: [],
+      }),
+    );
+    await dataSource.getRepository(CampaignPlayer).save(
+      dataSource.getRepository(CampaignPlayer).create({
+        campaign,
+        player,
+        suggested_a_game: true,
+        suggestedGame: game,
+      }),
+    );
+
+    await expect(service.withdrawRecommendation(player)).resolves.toMatchObject(
+      {
+        hiddenFromCatalog: true,
+        game: { id: game.id, title: game.title },
+      },
+    );
+    await expect(
+      dataSource.getRepository(Game).findOneByOrFail({ id: game.id }),
+    ).resolves.toMatchObject({
+      suggestion: false,
+      cover: 'https://example.com/cover.jpg',
+      trailer: 'https://example.com/trailer',
+      mainExtraHours: 12,
+    });
+    await expect(
+      dataSource.getRepository(CampaignPlayer).findOneOrFail({
+        where: { campaign: { id: campaign.id }, player: { id: player.id } },
+        relations: ['suggestedGame'],
+      }),
+    ).resolves.toMatchObject({
+      suggested_a_game: false,
+      suggestedGame: null,
+    });
   });
 
   const saveGames = (games: Array<Partial<Game> & Pick<Game, 'title'>>) => {

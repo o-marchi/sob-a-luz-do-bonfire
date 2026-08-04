@@ -7,14 +7,24 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { GamesService } from './games.service';
 import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
 import { Game } from './entities/game.entity';
 import { DeleteResult } from 'typeorm';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { GameBacklog, GameWithRecommenders } from './games.service';
+import {
+  AssessGameRecommendationDto,
+  CreateGameRecommendationDto,
+  SearchGamesQueryDto,
+} from './dto/game-recommendation.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { CurrentPlayer } from '../auth/decorators/current-player.decorator';
+import { Player } from '../players/entities/player.entity';
 
 @ApiTags('games')
 @Controller('games')
@@ -34,6 +44,40 @@ export class GamesController {
   @Get('backlog')
   findBacklog(): Promise<GameBacklog> {
     return this.gamesService.findBacklog();
+  }
+
+  @Get('recommendations/search')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  searchRecommendations(@Query() query: SearchGamesQueryDto) {
+    return this.gamesService.searchRecommendations(query.query);
+  }
+
+  @Post('recommendations/assess')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  assessRecommendation(
+    @Body() body: AssessGameRecommendationDto,
+    @CurrentPlayer() player: Player,
+  ) {
+    return this.gamesService.assessRecommendation(body.steamAppId, player);
+  }
+
+  @Post('recommendations')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  recommend(
+    @Body() body: CreateGameRecommendationDto,
+    @CurrentPlayer() player: Player,
+  ) {
+    return this.gamesService.recommend(body.assessmentToken, player);
+  }
+
+  @Delete('recommendations')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  withdrawRecommendation(@CurrentPlayer() player: Player) {
+    return this.gamesService.withdrawRecommendation(player);
   }
 
   @Get(':id')

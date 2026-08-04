@@ -13,6 +13,7 @@ import { ContentService } from '../content/content.service';
 import { SiteContent } from '../content/entities/site-content.entity';
 import { Game } from '../games/entities/game.entity';
 import { GameRecommendation } from '../games/entities/game-recommendation.entity';
+import { buildNextVotePoolGames } from '../games/games.service';
 import { Player } from '../players/entities/player.entity';
 import { PoolOption } from '../pool/entities/pool-option.entity';
 import { Pool } from '../pool/entities/pool.entity';
@@ -902,6 +903,18 @@ export class AdminService {
         game.durationLabel = input.durationLabel ?? null;
       }
 
+      if (input.mainHours !== undefined) {
+        game.mainHours = input.mainHours ?? null;
+      }
+
+      if (input.mainExtraHours !== undefined) {
+        game.mainExtraHours = input.mainExtraHours ?? null;
+      }
+
+      if (input.howLongToBeatTitle !== undefined) {
+        game.howLongToBeatTitle = input.howLongToBeatTitle ?? null;
+      }
+
       const savedGame = await gameRepository.save(game);
       savedGames.set(normalizeText(savedGame.title), savedGame);
     }
@@ -1092,15 +1105,7 @@ export class AdminService {
       games.push(game);
     }
 
-    const seenIds = new Set<number>();
-    return games.filter((game) => {
-      if (seenIds.has(game.id)) {
-        return false;
-      }
-
-      seenIds.add(game.id);
-      return true;
-    });
+    return buildNextVotePoolGames(manager, games);
   }
 
   private async resolvePoolGamesForPreview(
@@ -1141,10 +1146,19 @@ export class AdminService {
       }
     }
 
+    const persistedGames = games.filter((game): game is Game =>
+      Boolean(game.id),
+    );
+    const plannedGames = games.filter((game) => !game.id);
+    const selectedPersistedGames = await buildNextVotePoolGames(
+      this.dataSource.manager,
+      persistedGames,
+      plannedGames.length,
+    );
     const seenTitles = new Set<string>();
-    return games.filter((game) => {
-      const normalizedTitle = normalizeText(game.title);
 
+    return [...selectedPersistedGames, ...plannedGames].filter((game) => {
+      const normalizedTitle = normalizeText(game.title);
       if (seenTitles.has(normalizedTitle)) {
         warnings.push(`Duplicate pool option ignored: ${game.title}`);
         return false;
@@ -1795,6 +1809,36 @@ export class AdminService {
       changes.durationLabel = {
         from: existingGame.durationLabel ?? null,
         to: input.durationLabel,
+      };
+    }
+
+    if (
+      input.mainHours !== undefined &&
+      input.mainHours !== existingGame.mainHours
+    ) {
+      changes.mainHours = {
+        from: existingGame.mainHours ?? null,
+        to: input.mainHours,
+      };
+    }
+
+    if (
+      input.mainExtraHours !== undefined &&
+      input.mainExtraHours !== existingGame.mainExtraHours
+    ) {
+      changes.mainExtraHours = {
+        from: existingGame.mainExtraHours ?? null,
+        to: input.mainExtraHours,
+      };
+    }
+
+    if (
+      input.howLongToBeatTitle !== undefined &&
+      input.howLongToBeatTitle !== existingGame.howLongToBeatTitle
+    ) {
+      changes.howLongToBeatTitle = {
+        from: existingGame.howLongToBeatTitle ?? null,
+        to: input.howLongToBeatTitle,
       };
     }
 

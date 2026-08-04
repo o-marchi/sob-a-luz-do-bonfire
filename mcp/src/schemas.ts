@@ -10,6 +10,9 @@ export const gameInputSchema = z.object({
   summary: z.string().optional(),
   howLongToBeatUrl: z.string().optional(),
   durationLabel: z.string().optional(),
+  mainHours: z.number().nonnegative().optional(),
+  mainExtraHours: z.number().nonnegative().optional(),
+  howLongToBeatTitle: z.string().optional(),
 });
 
 export const campaignInputSchema = z.object({
