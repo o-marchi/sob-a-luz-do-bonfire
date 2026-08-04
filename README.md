@@ -2,7 +2,7 @@
 
 A full-stack web app for managing the **Sob a Luz do Bonfire** game club: current campaigns, past campaigns, game information, Discord login, player progress, and voting/election flow for upcoming games.
 
-Live site: [sob-a-luz-do-bonfire.onrender.com](https://sob-a-luz-do-bonfire.onrender.com)
+Live site: [sobaluzdobonfire.com.br](https://sobaluzdobonfire.com.br)
 
 The repository is split into three workspace packages:
 

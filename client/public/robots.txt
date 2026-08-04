@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /auth/callback
 
-Sitemap: https://sob-a-luz-do-bonfire.onrender.com/sitemap.xml
+Sitemap: https://sobaluzdobonfire.com.br/sitemap.xml
