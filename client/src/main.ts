@@ -6,12 +6,14 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import authPlugin from './plugins/auth'
+import { installSeo } from './seo'
 
 const app = createApp(App)
 
 app.use(createPinia())
 app.use(authPlugin)
 app.use(router)
+installSeo(router)
 
 router.isReady().then(() => {
   app.mount('#app')

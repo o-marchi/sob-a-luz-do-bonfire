@@ -1,0 +1,53 @@
+{
+  "siteName": "Sob a Luz do Bonfire",
+  "siteUrl": "https://sob-a-luz-do-bonfire.onrender.com",
+  "locale": "pt_BR",
+  "language": "pt-BR",
+  "pages": [
+    {
+      "path": "/",
+      "canonicalPath": "/",
+      "title": "Sob a Luz do Bonfire",
+      "description": "Acompanhe o jogo do mês, as campanhas, as regras e os próximos jogos do clube Sob a Luz do Bonfire.",
+      "heading": "Sob a Luz do Bonfire",
+      "summary": "Um clube de jogos reunido ao redor da fogueira. Acompanhe a campanha atual e a jornada da comunidade.",
+      "indexable": true
+    },
+    {
+      "path": "/campanhas",
+      "canonicalPath": "/campanhas/",
+      "title": "Campanhas | Sob a Luz do Bonfire",
+      "description": "Conheça o histórico de campanhas e os jogos que a comunidade viveu ao redor da fogueira.",
+      "heading": "Campanhas",
+      "summary": "Histórias, jogos e jornadas compartilhadas nas campanhas anteriores do clube.",
+      "indexable": true
+    },
+    {
+      "path": "/regras",
+      "canonicalPath": "/regras/",
+      "title": "Regras | Sob a Luz do Bonfire",
+      "description": "Veja como funcionam as recomendações, eleições, campanhas e a participação no Sob a Luz do Bonfire.",
+      "heading": "Regras",
+      "summary": "Como escolhemos jogos, organizamos campanhas e jogamos juntos.",
+      "indexable": true
+    },
+    {
+      "path": "/brasas",
+      "canonicalPath": "/brasas/",
+      "title": "Brasas | Sob a Luz do Bonfire",
+      "description": "Explore os jogos recomendados que ainda podem ser escolhidos para uma próxima campanha do clube.",
+      "heading": "Brasas",
+      "summary": "Jogos recomendados pela comunidade que ainda podem acender a próxima fogueira.",
+      "indexable": true
+    },
+    {
+      "path": "/auth/callback",
+      "canonicalPath": "/auth/callback/",
+      "title": "Autenticação | Sob a Luz do Bonfire",
+      "description": "Conclusão da autenticação do Sob a Luz do Bonfire.",
+      "heading": "Autenticação",
+      "summary": "Concluindo a entrada no Sob a Luz do Bonfire.",
+      "indexable": false
+    }
+  ]
+}
