@@ -2234,7 +2234,7 @@ a.meeting-callout:focus-visible {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(205px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(165px, 100%), 1fr));
   gap: 15px;
   margin-top: 24px;
 }
@@ -2263,7 +2263,42 @@ a.meeting-callout:focus-visible {
   background:
     radial-gradient(ellipse 86% 150px at 50% 0, rgba(196, 71, 30, 0.18), transparent 76%),
     rgba(12, 10, 15, 0.76);
-  animation: election-card-aflame 2.2s ease-in-out infinite alternate;
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.26),
+    0 0 22px rgba(226, 93, 39, 0.34),
+    0 -4px 17px rgba(247, 153, 82, 0.16),
+    inset 0 0 0 1px rgba(255, 191, 132, 0.2);
+}
+
+.election-card--selected::before {
+  position: absolute;
+  top: -12px;
+  right: -18px;
+  left: -18px;
+  z-index: 4;
+  height: 48px;
+  pointer-events: none;
+  background:
+    radial-gradient(
+        ellipse 20px 34px at 20px 100%,
+        rgba(255, 215, 148, 0.76) 0 10%,
+        rgba(242, 119, 48, 0.54) 34%,
+        transparent 72%
+      )
+      0 0 / 54px 43px repeat-x,
+    radial-gradient(
+        ellipse 16px 27px at 16px 100%,
+        rgba(255, 164, 79, 0.54) 0 18%,
+        rgba(199, 63, 25, 0.3) 45%,
+        transparent 75%
+      )
+      26px 8px / 68px 36px repeat-x;
+  mix-blend-mode: screen;
+  filter: blur(3px);
+  opacity: 0.72;
+  transform-origin: 50% 100%;
+  animation: election-flame-drift 3.6s ease-in-out infinite alternate;
+  content: '';
 }
 
 .election-card--selected::after {
@@ -2278,20 +2313,13 @@ a.meeting-callout:focus-visible {
   content: '';
 }
 
-@keyframes election-card-aflame {
+@keyframes election-flame-drift {
   from {
-    box-shadow:
-      0 12px 28px rgba(0, 0, 0, 0.24),
-      0 0 13px rgba(206, 72, 29, 0.24),
-      inset 0 0 0 1px rgba(235, 127, 67, 0.13);
+    transform: translate3d(-7px, 2px, 0) scaleY(0.94) skewX(-2deg);
   }
 
   to {
-    box-shadow:
-      0 14px 32px rgba(0, 0, 0, 0.27),
-      0 0 27px rgba(240, 111, 49, 0.43),
-      0 -5px 18px rgba(247, 153, 82, 0.2),
-      inset 0 0 0 1px rgba(255, 191, 132, 0.23);
+    transform: translate3d(7px, -2px, 0) scaleY(1.06) skewX(2deg);
   }
 }
 
@@ -2475,12 +2503,8 @@ a.meeting-callout:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .election-card--selected {
+  .election-card--selected::before {
     animation: none;
-    box-shadow:
-      0 14px 30px rgba(0, 0, 0, 0.24),
-      0 0 20px rgba(231, 101, 44, 0.34),
-      inset 0 0 0 1px rgba(255, 191, 132, 0.2);
   }
 }
 
