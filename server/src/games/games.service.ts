@@ -123,7 +123,7 @@ export const findGuaranteedNextVoteGames = async (
     .sort((left, right) => left.title.localeCompare(right.title, 'pt-BR'));
 };
 
-const findEligibleBacklogGames = async (
+export const findEligibleBacklogGames = async (
   manager: EntityManager,
   excludedIdentities: Set<string>,
 ): Promise<Game[]> => {

@@ -43,6 +43,15 @@ const router = createRouter({
       redirect: '/brasas',
     },
     {
+      path: '/conduzir',
+      name: 'conduzir',
+      component: () => import('../views/CycleConductor.vue'),
+      meta: {
+        pageTitle: 'Conduzir o ciclo',
+        pageKicker: 'Da última brasa à próxima chama',
+      },
+    },
+    {
       path: '/auth/callback',
       name: 'auth-callback',
       component: AuthCallbackPage,

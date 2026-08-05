@@ -52,6 +52,14 @@ export interface GameResearchAssessment {
   game: ResearchedGame;
 }
 
+export interface CatalogGameResearchInput {
+  title: string;
+  steam: string | null;
+  cover?: string | null;
+  trailer?: string | null;
+  summary?: string | null;
+}
+
 interface SteamMovie {
   name?: string;
   hls_h264?: string;
@@ -333,6 +341,72 @@ export class GameResearchService {
     };
 
     return this.assessResearchedGame(game);
+  }
+
+  async assessCatalogGame(
+    input: CatalogGameResearchInput,
+  ): Promise<GameResearchAssessment> {
+    const appIdMatch = input.steam?.match(
+      /store\.steampowered\.com\/app\/(\d+)/i,
+    );
+    const steamAppId = appIdMatch ? Number(appIdMatch[1]) : NaN;
+    if (!Number.isInteger(steamAppId) || steamAppId < 1) {
+      return this.assessment(false, 'duration_unavailable', {
+        steamAppId: 0,
+        title: input.title,
+        cover: input.cover ?? null,
+        steam: input.steam ?? '',
+        trailer: input.trailer ?? null,
+        summary: input.summary ?? null,
+        howLongToBeatUrl: null,
+        durationLabel: null,
+        mainHours: null,
+        mainExtraHours: null,
+        howLongToBeatTitle: null,
+      });
+    }
+
+    const steamDetails = await this.getSteamDetails(steamAppId);
+    const title = input.title.trim();
+    const baseGame: ResearchedGame = {
+      steamAppId,
+      title,
+      cover: input.cover ?? steamDetails.header_image ?? null,
+      steam: input.steam ?? `https://store.steampowered.com/app/${steamAppId}/`,
+      trailer:
+        input.trailer ?? (await this.findOfficialTrailer(steamDetails, title)),
+      summary: input.summary ?? steamDetails.short_description?.trim() ?? null,
+      howLongToBeatUrl: null,
+      durationLabel: null,
+      mainHours: null,
+      mainExtraHours: null,
+      howLongToBeatTitle: null,
+    };
+
+    if (steamDetails.type !== 'game') {
+      return this.assessment(false, 'not_a_game', baseGame);
+    }
+
+    const hltbMatch = await this.findHowLongToBeatMatch(title);
+    if (!hltbMatch?.game_id || !hltbMatch.comp_plus) {
+      return this.assessment(false, 'duration_unavailable', baseGame);
+    }
+
+    const mainHours = hltbMatch.comp_main ? hltbMatch.comp_main / 3600 : null;
+    const mainExtraHours = hltbMatch.comp_plus / 3600;
+    const durationLabel =
+      mainHours && Math.abs(mainHours - mainExtraHours) >= 0.25
+        ? `${formatHours(mainHours)}–${formatHours(mainExtraHours)} h`
+        : `${formatHours(mainExtraHours)} h`;
+
+    return this.assessResearchedGame({
+      ...baseGame,
+      howLongToBeatUrl: `${HLTB_URL}/game/${hltbMatch.game_id}`,
+      durationLabel,
+      mainHours,
+      mainExtraHours,
+      howLongToBeatTitle: hltbMatch.game_name?.trim() || title,
+    });
   }
 
   assessResearchedGame(game: ResearchedGame): GameResearchAssessment {

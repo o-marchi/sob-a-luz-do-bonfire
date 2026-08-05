@@ -73,6 +73,56 @@ describe('GameResearchService', () => {
     expect(assessment.game.mainExtraHours).toBeGreaterThan(20);
   });
 
+  it('researches a legacy catalog title without replacing its curated identity', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          '2369900': {
+            success: true,
+            data: {
+              type: 'game',
+              name: 'Castlevania Dominus Collection',
+              header_image: 'https://example.com/collection.jpg',
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ token: 'token' }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: [
+            {
+              game_id: 123,
+              game_name: 'Castlevania: Order of Ecclesia',
+              game_type: 'game',
+              comp_main: 11 * 3600,
+              comp_plus: 16 * 3600,
+            },
+          ],
+        }),
+      );
+
+    const assessment = await service.assessCatalogGame({
+      title: 'Castlevania: Order of Ecclesia',
+      steam:
+        'https://store.steampowered.com/app/2369900/Castlevania_Dominus_Collection/',
+      cover: 'https://example.com/curated.jpg',
+      trailer: 'https://example.com/curated-trailer',
+      summary: 'Curated summary.',
+    });
+
+    expect(assessment).toMatchObject({
+      eligible: true,
+      game: {
+        title: 'Castlevania: Order of Ecclesia',
+        cover: 'https://example.com/curated.jpg',
+        trailer: 'https://example.com/curated-trailer',
+        summary: 'Curated summary.',
+        mainExtraHours: 16,
+      },
+    });
+  });
+
   it('issues player-bound, expiring assessment tokens', () => {
     const game = {
       steamAppId: 42,

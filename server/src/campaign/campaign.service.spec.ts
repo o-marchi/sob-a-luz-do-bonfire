@@ -100,6 +100,24 @@ describe('CampaignService voting', () => {
     expect(campaign.pool?.options[1].players).toHaveLength(0);
   });
 
+  it('closes an expired election and rejects late votes', async () => {
+    const campaignRepository = dataSource.getRepository(Campaign);
+    const campaign = await campaignRepository.findOneByOrFail({
+      current: true,
+    });
+    campaign.electionStartedAt = '2026-08-01T20:00:00-03:00';
+    campaign.electionEndsAt = '2026-08-02T20:00:00-03:00';
+    await campaignRepository.save(campaign);
+
+    await expect(service.vote(player, options[1].id)).rejects.toThrow(
+      'A votação desta campanha está encerrada',
+    );
+
+    const current = await service.current();
+    expect(current.electionActive).toBe(false);
+    expect(current.electionClosedAt).toBeTruthy();
+  });
+
   it('handles concurrent first visits without duplicating campaign membership', async () => {
     await expect(
       Promise.all([service.current(player), service.current(player)]),

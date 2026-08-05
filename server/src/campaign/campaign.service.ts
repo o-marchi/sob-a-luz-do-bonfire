@@ -205,6 +205,16 @@ export class CampaignService {
         relations: this.defaultRelations,
       });
 
+    if (this.isElectionExpired(currentCampaign)) {
+      const closedAt = new Date().toISOString();
+      await this.campaignRepository.update(currentCampaign.id, {
+        electionActive: false,
+        electionClosedAt: closedAt,
+      });
+      currentCampaign.electionActive = false;
+      currentCampaign.electionClosedAt = closedAt;
+    }
+
     if (!player) {
       return currentCampaign;
     }
@@ -257,6 +267,7 @@ export class CampaignService {
   async undoVote(player: Player): Promise<Campaign> {
     await this.dataSource.transaction(async (manager) => {
       const currentCampaign = await this.findCurrentCampaignOrFail(manager);
+      this.assertElectionOpen(currentCampaign);
       const pool = currentCampaign.pool;
 
       if (!pool) {
@@ -282,6 +293,7 @@ export class CampaignService {
   async vote(player: Player, optionId: number): Promise<Campaign> {
     await this.dataSource.transaction(async (manager) => {
       const currentCampaign = await this.findCurrentCampaignOrFail(manager);
+      this.assertElectionOpen(currentCampaign);
       const pool = currentCampaign.pool;
 
       if (!pool) {
@@ -356,6 +368,10 @@ export class CampaignService {
     const campaign = await manager.getRepository(Campaign).findOne({
       where: { current: true },
       relations: this.defaultRelations,
+      lock:
+        manager.connection.options.type === 'postgres'
+          ? { mode: 'pessimistic_write' }
+          : undefined,
     });
 
     if (!campaign) {
@@ -363,5 +379,16 @@ export class CampaignService {
     }
 
     return campaign;
+  }
+
+  private assertElectionOpen(campaign: Campaign): void {
+    if (!campaign.electionActive || this.isElectionExpired(campaign)) {
+      throw new BadRequestException('A votação desta campanha está encerrada');
+    }
+  }
+
+  private isElectionExpired(campaign: Campaign): boolean {
+    if (!campaign.electionEndsAt) return false;
+    return new Date(campaign.electionEndsAt).getTime() <= Date.now();
   }
 }
