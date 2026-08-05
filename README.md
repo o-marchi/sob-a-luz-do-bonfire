@@ -126,9 +126,12 @@ JWT_SECRET=replace-with-a-long-random-secret
 DISCORD_CLIENT_ID=replace-with-discord-client-id
 DISCORD_CLIENT_SECRET=replace-with-discord-client-secret
 DISCORD_CALLBACK_URL=http://localhost:3000/auth/discord/callback
+DISCORD_GUILD_ID=1534325844619821170
 ```
 
 In the Discord Developer Portal, configure the OAuth redirect URL to match `DISCORD_CALLBACK_URL`.
+Discord login requests `guilds.members.read`; only members of `DISCORD_GUILD_ID` are allowed to
+sign in. The Bonfire server ID above is also the application default.
 
 ## Getting started
 

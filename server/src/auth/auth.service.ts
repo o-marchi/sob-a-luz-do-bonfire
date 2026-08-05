@@ -4,10 +4,10 @@ import type { Profile } from 'passport-discord';
 import { PlayersService } from '../players/players.service';
 import { Player } from '../players/entities/player.entity';
 import { MediaStorageService } from '../media/media-storage.service';
+import { DiscordMembershipService } from './discord-membership.service';
+import { BONFIRE_AUTH_VERSION } from './auth.constants';
 
-export type AuthPlayer = Player & {
-  accessToken: string;
-};
+export type AuthPlayer = Player;
 
 type DiscordProfileDetails = Profile & {
   email?: string | null;
@@ -23,16 +23,19 @@ export class AuthService {
     private readonly playersService: PlayersService,
     private readonly jwtService: JwtService,
     private readonly mediaStorageService: MediaStorageService,
+    private readonly discordMembershipService: DiscordMembershipService,
   ) {}
 
   async validateDiscordUser(
     profile: Profile,
     accessToken: string,
-    refreshToken: string,
   ): Promise<AuthPlayer> {
-    void refreshToken;
-
     const discordProfile = profile as DiscordProfileDetails;
+    await this.discordMembershipService.assertBonfireMember(
+      discordProfile.id,
+      accessToken,
+    );
+
     let avatar: string | undefined;
     if (discordProfile.avatar) {
       const discordAvatarUrl = this.playersService.buildDiscordAvatarUrl(
@@ -66,12 +69,18 @@ export class AuthService {
       player = await this.playersService.update(player.id, dto);
     }
 
-    return { ...player, accessToken };
+    return player;
   }
 
   async signToken(player: Player): Promise<string> {
     const { id, email, name, discord } = player;
-    return this.jwtService.signAsync({ id, email, name, discord });
+    return this.jwtService.signAsync({
+      id,
+      email,
+      name,
+      discord,
+      authVersion: BONFIRE_AUTH_VERSION,
+    });
   }
 
   private async storeDiscordAvatar(

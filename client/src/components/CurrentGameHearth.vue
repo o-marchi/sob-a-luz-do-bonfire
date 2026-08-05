@@ -15,12 +15,15 @@ import JourneyRoster from '@/components/JourneyRoster.vue'
 
 type SaveState = 'idle' | 'saving' | 'saved'
 
+const BONFIRE_DISCORD_URL = 'https://discord.com/channels/1534325844619821170'
+
 const props = defineProps<{
   campaign: Campaign
   game: Game
   campaignUser: CampaignPlayer | null
   journeyStatus: JourneyStatus
   saveState: SaveState
+  isAuthenticated: boolean
 }>()
 
 const emit = defineEmits<{
@@ -82,6 +85,20 @@ const coverStyle = computed(() => {
 })
 
 const durationLabel = computed(() => formatDurationLabel(props.game.durationLabel))
+
+const meetingHref = computed(() => {
+  if (!props.isAuthenticated) {
+    return null
+  }
+
+  if (props.campaign.meetingUrl) {
+    return props.campaign.meetingUrl
+  }
+
+  return props.campaign.meetingLocation?.toLocaleLowerCase().includes('discord')
+    ? BONFIRE_DISCORD_URL
+    : null
+})
 </script>
 
 <template>
@@ -93,12 +110,12 @@ const durationLabel = computed(() => formatDurationLabel(props.game.durationLabe
       </div>
 
       <component
-        :is="campaign.meetingUrl ? 'a' : 'div'"
+        :is="meetingHref ? 'a' : 'div'"
         v-if="meeting || campaign.meetingLocation"
         class="meeting-callout"
-        :href="campaign.meetingUrl || undefined"
-        :target="campaign.meetingUrl ? '_blank' : undefined"
-        :rel="campaign.meetingUrl ? 'noopener noreferrer' : undefined"
+        :href="meetingHref || undefined"
+        :target="meetingHref ? '_blank' : undefined"
+        :rel="meetingHref ? 'noopener noreferrer' : undefined"
       >
         <n-icon size="17"><CalendarOutline /></n-icon>
         <span>
