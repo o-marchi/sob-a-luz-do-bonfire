@@ -901,56 +901,6 @@ body.bonfire-inner-page .user-menu-popover {
   font-weight: 700;
 }
 
-.guaranteed-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 9px;
-}
-
-.guaranteed-game {
-  display: flex;
-  min-width: 0;
-  min-height: 76px;
-  align-items: stretch;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  border-radius: 6px;
-  background: rgba(9, 8, 12, 0.35);
-}
-
-.guaranteed-game__art {
-  width: 92px;
-  flex: 0 0 auto;
-  background-position: center;
-  background-size: cover;
-}
-
-.guaranteed-game > div:last-child {
-  display: grid;
-  min-width: 0;
-  padding: 10px 12px;
-  align-content: center;
-}
-
-.guaranteed-game small {
-  color: rgba(242, 164, 92, 0.72);
-  font-size: 8px;
-  font-weight: 850;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.guaranteed-game h5 {
-  margin: 3px 0 2px;
-  overflow: hidden;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 13px;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.guaranteed-game span,
 .guaranteed-empty,
 .random-selection__empty,
 .mystery-draw p {
@@ -970,6 +920,7 @@ body.bonfire-inner-page .user-menu-popover {
   display: grid;
   justify-items: center;
   text-align: center;
+  margin-top: 30px;
 }
 
 .mystery-draw p {
@@ -1015,16 +966,30 @@ body.bonfire-inner-page .user-menu-popover {
   margin-top: 30px;
 }
 
-.random-selection .reveal-grid {
-  grid-template-columns: repeat(auto-fill, minmax(168px, 220px));
-  justify-content: start;
+.cycle-catalog-grid {
+  gap: 14px;
 }
 
-.reveal-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
-  gap: 14px;
-  margin: 32px 0 22px;
+.cycle-catalog-grid .backlog-card__art {
+  height: 145px;
+}
+
+.cycle-catalog-grid .backlog-card__footer {
+  min-height: 58px;
+  padding: 11px 12px;
+}
+
+.cycle-catalog-grid--reveal {
+  margin: 24px 0 20px;
+}
+
+.cycle-catalog-card {
+  min-width: 0;
+  animation: card-reveal 560ms cubic-bezier(0.2, 0.82, 0.25, 1) both;
+}
+
+.cycle-catalog-card .backlog-card {
+  height: 100%;
 }
 
 .reveal-card {
@@ -1040,57 +1005,8 @@ body.bonfire-inner-page .user-menu-popover {
   animation: card-reveal 560ms cubic-bezier(0.2, 0.82, 0.25, 1) both;
 }
 
-.reveal-card__art {
-  position: relative;
-  min-height: 118px;
-  background-position: center;
-  background-size: cover;
-}
-
-.reveal-card__art::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(transparent 28%, rgba(15, 11, 16, 0.92));
-}
-
-.reveal-card__art span {
-  position: absolute;
-  z-index: 1;
-  left: 11px;
-  bottom: 9px;
-  color: #ffbd78;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-.reveal-card__body {
-  min-height: 118px;
-  padding: 14px;
-}
-
-.reveal-card__body small {
-  color: rgba(247, 222, 208, 0.32);
-}
-
-.reveal-card__body h4 {
-  margin: 6px 0 12px;
-  color: #fff4e9;
-  font-family: 'Mulish', sans-serif;
-  font-size: 16px;
-  font-weight: 820;
-  line-height: 1.25;
-}
-
-.reveal-card__body p {
-  color: rgba(247, 222, 208, 0.58);
-  font-size: 12px;
-}
-
 .reveal-card--hidden {
-  min-height: 237px;
+  min-height: 205px;
   display: grid;
   place-items: center;
   align-content: center;
@@ -1111,6 +1027,39 @@ body.bonfire-inner-page .user-menu-popover {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.results-privacy {
+  display: flex;
+  margin-top: 28px;
+  padding: 26px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  border: 1px solid rgba(242, 164, 92, 0.18);
+  border-radius: 7px;
+  background:
+    radial-gradient(circle at 15% 0, rgba(159, 66, 39, 0.12), transparent 42%), rgba(9, 8, 12, 0.38);
+}
+
+.results-privacy h4 {
+  margin: 5px 0 7px;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'Mulish', sans-serif;
+  font-size: 20px;
+}
+
+.results-privacy p {
+  max-width: 590px;
+  margin: 0;
+  color: rgba(247, 222, 208, 0.5);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.results-revealed-actions {
+  justify-content: flex-end;
+  margin-top: 20px;
 }
 
 .election-launch {
@@ -1412,10 +1361,6 @@ body.bonfire-inner-page .user-menu-popover {
     grid-template-columns: 1fr;
   }
 
-  .random-selection .reveal-grid {
-    grid-template-columns: 1fr;
-  }
-
   .result-row {
     flex-wrap: wrap;
     gap: 10px;
@@ -1429,11 +1374,17 @@ body.bonfire-inner-page .user-menu-popover {
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .results-privacy {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .cycle-status--active span,
-  .reveal-card {
+  .reveal-card,
+  .cycle-catalog-card {
     animation: none;
   }
 }

@@ -6,6 +6,7 @@ import { useMessage } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useCampaignStore } from '@/stores/campaign'
+import BacklogGameCard from '@/components/BacklogGameCard.vue'
 import {
   applyCycleTransition,
   cancelCycleElection,
@@ -14,7 +15,7 @@ import {
   previewCycleTransition,
   startCycleElection,
 } from '@/services/cycleService'
-import { getGameCover } from '@/services/gameService'
+import { getGameBacklog } from '@/services/gameService'
 import type {
   CycleDraw,
   CycleOverview,
@@ -22,6 +23,22 @@ import type {
   CycleTransitionPreview,
   ElectionResultOption,
 } from '@/types/Cycle'
+import type { BacklogGame, Game, GameBacklog } from '@/types/Game'
+
+const PORTUGUESE_MONTHS = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+]
 
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
@@ -30,6 +47,7 @@ const router = useRouter()
 const message = useMessage()
 
 const overview = ref<CycleOverview | null>(null)
+const backlog = ref<GameBacklog | null>(null)
 const draw = ref<CycleDraw | null>(null)
 const transitionPreview = ref<CycleTransitionPreview | null>(null)
 const loading = ref(true)
@@ -39,6 +57,7 @@ const cancellingElection = ref(false)
 const confirmingCancellation = ref(false)
 const previewing = ref(false)
 const applying = ref(false)
+const resultsRevealed = ref(false)
 const revealCount = ref(0)
 const electionEndsAt = ref('')
 const winnerGameId = ref<number | undefined>()
@@ -72,7 +91,23 @@ const allRevealed = computed(() =>
   Boolean(draw.value && revealCount.value >= draw.value.revealOrder.length),
 )
 const nextMondayDeadline = computed(() => getNextMondayBoundary())
-const nextMonthDeadline = computed(() => getNextMonthBoundary())
+const nextMonthDeadline = computed(
+  () =>
+    getCampaignMonthBoundary(
+      overview.value?.nextCampaign.month,
+      overview.value?.nextCampaign.year,
+    ) ?? getNextMonthBoundary(),
+)
+const catalogGamesById = computed(
+  () =>
+    new Map(
+      [...(backlog.value?.games ?? []), ...(backlog.value?.rubble ?? [])].map((game) => [
+        game.id,
+        game,
+      ]),
+    ),
+)
+const retirementThreshold = computed(() => backlog.value?.retirementThreshold ?? 3)
 const sortedElectionResult = computed(() =>
   [...(overview.value?.electionResult ?? [])].sort(
     (left, right) => right.tokens - left.tokens || left.game.localeCompare(right.game, 'pt-BR'),
@@ -83,9 +118,6 @@ const leadingOptions = computed(() => {
   const max = sortedElectionResult.value[0].tokens
   return sortedElectionResult.value.filter((option) => option.tokens === max)
 })
-const totalVotes = computed(() =>
-  (overview.value?.electionResult ?? []).reduce((total, option) => total + option.voters.length, 0),
-)
 const discordPreview = computed(() => transitionPreview.value?.discord ?? null)
 
 onMounted(async () => {
@@ -103,16 +135,45 @@ onBeforeUnmount(stopReveal)
 async function loadOverview() {
   loading.value = true
   try {
-    overview.value = await getCycleOverview()
-    nextMonth.value = overview.value.nextCampaign.month
-    nextYear.value = overview.value.nextCampaign.year
-    discordEnabled.value = overview.value.discordConfigured
-    setDefaultWinner(overview.value.electionResult)
+    const [loadedOverview, loadedBacklog] = await Promise.all([
+      getCycleOverview(),
+      getGameBacklog(),
+    ])
+    overview.value = loadedOverview
+    backlog.value = loadedBacklog
+    nextMonth.value = loadedOverview.nextCampaign.month
+    nextYear.value = loadedOverview.nextCampaign.year
+    discordEnabled.value = loadedOverview.discordConfigured
+    resultsRevealed.value = false
+    setDefaultWinner(loadedOverview.electionResult)
+
+    if (!loadedOverview.campaign.electionStartedAt) {
+      electionEndsAt.value = toLocalDateTimeInput(nextMonthDeadline.value)
+    }
+    if (!meetingAt.value) {
+      const nextMeeting = getLastThursdayOfMonth(
+        loadedOverview.nextCampaign.month,
+        loadedOverview.nextCampaign.year,
+        loadedOverview.campaign.meetingAt,
+      )
+      meetingAt.value = nextMeeting ? toLocalDateTimeInput(nextMeeting) : ''
+    }
   } catch (error) {
     message.error(getErrorMessage(error, 'Não foi possível carregar a condução do ciclo.'))
   } finally {
     loading.value = false
   }
+}
+
+function asBacklogGame(game: Game): BacklogGame {
+  return (
+    catalogGamesById.value.get(game.id) ?? {
+      ...game,
+      electionAppearances: 0,
+      guaranteedNextVote: guaranteedGames.value.some((guaranteed) => guaranteed.id === game.id),
+      recommendedBy: game.recommendedBy ?? [],
+    }
+  )
 }
 
 function setDefaultWinner(result: ElectionResultOption[]) {
@@ -281,6 +342,33 @@ function getNextMonthBoundary(from = new Date()): Date {
   return new Date(from.getFullYear(), from.getMonth() + 1, 1, 0, 0, 0, 0)
 }
 
+function getCampaignMonthBoundary(month?: string, year?: string): Date | null {
+  const monthIndex = PORTUGUESE_MONTHS.findIndex(
+    (candidate) =>
+      candidate.toLocaleLowerCase('pt-BR') === month?.trim().toLocaleLowerCase('pt-BR'),
+  )
+  const numericYear = Number(year)
+  if (monthIndex < 0 || !Number.isInteger(numericYear)) return null
+  return new Date(numericYear, monthIndex, 1, 0, 0, 0, 0)
+}
+
+function getLastThursdayOfMonth(
+  month: string,
+  year: string,
+  previousMeetingAt?: string | null,
+): Date | null {
+  const monthStart = getCampaignMonthBoundary(month, year)
+  if (!monthStart) return null
+  const meeting = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0, 20, 0, 0, 0)
+  while (meeting.getDay() !== 4) meeting.setDate(meeting.getDate() - 1)
+
+  const previousMeeting = previousMeetingAt ? new Date(previousMeetingAt) : null
+  if (previousMeeting && Number.isFinite(previousMeeting.getTime())) {
+    meeting.setHours(previousMeeting.getHours(), previousMeeting.getMinutes(), 0, 0)
+  }
+  return meeting
+}
+
 function formatDeadline(date: Date): string {
   return new Intl.DateTimeFormat('pt-BR', {
     weekday: 'short',
@@ -370,23 +458,14 @@ function getErrorMessage(error: unknown, fallback: string): string {
             </div>
             <strong>nenhum deles será removido</strong>
           </header>
-          <div class="guaranteed-grid">
-            <article v-for="game in guaranteedGames" :key="game.id" class="guaranteed-game">
-              <div
-                class="guaranteed-game__art"
-                :style="{ backgroundImage: `url('${getGameCover(game)}')` }"
-              ></div>
-              <div>
-                <small>Sugestão da roda</small>
-                <h5>{{ game.title }}</h5>
-                <span>
-                  {{
-                    game.durationLabel ||
-                    (game.mainExtraHours != null ? `${game.mainExtraHours} h` : 'Duração pendente')
-                  }}
-                </span>
-              </div>
-            </article>
+          <div class="backlog-grid cycle-catalog-grid">
+            <BacklogGameCard
+              v-for="game in guaranteedGames"
+              :key="game.id"
+              :game="asBacklogGame(game)"
+              :retirement-threshold="retirementThreshold"
+              next-vote
+            />
           </div>
         </section>
 
@@ -432,36 +511,25 @@ function getErrorMessage(error: unknown, fallback: string): string {
                 {{ draw.selectedFillers.length === 1 ? 'jogo sorteado' : 'jogos sorteados' }}
               </strong>
             </header>
-            <div class="reveal-grid" aria-live="polite">
-              <article
+            <div
+              class="backlog-grid cycle-catalog-grid cycle-catalog-grid--reveal"
+              aria-live="polite"
+            >
+              <div
                 v-for="(game, index) in revealedGames"
                 :key="game.id"
-                class="reveal-card"
+                class="cycle-catalog-card"
                 :style="{ '--reveal-index': index }"
               >
-                <div
-                  class="reveal-card__art"
-                  :style="{ backgroundImage: `url('${getGameCover(game)}')` }"
-                >
-                  <span>Sorteado das Brasas</span>
-                </div>
-                <div class="reveal-card__body">
-                  <small>{{ String(index + 1).padStart(2, '0') }}</small>
-                  <h4>{{ game.title }}</h4>
-                  <p>
-                    {{
-                      game.durationLabel ||
-                      (game.mainExtraHours != null
-                        ? `${game.mainExtraHours} h`
-                        : 'Duração pendente')
-                    }}
-                  </p>
-                </div>
-              </article>
+                <BacklogGameCard
+                  :game="asBacklogGame(game)"
+                  :retirement-threshold="retirementThreshold"
+                />
+              </div>
 
               <button
                 v-if="!allRevealed"
-                class="reveal-card reveal-card--hidden"
+                class="reveal-card reveal-card--hidden cycle-catalog-mystery"
                 type="button"
                 @click="revealNext"
               >
@@ -532,7 +600,27 @@ function getErrorMessage(error: unknown, fallback: string): string {
           <strong v-else>votação encerrada</strong>
         </div>
 
-        <div class="result-list">
+        <div v-if="!resultsRevealed" class="results-privacy">
+          <div>
+            <span class="cycle-eyebrow">Contagem protegida</span>
+            <h4>Os resultados estão ocultos</h4>
+            <p>
+              Nenhum jogo, voto ou token aparece até você decidir revelar. Assim a tela pode ser
+              compartilhada sem entregar quem está na frente.
+            </p>
+          </div>
+          <div class="game-links">
+            <button data-testid="reveal-results" type="button" @click="resultsRevealed = true">
+              Revelar resultados
+            </button>
+          </div>
+        </div>
+
+        <div v-if="resultsRevealed" class="results-revealed-actions game-links">
+          <button type="button" @click="resultsRevealed = false">Ocultar resultados</button>
+        </div>
+
+        <div v-if="resultsRevealed" class="result-list">
           <label
             v-for="(option, index) in sortedElectionResult"
             :key="option.gameId"
@@ -567,14 +655,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
           <template v-else>
             <div>
               <strong>Apagar esta votação?</strong>
-              <span>
-                O pool será removido e
-                {{
-                  totalVotes === 1
-                    ? '1 voto será descartado'
-                    : `${totalVotes} votos serão descartados`
-                }}.
-              </span>
+              <span>O pool será removido e os votos já registrados serão descartados.</span>
             </div>
             <div class="cycle-undo__actions game-links">
               <button
@@ -596,11 +677,11 @@ function getErrorMessage(error: unknown, fallback: string): string {
           </template>
         </aside>
 
-        <p v-if="leadingOptions.length > 1" class="cycle-warning">
+        <p v-if="resultsRevealed && leadingOptions.length > 1" class="cycle-warning">
           Empate na liderança. Escolha acima qual jogo recebe a chama.
         </p>
 
-        <form class="transition-form" @submit.prevent="prepareTransition">
+        <form v-if="resultsRevealed" class="transition-form" @submit.prevent="prepareTransition">
           <div class="transition-form__grid">
             <label class="cycle-field">
               <span>Mês</span>
@@ -657,7 +738,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
           </div>
         </form>
 
-        <div v-if="discordPreview && discordEnabled" class="discord-controls">
+        <div v-if="resultsRevealed && discordPreview && discordEnabled" class="discord-controls">
           <h4>Ajustes do Discord</h4>
           <div class="transition-form__grid">
             <label class="cycle-field">
@@ -728,7 +809,11 @@ function getErrorMessage(error: unknown, fallback: string): string {
           </div>
         </div>
 
-        <section v-if="transitionPreview" class="transition-preview" aria-live="polite">
+        <section
+          v-if="resultsRevealed && transitionPreview"
+          class="transition-preview"
+          aria-live="polite"
+        >
           <div
             v-if="transitionPreview.errors.length"
             class="preview-notices preview-notices--error"

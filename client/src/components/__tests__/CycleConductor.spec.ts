@@ -13,6 +13,9 @@ const cycleServiceMocks = vi.hoisted(() => ({
   previewCycleTransition: vi.fn(),
   applyCycleTransition: vi.fn(),
 }))
+const gameServiceMocks = vi.hoisted(() => ({
+  getGameBacklog: vi.fn(),
+}))
 const messageMocks = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
@@ -20,7 +23,11 @@ const messageMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/services/cycleService', () => cycleServiceMocks)
-vi.mock('@/services/gameService', () => ({ getGameCover: vi.fn(() => '') }))
+vi.mock('@/services/gameService', () => ({
+  getGameBacklog: gameServiceMocks.getGameBacklog,
+  getGameCover: vi.fn(() => ''),
+  formatDurationLabel: vi.fn((label?: string | null) => label ?? ''),
+}))
 vi.mock('vue-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('vue-router')>()),
   useRouter: () => ({ replace: vi.fn() }),
@@ -58,6 +65,30 @@ describe('CycleConductor', () => {
       nextCampaign: { month: 'Setembro', year: '2026' },
       discordConfigured: true,
     })
+    gameServiceMocks.getGameBacklog.mockResolvedValue({
+      games: [
+        {
+          id: 1,
+          title: 'Suggested Game',
+          suggestion: true,
+          electionAppearances: 2,
+          guaranteedNextVote: true,
+          recommendedBy: [{ id: 7, name: 'Ana', avatar: null }],
+        },
+        {
+          id: 2,
+          title: 'Random Game',
+          suggestion: true,
+          electionAppearances: 1,
+          guaranteedNextVote: false,
+          recommendedBy: [{ id: 8, name: 'Bia', avatar: null }],
+        },
+      ],
+      rubble: [],
+      retirementThreshold: 3,
+      targetPoolSize: 5,
+      nextVoteFillCount: 4,
+    })
     cycleServiceMocks.drawCyclePool.mockResolvedValue({
       campaignId: 17,
       targetPoolSize: 5,
@@ -90,6 +121,8 @@ describe('CycleConductor', () => {
     expect(wrapper.text()).toContain('Formar a próxima votação')
     expect(wrapper.text()).toContain('Suggested Game')
     expect(wrapper.text()).toContain('nenhum deles será removido')
+    expect(wrapper.findAll('.backlog-card')).toHaveLength(1)
+    expect(wrapper.text()).toContain('2 / 3')
     expect(wrapper.get('[data-testid="draw-games"]').classes()).not.toContain('n-button')
     await wrapper.get('[data-testid="draw-games"]').trigger('click')
     await flushPromises()
@@ -101,12 +134,16 @@ describe('CycleConductor', () => {
 
     expect(wrapper.text()).toContain('Random Game')
     expect(wrapper.text()).toContain('Suggested Game')
+    expect(wrapper.findAll('.backlog-card')).toHaveLength(2)
     expect(wrapper.text()).toContain('A roda está formada')
 
     await wrapper.get('[data-testid="start-election"]').trigger('click')
     await flushPromises()
 
-    expect(cycleServiceMocks.startCycleElection).toHaveBeenCalledWith('signed-draw', undefined)
+    expect(cycleServiceMocks.startCycleElection).toHaveBeenCalledWith(
+      'signed-draw',
+      '2026-09-01T00:00:00-03:00',
+    )
     expect(messageMocks.success).toHaveBeenCalledWith(
       'A votação está acesa. O grupo já pode votar.',
     )
@@ -122,6 +159,7 @@ describe('CycleConductor', () => {
     await wrapper.get('.reveal-card--hidden').trigger('click')
 
     const deadlineInput = wrapper.get<HTMLInputElement>('input[type="datetime-local"]')
+    expect(deadlineInput.element.value).toBe('2026-09-01T00:00')
     const mondayButton = wrapper
       .findAll('button')
       .find((button) => button.text().includes('Virada para segunda'))
@@ -146,6 +184,7 @@ describe('CycleConductor', () => {
         current: true,
         electionActive: true,
         electionStartedAt: '2026-08-05T20:00:00-03:00',
+        meetingAt: '2026-08-27T20:00:00-03:00',
         pool: { options: [{ id: 1, game: { id: 1, title: 'Game' } }] },
       },
       guaranteedGames: [],
@@ -166,9 +205,24 @@ describe('CycleConductor', () => {
     const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
     await flushPromises()
 
+    expect(wrapper.text()).toContain('Os resultados estão ocultos')
+    expect(wrapper.text()).not.toContain('3 tokens')
+    expect(wrapper.find('.result-list').exists()).toBe(false)
+    await wrapper.get('[data-testid="reveal-results"]').trigger('click')
+    expect(wrapper.text()).toContain('3 tokens')
+    expect(wrapper.get<HTMLInputElement>('input[type="datetime-local"]').element.value).toBe(
+      '2026-09-24T20:00',
+    )
+    const hideResults = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Ocultar resultados'))
+    await hideResults?.trigger('click')
+    expect(wrapper.text()).not.toContain('3 tokens')
+    expect(wrapper.find('.result-list').exists()).toBe(false)
+
     await wrapper.get('.cycle-undo .game-links button').trigger('click')
     expect(cycleServiceMocks.cancelCycleElection).not.toHaveBeenCalled()
-    expect(wrapper.text()).toContain('1 voto será descartado')
+    expect(wrapper.text()).toContain('os votos já registrados serão descartados')
 
     await wrapper.get('[data-testid="confirm-cancel-election"]').trigger('click')
     await flushPromises()
