@@ -18,6 +18,8 @@ import { CampaignPlayer } from './entities/campaign-player.entity';
 import { Player } from '../players/entities/player.entity';
 import { UpdateGameInformationDto } from './dto/update-game-information.dto';
 import { PoolOption } from '../pool/entities/pool-option.entity';
+import { GameRecommendation } from '../games/entities/game-recommendation.entity';
+import { GameRecommender, normalizeGameIdentity } from '../games/games.service';
 
 const normalizeMonth = (month: string): string =>
   month
@@ -76,6 +78,8 @@ export class CampaignService {
     private campaignRepository: Repository<Campaign>,
     @InjectRepository(CampaignPlayer)
     private campaignPlayerRepository: Repository<CampaignPlayer>,
+    @InjectRepository(GameRecommendation)
+    private gameRecommendationRepository: Repository<GameRecommendation>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -215,20 +219,60 @@ export class CampaignService {
       currentCampaign.electionClosedAt = closedAt;
     }
 
-    if (!player) {
-      return currentCampaign;
+    if (player) {
+      const wasPlayerAdded = await this.addPlayer(currentCampaign, player);
+
+      if (wasPlayerAdded) {
+        const reloadedCampaign = await this.campaignRepository.findOneOrFail({
+          where: { current: true },
+          relations: this.defaultRelations,
+        });
+        return this.attachPoolRecommenders(reloadedCampaign);
+      }
     }
 
-    const wasPlayerAdded = await this.addPlayer(currentCampaign, player);
+    return this.attachPoolRecommenders(currentCampaign);
+  }
 
-    if (wasPlayerAdded) {
-      return this.campaignRepository.findOneOrFail({
-        where: { current: true },
-        relations: this.defaultRelations,
+  private async attachPoolRecommenders(campaign: Campaign): Promise<Campaign> {
+    if (!campaign.pool?.options.length) return campaign;
+
+    const recommendations = await this.gameRecommendationRepository.find({
+      relations: ['game', 'player'],
+    });
+    const recommendersByIdentity = new Map<
+      string,
+      Map<number, GameRecommender>
+    >();
+
+    for (const recommendation of recommendations) {
+      const identity = normalizeGameIdentity(recommendation.game);
+      const recommenders =
+        recommendersByIdentity.get(identity) ??
+        new Map<number, GameRecommender>();
+      const player = recommendation.player;
+      recommenders.set(player.id, {
+        id: player.id,
+        name:
+          player.discord?.globalName ??
+          player.name ??
+          player.discord?.username ??
+          'Participante',
+        avatar: player.discord?.avatar ?? null,
       });
+      recommendersByIdentity.set(identity, recommenders);
     }
 
-    return currentCampaign;
+    for (const option of campaign.pool.options) {
+      const recommenders = Array.from(
+        recommendersByIdentity
+          .get(normalizeGameIdentity(option.game))
+          ?.values() ?? [],
+      ).sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+      Object.assign(option.game, { recommendedBy: recommenders });
+    }
+
+    return campaign;
   }
 
   getPlayerCampaign(campaign: Campaign, player: Player): CampaignPlayer | null {

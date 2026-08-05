@@ -236,6 +236,11 @@ export class GamesService {
   }
 
   async searchRecommendations(query: string): Promise<SteamGameSearchResult[]> {
+    const campaign = await this.campaignRepository.findOneBy({
+      current: true,
+    });
+    this.assertRecommendationsOpen(campaign);
+
     const normalizedQuery = normalizeGameTitle(query);
     const localResults = (
       await this.gameRepository.find({ order: { title: 'ASC' } })
@@ -284,6 +289,7 @@ export class GamesService {
     if (!campaign) {
       throw new NotFoundException('No current campaign found');
     }
+    this.assertRecommendationsOpen(campaign);
 
     const localGame = (await this.gameRepository.find()).find(
       (game) => extractSteamAppId(game.steam) === steamAppId,
@@ -332,6 +338,10 @@ export class GamesService {
     assessmentToken: string,
     player: Player,
   ): Promise<CreatedGameRecommendation> {
+    this.assertRecommendationsOpen(
+      await this.campaignRepository.findOneBy({ current: true }),
+    );
+
     let researchedGame: ResearchedGame;
 
     try {
@@ -359,6 +369,7 @@ export class GamesService {
       if (!campaign) {
         throw new NotFoundException('No current campaign found');
       }
+      this.assertRecommendationsOpen(campaign);
 
       let game = await this.findEquivalentGame(manager, researchedGame);
       const alreadySuggestedGame = campaign.players.find(
@@ -467,6 +478,7 @@ export class GamesService {
       if (!campaign) {
         throw new NotFoundException('No current campaign found');
       }
+      this.assertRecommendationsOpen(campaign);
 
       const campaignPlayer = campaign.players.find(
         (entry) => entry.player.id === player.id,
@@ -609,6 +621,14 @@ export class GamesService {
         backlogGames.filter((game) => !game.guaranteedNextVote).length,
       ),
     };
+  }
+
+  private assertRecommendationsOpen(campaign: Campaign | null): void {
+    if (campaign?.electionActive) {
+      throw new BadRequestException(
+        'As sugestões ficam fechadas enquanto a votação está acesa.',
+      );
+    }
   }
 
   async findOne(id: number): Promise<GameWithRecommenders | null> {

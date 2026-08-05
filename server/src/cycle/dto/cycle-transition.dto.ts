@@ -79,7 +79,7 @@ export class PreviewCycleTransitionDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(240)
+  @MaxLength(1000)
   description?: string;
 
   @IsOptional()

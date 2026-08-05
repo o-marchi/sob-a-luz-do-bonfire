@@ -51,6 +51,10 @@ describe('ElectionView', () => {
             summary: 'A primeira jornada da roda.',
             durationLabel: '12 horas',
             steam: 'https://store.steampowered.com/app/1',
+            recommendedBy: [
+              { id: 17, name: 'Bia', avatar: null },
+              { id: 18, name: 'Caio', avatar: null },
+            ],
           },
         },
         {
@@ -78,6 +82,7 @@ describe('ElectionView', () => {
     expect(wrapper.findAll('.election-card')).toHaveLength(2)
     expect(wrapper.text()).toContain('The First Game')
     expect(wrapper.text()).toContain('12 horas')
+    expect(wrapper.text()).toContain('Apresentado por Bia e Caio')
     expect(wrapper.text()).not.toContain('12 tokens')
     expect(wrapper.text()).not.toContain('4 tokens')
 

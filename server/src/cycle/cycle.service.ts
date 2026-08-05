@@ -639,13 +639,11 @@ export class CycleService {
     const summary =
       game.summary?.replace(/\s+/g, ' ').trim() ||
       'Uma nova jornada escolhida ao redor da fogueira.';
-    const firstSentence = summary.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim();
-    const phrase = firstSentence || summary;
-    if (phrase.length <= 220) return phrase;
+    if (summary.length <= 1000) return summary;
 
-    const shortened = phrase.slice(0, 219);
+    const shortened = summary.slice(0, 999);
     const lastSpace = shortened.lastIndexOf(' ');
-    return `${shortened.slice(0, lastSpace > 160 ? lastSpace : 219).trim()}…`;
+    return `${shortened.slice(0, lastSpace > 900 ? lastSpace : 999).trim()}…`;
   }
 
   private getNextCampaignDefaults(campaign: Campaign): {

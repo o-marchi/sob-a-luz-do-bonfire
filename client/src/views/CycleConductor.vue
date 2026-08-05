@@ -194,7 +194,7 @@ function syncDescriptionWithWinner() {
   const winner = campaign.value?.pool?.options.find(
     (option) => option.game.id === winnerGameId.value,
   )?.game
-  description.value = winner ? buildCampaignPhrase(winner) : ''
+  description.value = winner ? buildCampaignDescription(winner) : ''
 }
 
 async function drawGames() {
@@ -397,16 +397,14 @@ function formatDeadline(date: Date): string {
   }).format(date)
 }
 
-function buildCampaignPhrase(game: Game): string {
+function buildCampaignDescription(game: Game): string {
   const summary =
     game.summary?.replace(/\s+/g, ' ').trim() || 'Uma nova jornada escolhida ao redor da fogueira.'
-  const firstSentence = summary.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim()
-  const phrase = firstSentence || summary
-  if (phrase.length <= 220) return phrase
+  if (summary.length <= 1000) return summary
 
-  const shortened = phrase.slice(0, 219)
+  const shortened = summary.slice(0, 999)
   const lastSpace = shortened.lastIndexOf(' ')
-  return `${shortened.slice(0, lastSpace > 160 ? lastSpace : 219).trim()}…`
+  return `${shortened.slice(0, lastSpace > 900 ? lastSpace : 999).trim()}…`
 }
 
 function toOffsetIso(localValue: string): string {
@@ -738,14 +736,14 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
           <label class="cycle-field">
             <span>
-              Frase da campanha
-              <small>preenchida com o resumo curto salvo do jogo vencedor</small>
+              Descrição da campanha
+              <small>descrição curta salva diretamente da Steam</small>
             </span>
             <textarea
               v-model="description"
               rows="3"
-              maxlength="240"
-              placeholder="Uma frase curta sobre esta jornada."
+              maxlength="1000"
+              placeholder="A descrição curta do jogo vencedor aparecerá aqui."
               @input="descriptionEdited = true"
             ></textarea>
           </label>

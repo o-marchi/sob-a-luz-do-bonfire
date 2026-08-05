@@ -192,7 +192,7 @@ describe('CycleConductor', () => {
               game: {
                 id: 1,
                 title: 'Game',
-                summary: 'Uma frase curta da Steam. O restante não entra.',
+                summary: 'Uma descrição curta da Steam. A segunda frase também permanece.',
               },
             },
           ],
@@ -222,7 +222,7 @@ describe('CycleConductor', () => {
     expect(wrapper.find('.result-list').exists()).toBe(true)
     expect(wrapper.find('.transition-form').exists()).toBe(true)
     expect(wrapper.get<HTMLTextAreaElement>('textarea').element.value).toBe(
-      'Uma frase curta da Steam.',
+      'Uma descrição curta da Steam. A segunda frase também permanece.',
     )
     expect(wrapper.findAll('.cycle-field > span').some((field) => field.text() === 'Local')).toBe(
       false,

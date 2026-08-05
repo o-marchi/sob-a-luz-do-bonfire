@@ -309,7 +309,7 @@ describe('CycleService', () => {
       title: 'Winning Game',
       suggestion: true,
       mainExtraHours: 9,
-      summary: 'Uma jornada curta.',
+      summary: 'Uma jornada curta. A descrição completa continua aqui.',
       steam: 'https://store.steampowered.com/app/42/',
     });
     const runnerUp = await saveGame({
@@ -371,7 +371,7 @@ describe('CycleService', () => {
       campaign: {
         month: 'Setembro',
         year: '2026',
-        description: 'Uma jornada curta.',
+        description: 'Uma jornada curta. A descrição completa continua aqui.',
       },
     });
     expect(preview.confirmationToken).toBeTruthy();

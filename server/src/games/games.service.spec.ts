@@ -381,6 +381,43 @@ describe('GamesService backlog', () => {
     });
   });
 
+  it('blocks recommendation work while the current election is active', async () => {
+    const player = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Ana' }));
+    const campaign = await dataSource.getRepository(Campaign).save(
+      dataSource.getRepository(Campaign).create({
+        month: 'Agosto',
+        year: '2026',
+        current: true,
+        electionActive: true,
+        players: [],
+      }),
+    );
+    await dataSource.getRepository(CampaignPlayer).save(
+      dataSource.getRepository(CampaignPlayer).create({
+        campaign,
+        player,
+        suggested_a_game: false,
+      }),
+    );
+
+    await expect(service.searchRecommendations('game')).rejects.toThrow(
+      'As sugestões ficam fechadas enquanto a votação está acesa.',
+    );
+    await expect(service.assessRecommendation(42, player)).rejects.toThrow(
+      'As sugestões ficam fechadas enquanto a votação está acesa.',
+    );
+    await expect(service.recommend('signed-token', player)).rejects.toThrow(
+      'As sugestões ficam fechadas enquanto a votação está acesa.',
+    );
+    await expect(service.withdrawRecommendation(player)).rejects.toThrow(
+      'As sugestões ficam fechadas enquanto a votação está acesa.',
+    );
+    expect(researchService.searchSteam).not.toHaveBeenCalled();
+    expect(researchService.assessSteamGame).not.toHaveBeenCalled();
+  });
+
   it('keeps an explicitly re-suggested ashes game in the next-vote shelf', async () => {
     const game = (
       await saveGames([{ title: 'A Return From Ashes', suggestion: true }])

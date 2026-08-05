@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth'
 import { formatDurationLabel, getGameCover } from '@/services/gameService'
 import { undoVote, vote } from '@/services/campaignService'
 import type { PoolOption } from '@/types/Campaign'
+import type { GameRecommender } from '@/types/Game'
 import type { User } from '@/types/User'
 
 const campaignStore = useCampaignStore()
@@ -15,6 +16,7 @@ const { electionActive, election: pool } = storeToRefs(campaignStore)
 const { user } = storeToRefs(useAuthStore())
 
 const loadingVote = ref<boolean | number>(false)
+const failedRecommenderAvatars = ref(new Set<number>())
 const message = useMessage()
 
 const didIVoteForThis = (players: User[]) =>
@@ -27,6 +29,31 @@ const selectedOption = computed(() =>
 const durationLabel = (option: PoolOption) =>
   formatDurationLabel(option.game.durationLabel) ||
   (option.game.mainExtraHours != null ? `${option.game.mainExtraHours} h` : '')
+
+const hasRecommenderAvatar = (recommender: GameRecommender) =>
+  Boolean(recommender.avatar) && !failedRecommenderAvatars.value.has(recommender.id)
+
+const markRecommenderAvatarFailed = (recommender: GameRecommender) => {
+  failedRecommenderAvatars.value = new Set(failedRecommenderAvatars.value).add(recommender.id)
+}
+
+const recommenderInitial = (recommender: GameRecommender) =>
+  recommender.name.trim().charAt(0).toLocaleUpperCase('pt-BR') || '?'
+
+const visibleRecommenders = (option: PoolOption) => (option.game.recommendedBy ?? []).slice(0, 3)
+
+const hiddenRecommenderNames = (option: PoolOption) =>
+  (option.game.recommendedBy ?? [])
+    .slice(3)
+    .map((recommender) => recommender.name)
+    .join(', ')
+
+const recommenderLabel = (option: PoolOption) => {
+  const names = (option.game.recommendedBy ?? []).map((recommender) => recommender.name)
+  if (!names.length) return ''
+  if (names.length === 1) return `Apresentado por ${names[0]}`
+  return `Apresentado por ${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`
+}
 
 const undoVoteAction = async () => {
   loadingVote.value = true
@@ -137,6 +164,43 @@ const voteAction = async (optionId: number) => {
         <div class="election-card__body">
           <p v-if="option.game.summary">{{ option.game.summary }}</p>
           <p v-else>Uma possível nova jornada para compartilhar ao redor da fogueira.</p>
+
+          <div
+            v-if="option.game.recommendedBy?.length"
+            class="election-card__recommenders"
+            :aria-label="recommenderLabel(option)"
+          >
+            <div class="backlog-card__recommenders" aria-hidden="true">
+              <n-tooltip
+                v-for="recommender in visibleRecommenders(option)"
+                :key="recommender.id"
+                placement="top"
+              >
+                <template #trigger>
+                  <span class="backlog-recommender" tabindex="0">
+                    <img
+                      v-if="hasRecommenderAvatar(recommender)"
+                      :src="recommender.avatar ?? undefined"
+                      alt=""
+                      @error="markRecommenderAvatarFailed(recommender)"
+                    />
+                    <span v-else aria-hidden="true">{{ recommenderInitial(recommender) }}</span>
+                  </span>
+                </template>
+                Apresentado por {{ recommender.name }}
+              </n-tooltip>
+
+              <n-tooltip v-if="option.game.recommendedBy.length > 3" placement="top">
+                <template #trigger>
+                  <span class="backlog-recommender backlog-recommender--more" tabindex="0">
+                    +{{ option.game.recommendedBy.length - 3 }}
+                  </span>
+                </template>
+                Também apresentado por {{ hiddenRecommenderNames(option) }}
+              </n-tooltip>
+            </div>
+            <span>{{ recommenderLabel(option) }}</span>
+          </div>
 
           <footer>
             <div v-if="didIVoteForThis(option.players ?? [])" class="game-links">

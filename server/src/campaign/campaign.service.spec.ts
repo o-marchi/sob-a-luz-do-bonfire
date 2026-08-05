@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Game } from '../games/entities/game.entity';
+import { GameRecommendation } from '../games/entities/game-recommendation.entity';
 import { Player } from '../players/entities/player.entity';
 import { PoolOption } from '../pool/entities/pool-option.entity';
 import { Pool } from '../pool/entities/pool.entity';
@@ -17,7 +18,15 @@ describe('CampaignService voting', () => {
   beforeEach(async () => {
     dataSource = new DataSource({
       type: 'sqljs',
-      entities: [Campaign, CampaignPlayer, Game, Player, Pool, PoolOption],
+      entities: [
+        Campaign,
+        CampaignPlayer,
+        Game,
+        GameRecommendation,
+        Player,
+        Pool,
+        PoolOption,
+      ],
       synchronize: true,
     });
     await dataSource.initialize();
@@ -25,6 +34,7 @@ describe('CampaignService voting', () => {
     service = new CampaignService(
       dataSource.getRepository(Campaign),
       dataSource.getRepository(CampaignPlayer),
+      dataSource.getRepository(GameRecommendation),
       dataSource,
     );
 
@@ -85,6 +95,24 @@ describe('CampaignService voting', () => {
     expect(campaign.pool?.options[0].players).toHaveLength(0);
     expect(campaign.pool?.options[1].players.map((voter) => voter.id)).toEqual([
       player.id,
+    ]);
+  });
+
+  it('includes public recommenders with each current election game', async () => {
+    await dataSource.getRepository(GameRecommendation).save(
+      dataSource.getRepository(GameRecommendation).create({
+        game: options[0].game,
+        player,
+      }),
+    );
+
+    const campaign = await service.current();
+    const game = campaign.pool?.options[0].game as Game & {
+      recommendedBy: Array<{ id: number; name: string; avatar: string | null }>;
+    };
+
+    expect(game.recommendedBy).toEqual([
+      { id: player.id, name: 'Player', avatar: null },
     ]);
   });
 
