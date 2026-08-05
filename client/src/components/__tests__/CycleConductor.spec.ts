@@ -185,7 +185,18 @@ describe('CycleConductor', () => {
         electionActive: true,
         electionStartedAt: '2026-08-05T20:00:00-03:00',
         meetingAt: '2026-08-27T20:00:00-03:00',
-        pool: { options: [{ id: 1, game: { id: 1, title: 'Game' } }] },
+        pool: {
+          options: [
+            {
+              id: 1,
+              game: {
+                id: 1,
+                title: 'Game',
+                summary: 'Uma frase curta da Steam. O restante não entra.',
+              },
+            },
+          ],
+        },
       },
       guaranteedGames: [],
       electionResult: [{ optionId: 1, gameId: 1, game: 'Game', tokens: 3, voters: ['Ana'] }],
@@ -206,8 +217,16 @@ describe('CycleConductor', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Os resultados estão ocultos')
+    expect(wrapper.text()).toContain('Game')
     expect(wrapper.text()).not.toContain('3 tokens')
-    expect(wrapper.find('.result-list').exists()).toBe(false)
+    expect(wrapper.find('.result-list').exists()).toBe(true)
+    expect(wrapper.find('.transition-form').exists()).toBe(true)
+    expect(wrapper.get<HTMLTextAreaElement>('textarea').element.value).toBe(
+      'Uma frase curta da Steam.',
+    )
+    expect(wrapper.findAll('.cycle-field > span').some((field) => field.text() === 'Local')).toBe(
+      false,
+    )
     await wrapper.get('[data-testid="reveal-results"]').trigger('click')
     expect(wrapper.text()).toContain('3 tokens')
     expect(wrapper.get<HTMLInputElement>('input[type="datetime-local"]').element.value).toBe(
@@ -218,7 +237,8 @@ describe('CycleConductor', () => {
       .find((button) => button.text().includes('Ocultar resultados'))
     await hideResults?.trigger('click')
     expect(wrapper.text()).not.toContain('3 tokens')
-    expect(wrapper.find('.result-list').exists()).toBe(false)
+    expect(wrapper.find('.result-list').exists()).toBe(true)
+    expect(wrapper.find('.transition-form').exists()).toBe(true)
 
     await wrapper.get('.cycle-undo .game-links button').trigger('click')
     expect(cycleServiceMocks.cancelCycleElection).not.toHaveBeenCalled()

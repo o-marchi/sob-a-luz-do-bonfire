@@ -5,10 +5,6 @@ import { CampaignPlayer } from '../campaign/entities/campaign-player.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { GameRecommendation } from '../games/entities/game-recommendation.entity';
 import { Game } from '../games/entities/game.entity';
-import {
-  CatalogGameResearchInput,
-  GameResearchService,
-} from '../games/game-research.service';
 import { Player } from '../players/entities/player.entity';
 import { PoolOption } from '../pool/entities/pool-option.entity';
 import { Pool } from '../pool/entities/pool.entity';
@@ -55,10 +51,6 @@ describe('CycleService', () => {
   let actor: Player;
   let currentGame: Game;
   let campaign: Campaign;
-  let gameResearch: jest.Mocked<Pick<GameResearchService, 'assessCatalogGame'>>;
-  let assessCatalogGame: jest.MockedFunction<
-    GameResearchService['assessCatalogGame']
-  >;
 
   beforeEach(async () => {
     dataSource = new DataSource({
@@ -90,36 +82,12 @@ describe('CycleService', () => {
         gameMessageUrl: null,
       }),
     };
-    assessCatalogGame = jest
-      .fn()
-      .mockImplementation((game: CatalogGameResearchInput) =>
-        Promise.resolve({
-          eligible: false,
-          reason: 'duration_unavailable',
-          limitHours: 20,
-          game: {
-            steamAppId: 0,
-            title: game.title,
-            cover: game.cover ?? null,
-            steam: game.steam ?? '',
-            trailer: game.trailer ?? null,
-            summary: game.summary ?? null,
-            howLongToBeatUrl: null,
-            durationLabel: null,
-            mainHours: null,
-            mainExtraHours: null,
-            howLongToBeatTitle: null,
-          },
-        }),
-      );
-    gameResearch = { assessCatalogGame };
     service = new CycleService(
       dataSource.getRepository(Campaign),
       dataSource.getRepository(Game),
       dataSource,
       new ConfigService({ JWT_SECRET: 'cycle-test-secret' }),
       discord as unknown as DiscordCycleService,
-      gameResearch as unknown as GameResearchService,
     );
 
     actor = await dataSource
@@ -146,27 +114,19 @@ describe('CycleService', () => {
     await dataSource.destroy();
   });
 
-  it('draws all meeting suggestions and fills the pool with verified eligible games', async () => {
+  it('draws all meeting suggestions and fills the pool from the curated catalog', async () => {
     const suggestion = await saveGame({
       title: 'Meeting Suggestion',
       suggestion: true,
       mainExtraHours: 14,
     });
     await attachSuggestion(suggestion);
-    const fillers = await Promise.all(
-      ['A', 'B', 'C', 'D', 'E'].map((title) =>
-        saveGame({
-          title: `Filler ${title}`,
-          suggestion: true,
-          mainExtraHours: 10,
-        }),
-      ),
-    );
-    await saveGame({
-      title: 'Unchecked filler',
-      suggestion: true,
-      mainExtraHours: null,
-    });
+    const fillers = await Promise.all([
+      saveGame({ title: 'Filler A', suggestion: true, mainExtraHours: 10 }),
+      saveGame({ title: 'Filler B', suggestion: true, mainExtraHours: null }),
+      saveGame({ title: 'Filler C', suggestion: true, mainExtraHours: 99 }),
+      saveGame({ title: 'Filler D', suggestion: true, mainExtraHours: 8 }),
+    ]);
 
     const draw = (await service.drawPool()) as {
       guaranteedGames: Game[];
@@ -189,11 +149,7 @@ describe('CycleService', () => {
     expect(draw.revealOrder).toEqual(
       expect.arrayContaining(draw.selectedFillers),
     );
-    expect(
-      draw.excludedUnverified.every(
-        (game) => game.title === 'Unchecked filler',
-      ),
-    ).toBe(true);
+    expect(draw.excludedUnverified).toEqual([]);
 
     const started = await service.startElection(
       { selectionToken: draw.selectionToken },
@@ -264,8 +220,8 @@ describe('CycleService', () => {
     expect(started.pool?.options).toHaveLength(7);
   });
 
-  it('researches an unchecked catalog game and fails closed when no duration is found', async () => {
-    await saveGame({
+  it('uses an admitted catalog game without checking its duration again', async () => {
+    const unchecked = await saveGame({
       title: 'Unchecked filler',
       suggestion: true,
       steam: 'https://store.steampowered.com/app/42/',
@@ -275,16 +231,20 @@ describe('CycleService', () => {
     const draw = (await service.drawPool()) as {
       selectedFillers: Game[];
       excludedUnverified: Game[];
+      selectionToken: string;
     };
 
-    expect(assessCatalogGame).toHaveBeenCalledTimes(1);
-    expect(draw.selectedFillers).toEqual([]);
-    expect(draw.excludedUnverified).toEqual([
-      expect.objectContaining({
-        title: 'Unchecked filler',
-        researchStatus: 'duration_unavailable',
-      }),
+    expect(draw.selectedFillers).toEqual([
+      expect.objectContaining({ id: unchecked.id, title: unchecked.title }),
     ]);
+    expect(draw.excludedUnverified).toEqual([]);
+
+    const started = await service.startElection(
+      { selectionToken: draw.selectionToken },
+      actor,
+    );
+    expect(started.pool?.options).toHaveLength(1);
+    expect(started.pool?.options[0]?.game.id).toBe(unchecked.id);
   });
 
   it('undoes an accidentally started election without counting its pool appearances', async () => {

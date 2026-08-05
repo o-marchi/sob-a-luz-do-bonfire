@@ -5,7 +5,6 @@ import { AdminAuditLog } from '../admin/entities/admin-audit-log.entity';
 import { AuthModule } from '../auth/auth.module';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { Game } from '../games/entities/game.entity';
-import { GamesModule } from '../games/games.module';
 import { PoolOption } from '../pool/entities/pool-option.entity';
 import { Pool } from '../pool/entities/pool.entity';
 import { CycleController } from './cycle.controller';
@@ -16,7 +15,6 @@ import { DiscordCycleService } from './discord-cycle.service';
   imports: [
     ConfigModule,
     AuthModule,
-    GamesModule,
     TypeOrmModule.forFeature([AdminAuditLog, Campaign, Game, Pool, PoolOption]),
   ],
   controllers: [CycleController],

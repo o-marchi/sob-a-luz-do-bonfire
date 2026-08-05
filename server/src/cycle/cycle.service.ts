@@ -10,7 +10,6 @@ import { DataSource, EntityManager, Repository } from 'typeorm';
 import { AdminAuditLog } from '../admin/entities/admin-audit-log.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { Game } from '../games/entities/game.entity';
-import { GameResearchService } from '../games/game-research.service';
 import {
   TARGET_POOL_SIZE,
   findEligibleBacklogGames,
@@ -111,7 +110,6 @@ export class CycleService {
     private readonly dataSource: DataSource,
     config: ConfigService,
     private readonly discord: DiscordCycleService,
-    private readonly gameResearch: GameResearchService,
   ) {
     this.signingSecret =
       config.get<string>('CYCLE_AUTOMATION_SECRET')?.trim() ||
@@ -158,24 +156,6 @@ export class CycleService {
     const guaranteedGames = await findGuaranteedNextVoteGames(
       this.dataSource.manager,
     );
-    for (const game of guaranteedGames) {
-      await this.refreshResearch(game);
-    }
-    const invalidGuaranteed = guaranteedGames.filter(
-      (game) => !this.isDurationEligible(game),
-    );
-    if (invalidGuaranteed.length > 0) {
-      throw new BadRequestException({
-        message:
-          'Há sugestões sem uma duração válida no HowLongToBeat. Pesquise-as antes do sorteio.',
-        games: invalidGuaranteed.map((game) => ({
-          id: game.id,
-          title: game.title,
-          mainExtraHours: game.mainExtraHours,
-        })),
-      });
-    }
-
     const guaranteedIdentities = new Set(
       guaranteedGames.map(normalizeGameIdentity),
     );
@@ -184,31 +164,9 @@ export class CycleService {
       guaranteedIdentities,
     );
     const fillCount = Math.max(0, TARGET_POOL_SIZE - guaranteedGames.length);
-    const selectedFillers: Game[] = [];
-    const rejectedCandidates: Game[] = [];
-    const shuffledCandidates = this.shuffle(backlogCandidates);
-    for (
-      let index = 0;
-      index < shuffledCandidates.length && selectedFillers.length < fillCount;
-      index += 2
-    ) {
-      const batch = shuffledCandidates.slice(index, index + 2);
-      await Promise.all(batch.map((game) => this.refreshResearch(game)));
-      for (const game of batch) {
-        if (selectedFillers.length >= fillCount) break;
-        if (this.isDurationEligible(game)) {
-          selectedFillers.push(game);
-        } else {
-          rejectedCandidates.push(game);
-        }
-      }
-    }
-    const excludedUnverified = rejectedCandidates.filter(
-      (game) => !this.hasKnownDuration(game),
-    );
-    const excludedTooLong = rejectedCandidates.filter(
-      (game) => this.hasKnownDuration(game) && !this.isDurationEligible(game),
-    );
+    const selectedFillers = this.shuffle(backlogCandidates).slice(0, fillCount);
+    const excludedUnverified: Game[] = [];
+    const excludedTooLong: Game[] = [];
     const selection = [...guaranteedGames, ...selectedFillers];
     const revealOrder = this.shuffle(selectedFillers);
     const warnings: string[] = [];
@@ -218,17 +176,6 @@ export class CycleService {
         `Só há ${selectedFillers.length} jogos elegíveis nas Brasas para ${fillCount} espaços.`,
       );
     }
-    if (excludedUnverified.length > 0) {
-      warnings.push(
-        `${excludedUnverified.length} jogos sorteados ficaram fora porque a duração não pôde ser verificada.`,
-      );
-    }
-    if (excludedTooLong.length > 0) {
-      warnings.push(
-        `${excludedTooLong.length} jogos sorteados ficaram fora por passarem de 20 horas.`,
-      );
-    }
-
     const token = this.signToken<DrawTokenPayload>({
       kind: 'cycle-draw',
       campaignId: campaign.id,
@@ -292,21 +239,12 @@ export class CycleService {
           'Um dos jogos sorteados não está mais disponível.',
         );
       }
-      if (games.some((game) => !this.isDurationEligible(game))) {
-        throw new BadRequestException(
-          'Um dos jogos sorteados perdeu a verificação de duração.',
-        );
-      }
-
       const allowedFillers = await findEligibleBacklogGames(
         manager,
         new Set(guaranteedGames.map(normalizeGameIdentity)),
       );
       const allowedIdentities = new Set(
-        [
-          ...guaranteedGames,
-          ...allowedFillers.filter((game) => this.isDurationEligible(game)),
-        ].map(normalizeGameIdentity),
+        [...guaranteedGames, ...allowedFillers].map(normalizeGameIdentity),
       );
       if (
         games.some(
@@ -650,46 +588,6 @@ export class CycleService {
     });
 
     return { campaign: nextCampaign, discord: discordResult };
-  }
-
-  private hasKnownDuration(game: Game): boolean {
-    return (
-      typeof game.mainExtraHours === 'number' &&
-      Number.isFinite(game.mainExtraHours)
-    );
-  }
-
-  private isDurationEligible(game: Game): boolean {
-    return (
-      this.hasKnownDuration(game) &&
-      (game.mainExtraHours ?? Number.POSITIVE_INFINITY) >= 0 &&
-      (game.mainExtraHours ?? Number.POSITIVE_INFINITY) <= 20
-    );
-  }
-
-  private async refreshResearch(game: Game): Promise<void> {
-    if (this.hasKnownDuration(game)) return;
-    const checkedAt = game.researchCheckedAt
-      ? new Date(game.researchCheckedAt).getTime()
-      : 0;
-    if (checkedAt > Date.now() - 5 * 60 * 1000) return;
-
-    try {
-      const assessment = await this.gameResearch.assessCatalogGame(game);
-      game.cover ||= assessment.game.cover;
-      game.trailer ||= assessment.game.trailer;
-      game.summary ||= assessment.game.summary;
-      game.howLongToBeatUrl = assessment.game.howLongToBeatUrl;
-      game.durationLabel = assessment.game.durationLabel;
-      game.mainHours = assessment.game.mainHours;
-      game.mainExtraHours = assessment.game.mainExtraHours;
-      game.howLongToBeatTitle = assessment.game.howLongToBeatTitle;
-      game.researchStatus = assessment.reason;
-    } catch {
-      game.researchStatus = 'duration_unavailable';
-    }
-    game.researchCheckedAt = new Date().toISOString();
-    await this.gameRepository.save(game);
   }
 
   private calculateElectionResult(campaign: Campaign): ElectionResultOption[] {

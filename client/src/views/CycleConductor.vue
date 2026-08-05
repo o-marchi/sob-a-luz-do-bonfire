@@ -64,8 +64,8 @@ const winnerGameId = ref<number | undefined>()
 const nextMonth = ref('')
 const nextYear = ref('')
 const meetingAt = ref('')
-const meetingLocation = ref('Discord')
 const description = ref('')
+const descriptionEdited = ref(false)
 const allowEarlyClose = ref(false)
 const discordEnabled = ref(true)
 const oldChannelId = ref('')
@@ -113,6 +113,11 @@ const sortedElectionResult = computed(() =>
     (left, right) => right.tokens - left.tokens || left.game.localeCompare(right.game, 'pt-BR'),
   ),
 )
+const neutralElectionResult = computed(() =>
+  [...(overview.value?.electionResult ?? [])].sort((left, right) =>
+    left.game.localeCompare(right.game, 'pt-BR'),
+  ),
+)
 const leadingOptions = computed(() => {
   if (!sortedElectionResult.value.length) return []
   const max = sortedElectionResult.value[0].tokens
@@ -146,6 +151,7 @@ async function loadOverview() {
     discordEnabled.value = loadedOverview.discordConfigured
     resultsRevealed.value = false
     setDefaultWinner(loadedOverview.electionResult)
+    syncDescriptionWithWinner()
 
     if (!loadedOverview.campaign.electionStartedAt) {
       electionEndsAt.value = toLocalDateTimeInput(nextMonthDeadline.value)
@@ -181,6 +187,14 @@ function setDefaultWinner(result: ElectionResultOption[]) {
   const max = Math.max(...result.map((option) => option.tokens))
   const leaders = result.filter((option) => option.tokens === max)
   winnerGameId.value = leaders.length === 1 ? leaders[0].gameId : undefined
+}
+
+function syncDescriptionWithWinner() {
+  if (descriptionEdited.value) return
+  const winner = campaign.value?.pool?.options.find(
+    (option) => option.game.id === winnerGameId.value,
+  )?.game
+  description.value = winner ? buildCampaignPhrase(winner) : ''
 }
 
 async function drawGames() {
@@ -252,6 +266,8 @@ async function undoElection() {
     await campaignStore.init(updatedCampaign)
     confirmingCancellation.value = false
     transitionPreview.value = null
+    description.value = ''
+    descriptionEdited.value = false
     message.success('A votação foi desfeita. As Brasas voltaram ao lugar.')
     await loadOverview()
   } catch (error) {
@@ -268,7 +284,7 @@ function buildTransitionInput(): CycleTransitionInput {
     year: nextYear.value,
     description: description.value.trim() || undefined,
     meetingAt: meetingAt.value ? toOffsetIso(meetingAt.value) : undefined,
-    meetingLocation: meetingLocation.value.trim() || undefined,
+    meetingLocation: 'Discord',
     allowEarlyClose: allowEarlyClose.value,
     discord: {
       enabled: discordEnabled.value,
@@ -317,6 +333,8 @@ async function finishTransition() {
     await campaignStore.init(result.campaign)
     message.success(`A campanha de ${result.campaign.month} começou.`)
     transitionPreview.value = null
+    description.value = ''
+    descriptionEdited.value = false
     await loadOverview()
   } catch (error) {
     message.error(getErrorMessage(error, 'A passagem não pôde ser concluída.'))
@@ -377,6 +395,18 @@ function formatDeadline(date: Date): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+}
+
+function buildCampaignPhrase(game: Game): string {
+  const summary =
+    game.summary?.replace(/\s+/g, ' ').trim() || 'Uma nova jornada escolhida ao redor da fogueira.'
+  const firstSentence = summary.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim()
+  const phrase = firstSentence || summary
+  if (phrase.length <= 220) return phrase
+
+  const shortened = phrase.slice(0, 219)
+  const lastSpace = shortened.lastIndexOf(' ')
+  return `${shortened.slice(0, lastSpace > 160 ? lastSpace : 219).trim()}…`
 }
 
 function toOffsetIso(localValue: string): string {
@@ -605,8 +635,8 @@ function getErrorMessage(error: unknown, fallback: string): string {
             <span class="cycle-eyebrow">Contagem protegida</span>
             <h4>Os resultados estão ocultos</h4>
             <p>
-              Nenhum jogo, voto ou token aparece até você decidir revelar. Assim a tela pode ser
-              compartilhada sem entregar quem está na frente.
+              Os jogos continuam visíveis em ordem alfabética. Ranking, tokens, votos e liderança só
+              aparecem quando você decidir revelar.
             </p>
           </div>
           <div class="game-links">
@@ -620,23 +650,32 @@ function getErrorMessage(error: unknown, fallback: string): string {
           <button type="button" @click="resultsRevealed = false">Ocultar resultados</button>
         </div>
 
-        <div v-if="resultsRevealed" class="result-list">
+        <div class="result-list">
           <label
-            v-for="(option, index) in sortedElectionResult"
+            v-for="(option, index) in resultsRevealed
+              ? sortedElectionResult
+              : neutralElectionResult"
             :key="option.gameId"
             class="result-row"
-            :class="{ 'result-row--leader': index === 0 }"
+            :class="{ 'result-row--leader': resultsRevealed && index === 0 }"
           >
             <input
-              v-if="leadingOptions.length > 1 && option.tokens === leadingOptions[0]?.tokens"
+              v-if="
+                resultsRevealed &&
+                leadingOptions.length > 1 &&
+                option.tokens === leadingOptions[0]?.tokens
+              "
               v-model="winnerGameId"
               type="radio"
               :value="option.gameId"
+              @change="syncDescriptionWithWinner"
             />
-            <span class="result-row__rank">{{ index + 1 }}</span>
+            <span v-if="resultsRevealed" class="result-row__rank">{{ index + 1 }}</span>
             <strong>{{ option.game }}</strong>
-            <span>{{ option.tokens }} {{ option.tokens === 1 ? 'token' : 'tokens' }}</span>
-            <small>{{ option.voters.length }} votos</small>
+            <template v-if="resultsRevealed">
+              <span>{{ option.tokens }} {{ option.tokens === 1 ? 'token' : 'tokens' }}</span>
+              <small>{{ option.voters.length }} votos</small>
+            </template>
           </label>
         </div>
 
@@ -681,7 +720,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
           Empate na liderança. Escolha acima qual jogo recebe a chama.
         </p>
 
-        <form v-if="resultsRevealed" class="transition-form" @submit.prevent="prepareTransition">
+        <form class="transition-form" @submit.prevent="prepareTransition">
           <div class="transition-form__grid">
             <label class="cycle-field">
               <span>Mês</span>
@@ -695,19 +734,19 @@ function getErrorMessage(error: unknown, fallback: string): string {
               <span>Próximo encontro</span>
               <input v-model="meetingAt" type="datetime-local" />
             </label>
-            <label class="cycle-field">
-              <span>Local</span>
-              <input v-model="meetingLocation" placeholder="Discord" />
-            </label>
           </div>
 
           <label class="cycle-field">
-            <span>Frase da campanha <small>opcional, usamos o resumo curto do jogo</small></span>
+            <span>
+              Frase da campanha
+              <small>preenchida com o resumo curto salvo do jogo vencedor</small>
+            </span>
             <textarea
               v-model="description"
               rows="3"
               maxlength="240"
               placeholder="Uma frase curta sobre esta jornada."
+              @input="descriptionEdited = true"
             ></textarea>
           </label>
 
@@ -738,7 +777,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
           </div>
         </form>
 
-        <div v-if="resultsRevealed && discordPreview && discordEnabled" class="discord-controls">
+        <div v-if="discordPreview && discordEnabled" class="discord-controls">
           <h4>Ajustes do Discord</h4>
           <div class="transition-form__grid">
             <label class="cycle-field">
@@ -809,11 +848,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
           </div>
         </div>
 
-        <section
-          v-if="resultsRevealed && transitionPreview"
-          class="transition-preview"
-          aria-live="polite"
-        >
+        <section v-if="transitionPreview" class="transition-preview" aria-live="polite">
           <div
             v-if="transitionPreview.errors.length"
             class="preview-notices preview-notices--error"
