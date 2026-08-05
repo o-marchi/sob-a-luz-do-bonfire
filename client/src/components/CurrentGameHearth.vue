@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { NIcon } from 'naive-ui'
-import { CalendarOutline, LogoSteam, LogoYoutube, TimeOutline } from '@vicons/ionicons5'
+import {
+  CalendarOutline,
+  LogoDiscord,
+  LogoSteam,
+  LogoYoutube,
+  TimeOutline,
+} from '@vicons/ionicons5'
 import type { Campaign, CampaignPlayer } from '@/types/Campaign'
 import type { Game } from '@/types/Game'
 import { formatDurationLabel, getGameCover } from '@/services/gameService'
@@ -15,7 +21,7 @@ import JourneyRoster from '@/components/JourneyRoster.vue'
 
 type SaveState = 'idle' | 'saving' | 'saved'
 
-const BONFIRE_DISCORD_URL = 'https://discord.com/channels/1534325844619821170'
+const BONFIRE_DISCORD_EVENT_URL = 'https://discord.gg/MpmzThSaN?event=1534358752239550504'
 
 const props = defineProps<{
   campaign: Campaign
@@ -96,8 +102,15 @@ const meetingHref = computed(() => {
   }
 
   return props.campaign.meetingLocation?.toLocaleLowerCase().includes('discord')
-    ? BONFIRE_DISCORD_URL
+    ? BONFIRE_DISCORD_EVENT_URL
     : null
+})
+
+const isDiscordMeeting = computed(() => {
+  return Boolean(
+    props.campaign.meetingLocation?.toLocaleLowerCase().includes('discord') ||
+      meetingHref.value?.toLocaleLowerCase().includes('discord'),
+  )
 })
 </script>
 
@@ -111,17 +124,20 @@ const meetingHref = computed(() => {
 
       <component
         :is="meetingHref ? 'a' : 'div'"
-        v-if="meeting || campaign.meetingLocation"
+        v-if="meeting || meetingHref"
         class="meeting-callout"
         :href="meetingHref || undefined"
         :target="meetingHref ? '_blank' : undefined"
         :rel="meetingHref ? 'noopener noreferrer' : undefined"
       >
-        <n-icon size="17"><CalendarOutline /></n-icon>
+        <n-icon size="17">
+          <LogoDiscord v-if="isDiscordMeeting" />
+          <CalendarOutline v-else />
+        </n-icon>
         <span>
           <small>Próximo encontro</small>
           <strong v-if="meeting">{{ meeting.day }} · {{ meeting.time }}</strong>
-          <strong v-if="campaign.meetingLocation">{{ campaign.meetingLocation }}</strong>
+          <strong v-else-if="meetingHref">Abrir evento</strong>
         </span>
       </component>
     </header>
