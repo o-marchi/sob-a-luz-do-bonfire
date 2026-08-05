@@ -47,8 +47,14 @@ export class CampaignController {
 
   @Get('current')
   @UseGuards(OptionalJwtAuthGuard)
-  current(@CurrentPlayer() player: Player | null): Promise<Campaign> {
-    return this.campaignService.current(player);
+  async current(@CurrentPlayer() player: Player | null): Promise<Campaign> {
+    const campaign = await this.campaignService.current(player);
+
+    if (!player) {
+      campaign.meetingUrl = null;
+    }
+
+    return campaign;
   }
 
   @Get('history')

@@ -8,7 +8,6 @@ type AuthenticatedUser = User & { exp?: number }
 export const useAuthStore = defineStore('auth', () => {
   // State
   const jwt = ref<string | null>(null)
-  const accessToken = ref<string | null>(null)
   const user = ref<User | null>(null)
   const isAuthenticated = ref(false)
   const loading = ref(true)
@@ -17,10 +16,9 @@ export const useAuthStore = defineStore('auth', () => {
   // Actions
   async function handleAuthCallback() {
     const params = new URLSearchParams(window.location.search)
-    const accessTokenParam = params.get('access_token')
     const jwtParam = params.get('jwt')
 
-    if (!accessTokenParam || !jwtParam) {
+    if (!jwtParam) {
       throw new Error('Failed to fetch user')
     }
 
@@ -32,7 +30,6 @@ export const useAuthStore = defineStore('auth', () => {
 
     localStorage.setItem('jwt', jwtParam)
     localStorage.setItem('user', JSON.stringify(user))
-    localStorage.setItem('access_token', accessTokenParam)
 
     await init(true)
   }
@@ -42,9 +39,11 @@ export const useAuthStore = defineStore('auth', () => {
       return
     }
 
+    // Older versions kept Discord's OAuth token in the browser. It is no longer needed.
+    localStorage.removeItem('access_token')
+
     try {
       jwt.value = localStorage.getItem('jwt')
-      accessToken.value = localStorage.getItem('access_token')
       user.value = JSON.parse(localStorage.getItem('user') || 'null') as User | null
 
       if (jwt.value) {
@@ -74,14 +73,12 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
     localStorage.removeItem('access_token')
     jwt.value = null
-    accessToken.value = null
     user.value = null
     isAuthenticated.value = false
   }
 
   return {
     jwt,
-    accessToken,
     user,
     isAuthenticated,
     loading,
