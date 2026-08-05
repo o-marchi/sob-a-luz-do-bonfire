@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { ApiTags } from '@nestjs/swagger';
 import express from 'express';
 import { AuthPlayer, AuthService } from './auth.service';
+import { DiscordCallbackGuard } from './guards/discord-callback.guard';
+import type { DiscordCallbackRequest } from './guards/discord-callback.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -22,9 +24,9 @@ export class AuthController {
 
   // 2) Discord callback
   @Get('discord/callback')
-  @UseGuards(AuthGuard('discord'))
+  @UseGuards(DiscordCallbackGuard)
   async discordCallback(
-    @Req() req: express.Request,
+    @Req() req: DiscordCallbackRequest,
     @Res() res: express.Response,
   ) {
     const player = req.user as AuthPlayer;
@@ -32,13 +34,17 @@ export class AuthController {
       this.config.getOrThrow<string>('PUBLIC_CLIENT_URL');
 
     if (!player) {
-      return res.redirect(302, `${clientUrl}?authentication_error=true`);
+      const redirectUrl = new URL(clientUrl);
+      redirectUrl.searchParams.set(
+        'authentication_error',
+        req.discordAuthenticationError ?? 'true',
+      );
+      return res.redirect(302, redirectUrl.toString());
     }
 
     const token: string = await this.authService.signToken(player);
     const redirectUrl = new URL('/auth/callback', clientUrl);
     redirectUrl.searchParams.append('jwt', token);
-    redirectUrl.searchParams.append('access_token', player.accessToken);
 
     return res.redirect(302, redirectUrl.toString());
   }

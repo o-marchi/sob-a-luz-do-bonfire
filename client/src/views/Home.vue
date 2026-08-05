@@ -42,9 +42,15 @@ onBeforeUnmount(() => {
 })
 
 const params = new URLSearchParams(window.location.search)
+const authenticationError = params.get('authentication_error')
 
-if (params.get('authentication_error') === 'true') {
-  message.error('Autenticação falhou. Tente novamente (ou desista).', {
+if (authenticationError) {
+  const authenticationMessage =
+    authenticationError === 'not_member'
+      ? 'A chama ainda não reconhece você. Entre no Discord do Bonfire e tente novamente.'
+      : 'Não foi possível confirmar sua presença no Discord. Tente novamente.'
+
+  message.error(authenticationMessage, {
     duration: 5000,
   })
 
@@ -106,6 +112,7 @@ const recalculateElection = async () => {
       :campaign-user="campaignUser"
       :journey-status="journeyStatus"
       :save-state="saveState"
+      :is-authenticated="isAuthenticated"
       @change-journey="changeJourney"
     />
 

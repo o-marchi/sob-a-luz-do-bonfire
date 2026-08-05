@@ -14,7 +14,7 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
       clientID: config.getOrThrow<string>('DISCORD_CLIENT_ID'),
       clientSecret: config.getOrThrow<string>('DISCORD_CLIENT_SECRET'),
       callbackURL: config.getOrThrow<string>('DISCORD_CALLBACK_URL'),
-      scope: ['identify', 'email'],
+      scope: ['identify', 'email', 'guilds.members.read'],
       passReqToCallback: false,
     });
   }
@@ -24,10 +24,8 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
     refreshToken: string,
     profile: Profile,
   ): Promise<AuthPlayer> {
-    return this.authService.validateDiscordUser(
-      profile,
-      accessToken,
-      refreshToken,
-    );
+    void refreshToken;
+
+    return this.authService.validateDiscordUser(profile, accessToken);
   }
 }

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PlayersService } from '../../players/players.service';
 import { Player } from '../../players/entities/player.entity';
+import { BONFIRE_AUTH_VERSION } from '../auth.constants';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -17,8 +18,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: { id?: unknown }): Promise<Player> {
-    if (!Number.isInteger(payload.id)) {
+  async validate(payload: {
+    id?: unknown;
+    authVersion?: unknown;
+  }): Promise<Player> {
+    if (
+      !Number.isInteger(payload.id) ||
+      payload.authVersion !== BONFIRE_AUTH_VERSION
+    ) {
       throw new UnauthorizedException();
     }
 

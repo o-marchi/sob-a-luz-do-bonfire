@@ -9,6 +9,8 @@ import { DiscordStrategy } from './strategies/discord.strategy';
 import { PlayersModule } from '../players/players.module';
 import { JwtStrategy } from './strategies/jwt.strategy'; // assumes you have this
 import { MediaModule } from '../media/media.module';
+import { DiscordMembershipService } from './discord-membership.service';
+import { DiscordCallbackGuard } from './guards/discord-callback.guard';
 
 @Module({
   imports: [
@@ -26,7 +28,13 @@ import { MediaModule } from '../media/media.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, DiscordStrategy, JwtStrategy],
+  providers: [
+    AuthService,
+    DiscordStrategy,
+    DiscordMembershipService,
+    DiscordCallbackGuard,
+    JwtStrategy,
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}
