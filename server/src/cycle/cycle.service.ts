@@ -371,6 +371,7 @@ export class CycleService {
       }
 
       const poolId = current.pool.id;
+      const optionIds = current.pool.options.map((option) => option.id);
       const gameIds = current.pool.options.map((option) => option.game.id);
       const discardedVotes = current.pool.options.reduce(
         (total, option) => total + option.players.length,
@@ -383,6 +384,15 @@ export class CycleService {
       current.electionEndsAt = null;
       current.electionClosedAt = null;
       await manager.getRepository(Campaign).save(current);
+      if (optionIds.length > 0) {
+        await manager
+          .createQueryBuilder()
+          .delete()
+          .from('pool_option_players')
+          .where('pool_option_id IN (:...optionIds)', { optionIds })
+          .execute();
+        await manager.getRepository(PoolOption).delete(optionIds);
+      }
       await manager.getRepository(Pool).delete(poolId);
       await this.writeAudit(
         manager,

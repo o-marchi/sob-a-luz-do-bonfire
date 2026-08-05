@@ -142,6 +142,7 @@ export const findEligibleBacklogGames = async (
   const gamesByIdentity = new Map<string, Game[]>();
 
   for (const option of poolOptions) {
+    if (!option.pool) continue;
     const identity = normalizeGameIdentity(option.game);
     const poolIds = appearancesByIdentity.get(identity) ?? new Set<number>();
     poolIds.add(option.pool.id);
@@ -542,6 +543,7 @@ export class GamesService {
 
     const appearancesByIdentity = new Map<string, Set<number>>();
     for (const option of poolOptions) {
+      if (!option.pool) continue;
       const identity = normalizeGameIdentity(option.game);
       const poolIds = appearancesByIdentity.get(identity) ?? new Set<number>();
       poolIds.add(option.pool.id);

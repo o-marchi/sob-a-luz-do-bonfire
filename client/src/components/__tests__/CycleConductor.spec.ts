@@ -87,7 +87,7 @@ describe('CycleConductor', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Formar a próxima votação')
-    await wrapper.get('.draw-hearth .cycle-primary').trigger('click')
+    await wrapper.get('[data-testid="draw-games"]').trigger('click')
     await flushPromises()
 
     expect(cycleServiceMocks.drawCyclePool).toHaveBeenCalledOnce()
@@ -100,7 +100,7 @@ describe('CycleConductor', () => {
     expect(wrapper.text()).toContain('Suggested Game')
     expect(wrapper.text()).toContain('A roda está formada')
 
-    await wrapper.get('.election-launch .cycle-primary').trigger('click')
+    await wrapper.get('[data-testid="start-election"]').trigger('click')
     await flushPromises()
 
     expect(cycleServiceMocks.startCycleElection).toHaveBeenCalledWith('signed-draw', undefined)
@@ -138,11 +138,11 @@ describe('CycleConductor', () => {
     const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
     await flushPromises()
 
-    await wrapper.get('.cycle-undo .cycle-quiet').trigger('click')
+    await wrapper.get('.cycle-undo .n-button').trigger('click')
     expect(cycleServiceMocks.cancelCycleElection).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('1 voto será descartado')
 
-    await wrapper.get('.cycle-danger').trigger('click')
+    await wrapper.get('[data-testid="confirm-cancel-election"]').trigger('click')
     await flushPromises()
 
     expect(cycleServiceMocks.cancelCycleElection).toHaveBeenCalledOnce()

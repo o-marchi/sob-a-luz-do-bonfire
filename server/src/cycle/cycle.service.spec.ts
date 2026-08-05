@@ -268,6 +268,7 @@ describe('CycleService', () => {
     await expect(
       dataSource.getRepository(Pool).findOneBy({ id: poolId }),
     ).resolves.toBeNull();
+    await expect(dataSource.getRepository(PoolOption).count()).resolves.toBe(0);
     const cancellationLog = (
       await dataSource.getRepository(AdminAuditLog).find()
     ).find((entry) => entry.action === 'cycle_election_cancelled');

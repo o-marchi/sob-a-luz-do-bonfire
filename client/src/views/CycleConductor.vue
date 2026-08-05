@@ -2,7 +2,7 @@
 import axios from 'axios'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMessage } from 'naive-ui'
+import { NButton, useMessage } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useCampaignStore } from '@/stores/campaign'
@@ -337,10 +337,15 @@ function getErrorMessage(error: unknown, fallback: string): string {
         </p>
 
         <div v-if="!draw" class="draw-hearth">
-          <div class="draw-hearth__flame" aria-hidden="true"></div>
-          <button class="cycle-primary" type="button" :disabled="drawing" @click="drawGames">
+          <n-button
+            data-testid="draw-games"
+            size="large"
+            type="primary"
+            :loading="drawing"
+            @click="drawGames"
+          >
             {{ drawing ? 'Pesquisando e misturando as brasas…' : 'Sortear os jogos' }}
-          </button>
+          </n-button>
         </div>
 
         <template v-else>
@@ -378,12 +383,12 @@ function getErrorMessage(error: unknown, fallback: string): string {
           </div>
 
           <div class="draw-actions">
-            <button v-if="!allRevealed" type="button" class="cycle-secondary" @click="revealAll">
+            <n-button v-if="!allRevealed" secondary @click="revealAll">
               Revelar em sequência
-            </button>
-            <button type="button" class="cycle-quiet" :disabled="drawing" @click="drawGames">
+            </n-button>
+            <n-button quaternary :loading="drawing" @click="drawGames">
               Sortear novamente
-            </button>
+            </n-button>
           </div>
 
           <div v-if="allRevealed" class="election-launch">
@@ -393,23 +398,27 @@ function getErrorMessage(error: unknown, fallback: string): string {
               <p>Você pode deixar sem prazo e encerrar manualmente depois.</p>
             </div>
             <div class="duration-presets">
-              <button type="button" @click="setElectionDuration(24)">24 h</button>
-              <button type="button" @click="setElectionDuration(48)">48 h</button>
-              <button type="button" @click="setElectionDuration(72)">3 dias</button>
-              <button type="button" @click="setElectionDuration(168)">1 semana</button>
+              <n-button size="small" secondary @click="setElectionDuration(24)">24 h</n-button>
+              <n-button size="small" secondary @click="setElectionDuration(48)">48 h</n-button>
+              <n-button size="small" secondary @click="setElectionDuration(72)"> 3 dias </n-button>
+              <n-button size="small" secondary @click="setElectionDuration(168)">
+                1 semana
+              </n-button>
             </div>
             <label class="cycle-field">
               <span>Encerramento opcional</span>
               <input v-model="electionEndsAt" type="datetime-local" />
             </label>
-            <button
-              class="cycle-primary cycle-primary--wide"
-              type="button"
-              :disabled="startingElection"
+            <n-button
+              data-testid="start-election"
+              block
+              size="large"
+              type="primary"
+              :loading="startingElection"
               @click="openElection"
             >
               {{ startingElection ? 'Acendendo a votação…' : 'Começar a eleição' }}
-            </button>
+            </n-button>
           </div>
         </template>
       </section>
@@ -453,9 +462,9 @@ function getErrorMessage(error: unknown, fallback: string): string {
               <strong>Abriu a votação sem querer?</strong>
               <span>Você pode voltar às Brasas e fazer outro sorteio.</span>
             </div>
-            <button type="button" class="cycle-quiet" @click="confirmingCancellation = true">
+            <n-button quaternary @click="confirmingCancellation = true">
               Desfazer abertura
-            </button>
+            </n-button>
           </template>
           <template v-else>
             <div>
@@ -470,22 +479,22 @@ function getErrorMessage(error: unknown, fallback: string): string {
               </span>
             </div>
             <div class="cycle-undo__actions">
-              <button
-                type="button"
-                class="cycle-quiet"
+              <n-button
+                quaternary
                 :disabled="cancellingElection"
                 @click="confirmingCancellation = false"
               >
                 Manter votação
-              </button>
-              <button
-                type="button"
-                class="cycle-danger"
-                :disabled="cancellingElection"
+              </n-button>
+              <n-button
+                data-testid="confirm-cancel-election"
+                secondary
+                type="error"
+                :loading="cancellingElection"
                 @click="undoElection"
               >
                 {{ cancellingElection ? 'Desfazendo…' : 'Sim, desfazer' }}
-              </button>
+              </n-button>
             </div>
           </template>
         </aside>
@@ -544,9 +553,16 @@ function getErrorMessage(error: unknown, fallback: string): string {
             <span>Permitir encerrar antes do horário programado.</span>
           </label>
 
-          <button class="cycle-primary" type="submit" :disabled="previewing || !winnerGameId">
-            {{ previewing ? 'Lendo a passagem…' : 'Revisar a passagem' }}
-          </button>
+          <div class="transition-form__actions">
+            <n-button
+              attr-type="submit"
+              type="primary"
+              :loading="previewing"
+              :disabled="!winnerGameId"
+            >
+              {{ previewing ? 'Lendo a passagem…' : 'Revisar a passagem' }}
+            </n-button>
+          </div>
         </form>
 
         <div v-if="discordPreview && discordEnabled" class="discord-controls">
@@ -613,14 +629,9 @@ function getErrorMessage(error: unknown, fallback: string): string {
               <input v-model="newChannelTopic" />
             </label>
           </div>
-          <button
-            class="cycle-secondary"
-            type="button"
-            :disabled="previewing"
-            @click="prepareTransition"
-          >
+          <n-button secondary :loading="previewing" @click="prepareTransition">
             Atualizar prévia
-          </button>
+          </n-button>
         </div>
 
         <section v-if="transitionPreview" class="transition-preview" aria-live="polite">
@@ -666,15 +677,16 @@ function getErrorMessage(error: unknown, fallback: string): string {
             </ul>
           </template>
 
-          <button
+          <n-button
             v-if="transitionPreview.valid && transitionPreview.confirmationToken"
-            class="cycle-primary cycle-primary--wide"
-            type="button"
-            :disabled="applying"
+            block
+            size="large"
+            type="primary"
+            :loading="applying"
             @click="finishTransition"
           >
             {{ applying ? 'Passando a chama…' : 'Encerrar este ciclo e começar o próximo' }}
-          </button>
+          </n-button>
         </section>
       </section>
     </template>

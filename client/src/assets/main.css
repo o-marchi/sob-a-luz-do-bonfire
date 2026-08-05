@@ -866,108 +866,10 @@ body.bonfire-inner-page .user-menu-popover {
 }
 
 .draw-hearth {
-  min-height: 300px;
+  min-height: 190px;
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 26px;
-}
-
-.draw-hearth__flame {
-  position: relative;
-  width: 72px;
-  height: 72px;
-  border: 1px solid rgba(255, 194, 124, 0.34);
-  border-radius: 50%;
-  background: radial-gradient(circle, #ffd089 0 8%, #e97442 22%, #7d302c 48%, transparent 70%);
-  box-shadow: 0 0 58px rgba(219, 93, 48, 0.28);
-  animation: flame-breathe 2.2s ease-in-out infinite;
-}
-
-.draw-hearth__flame::before,
-.draw-hearth__flame::after {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 54px;
-  height: 5px;
-  border-radius: 999px;
-  background: #492729;
-  box-shadow: inset 0 1px rgba(255, 190, 132, 0.18);
-  content: '';
-}
-
-.draw-hearth__flame::before {
-  transform: translate(-50%, -50%) rotate(32deg);
-}
-
-.draw-hearth__flame::after {
-  transform: translate(-50%, -50%) rotate(-32deg);
-}
-
-.cycle-primary,
-.cycle-secondary,
-.cycle-quiet,
-.cycle-danger,
-.duration-presets button {
-  border: 0;
-  border-radius: 5px;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-  transition:
-    transform 160ms ease,
-    background 160ms ease,
-    opacity 160ms ease;
-}
-
-.cycle-primary {
-  padding: 13px 20px;
-  color: #271414;
-  background: linear-gradient(135deg, #f5b879, #df7041);
-  box-shadow: 0 10px 30px rgba(211, 87, 44, 0.2);
-}
-
-.cycle-primary--wide {
-  width: 100%;
-  padding: 16px 22px;
-}
-
-.cycle-secondary,
-.duration-presets button {
-  padding: 10px 14px;
-  color: #f5c69d;
-  border: 1px solid rgba(242, 164, 92, 0.32);
-  background: rgba(111, 49, 39, 0.16);
-}
-
-.cycle-quiet {
-  padding: 10px;
-  color: rgba(247, 222, 208, 0.55);
-  background: transparent;
-}
-
-.cycle-danger {
-  padding: 10px 14px;
-  color: #ffd5ca;
-  border: 1px solid rgba(225, 100, 78, 0.38);
-  background: rgba(129, 39, 37, 0.28);
-}
-
-.cycle-primary:hover:not(:disabled),
-.cycle-secondary:hover:not(:disabled),
-.cycle-quiet:hover:not(:disabled),
-.cycle-danger:hover:not(:disabled),
-.duration-presets button:hover {
-  transform: translateY(-2px);
-}
-
-.cycle-primary:disabled,
-.cycle-secondary:disabled,
-.cycle-quiet:disabled,
-.cycle-danger:disabled {
-  cursor: wait;
-  opacity: 0.55;
 }
 
 .reveal-grid {
@@ -1183,6 +1085,11 @@ body.bonfire-inner-page .user-menu-popover {
   gap: 16px;
 }
 
+.transition-form__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .cycle-check {
   display: flex;
   align-items: flex-start;
@@ -1324,13 +1231,6 @@ body.bonfire-inner-page .user-menu-popover {
   }
 }
 
-@keyframes flame-breathe {
-  50% {
-    transform: scale(1.06);
-    box-shadow: 0 0 68px rgba(239, 116, 63, 0.38);
-  }
-}
-
 @keyframes cycle-pulse {
   50% {
     opacity: 0.65;
@@ -1380,7 +1280,6 @@ body.bonfire-inner-page .user-menu-popover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .draw-hearth__flame,
   .cycle-status--active span,
   .reveal-card {
     animation: none;

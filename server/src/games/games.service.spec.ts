@@ -6,7 +6,7 @@ import { PoolOption } from '../pool/entities/pool-option.entity';
 import { Pool } from '../pool/entities/pool.entity';
 import { Game } from './entities/game.entity';
 import { GameRecommendation } from './entities/game-recommendation.entity';
-import { GamesService } from './games.service';
+import { findEligibleBacklogGames, GamesService } from './games.service';
 import { GameResearchService } from './game-research.service';
 
 describe('GamesService backlog', () => {
@@ -104,6 +104,30 @@ describe('GamesService backlog', () => {
       ['Fourth appearance', 4],
       ['Third chance', 3],
     ]);
+  });
+
+  it('ignores historical options whose pool no longer exists', async () => {
+    const [game] = await saveGames([
+      { title: 'Still eligible', suggestion: true },
+    ]);
+    await dataSource.query('PRAGMA foreign_keys = OFF');
+    await dataSource.query(
+      'INSERT INTO pool_options (game_id, pool_id) VALUES (?, ?)',
+      [game.id, 999_999],
+    );
+    await dataSource.query('PRAGMA foreign_keys = ON');
+
+    await expect(service.findBacklog()).resolves.toMatchObject({
+      games: [
+        expect.objectContaining({
+          id: game.id,
+          electionAppearances: 0,
+        }),
+      ],
+    });
+    await expect(
+      findEligibleBacklogGames(dataSource.manager, new Set()),
+    ).resolves.toContainEqual(expect.objectContaining({ id: game.id }));
   });
 
   it('collapses duplicate records and combines their pool appearances', async () => {
