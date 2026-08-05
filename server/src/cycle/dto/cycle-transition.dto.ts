@@ -21,6 +21,11 @@ export class StartElectionDto {
   electionEndsAt?: string;
 }
 
+export class CancelElectionDto {
+  @IsBoolean()
+  confirm!: boolean;
+}
+
 export class DiscordTransitionDto {
   @IsBoolean()
   enabled!: boolean;
@@ -74,6 +79,7 @@ export class PreviewCycleTransitionDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(240)
   description?: string;
 
   @IsOptional()

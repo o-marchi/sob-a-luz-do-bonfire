@@ -7,6 +7,7 @@ import { Player } from '../players/entities/player.entity';
 import { CycleService } from './cycle.service';
 import {
   ApplyCycleTransitionDto,
+  CancelElectionDto,
   PreviewCycleTransitionDto,
   StartElectionDto,
 } from './dto/cycle-transition.dto';
@@ -34,6 +35,14 @@ export class CycleController {
     @CurrentPlayer() player: Player,
   ) {
     return this.cycleService.startElection(body, player);
+  }
+
+  @Post('cancel-election')
+  cancelElection(
+    @Body() body: CancelElectionDto,
+    @CurrentPlayer() player: Player,
+  ) {
+    return this.cycleService.cancelElection(body, player);
   }
 
   @Post('transition/preview')

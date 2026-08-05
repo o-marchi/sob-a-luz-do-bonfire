@@ -29,6 +29,11 @@ export const startCycleElection = async (
   return data
 }
 
+export const cancelCycleElection = async (): Promise<Campaign> => {
+  const { data } = await api.post<Campaign>('/cycle/cancel-election', { confirm: true })
+  return data
+}
+
 export const previewCycleTransition = async (
   input: CycleTransitionInput,
 ): Promise<CycleTransitionPreview> => {

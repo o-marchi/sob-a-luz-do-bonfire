@@ -235,6 +235,47 @@ describe('CycleService', () => {
     ]);
   });
 
+  it('undoes an accidentally started election without counting its pool appearances', async () => {
+    await Promise.all(
+      ['One', 'Two', 'Three', 'Four', 'Five'].map((title) =>
+        saveGame({ title, suggestion: true, mainExtraHours: 8 }),
+      ),
+    );
+    const voter = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Early voter' }));
+    const draw = (await service.drawPool()) as { selectionToken: string };
+    const started = await service.startElection(
+      { selectionToken: draw.selectionToken },
+      actor,
+    );
+    const poolId = started.pool?.id;
+    const firstOption = started.pool?.options[0];
+    if (!poolId || !firstOption) throw new Error('Expected a started pool');
+    firstOption.players = [voter];
+    await dataSource.getRepository(PoolOption).save(firstOption);
+
+    const cancelled = await service.cancelElection({ confirm: true }, actor);
+
+    expect(cancelled).toMatchObject({
+      id: campaign.id,
+      electionActive: false,
+      electionStartedAt: null,
+      electionEndsAt: null,
+      electionClosedAt: null,
+      pool: null,
+    });
+    await expect(
+      dataSource.getRepository(Pool).findOneBy({ id: poolId }),
+    ).resolves.toBeNull();
+    const cancellationLog = (
+      await dataSource.getRepository(AdminAuditLog).find()
+    ).find((entry) => entry.action === 'cycle_election_cancelled');
+    expect(cancellationLog?.result).toMatchObject({
+      discardedVotes: 1,
+    });
+  });
+
   it('rejects a draw token after its selection is modified', async () => {
     await Promise.all(
       ['One', 'Two', 'Three', 'Four', 'Five'].map((title) =>
@@ -314,7 +355,11 @@ describe('CycleService', () => {
     expect(preview).toMatchObject({
       valid: true,
       winner: { id: winner.id, title: winner.title },
-      campaign: { month: 'Setembro', year: '2026' },
+      campaign: {
+        month: 'Setembro',
+        year: '2026',
+        description: 'Uma jornada curta.',
+      },
     });
     expect(preview.confirmationToken).toBeTruthy();
 

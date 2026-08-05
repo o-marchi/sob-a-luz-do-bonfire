@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCampaignStore } from '@/stores/campaign'
 import {
   applyCycleTransition,
+  cancelCycleElection,
   drawCyclePool,
   getCycleOverview,
   previewCycleTransition,
@@ -34,6 +35,8 @@ const transitionPreview = ref<CycleTransitionPreview | null>(null)
 const loading = ref(true)
 const drawing = ref(false)
 const startingElection = ref(false)
+const cancellingElection = ref(false)
+const confirmingCancellation = ref(false)
 const previewing = ref(false)
 const applying = ref(false)
 const revealCount = ref(0)
@@ -72,6 +75,9 @@ const leadingOptions = computed(() => {
   const max = sortedElectionResult.value[0].tokens
   return sortedElectionResult.value.filter((option) => option.tokens === max)
 })
+const totalVotes = computed(() =>
+  (overview.value?.electionResult ?? []).reduce((total, option) => total + option.voters.length, 0),
+)
 const discordPreview = computed(() => transitionPreview.value?.discord ?? null)
 
 onMounted(async () => {
@@ -92,7 +98,7 @@ async function loadOverview() {
     overview.value = await getCycleOverview()
     nextMonth.value = overview.value.nextCampaign.month
     nextYear.value = overview.value.nextCampaign.year
-    discordEnabled.value = true
+    discordEnabled.value = overview.value.discordConfigured
     setDefaultWinner(overview.value.electionResult)
   } catch (error) {
     message.error(getErrorMessage(error, 'Não foi possível carregar a condução do ciclo.'))
@@ -170,6 +176,22 @@ async function openElection() {
     message.error(getErrorMessage(error, 'Não foi possível abrir a votação.'))
   } finally {
     startingElection.value = false
+  }
+}
+
+async function undoElection() {
+  cancellingElection.value = true
+  try {
+    const updatedCampaign = await cancelCycleElection()
+    await campaignStore.init(updatedCampaign)
+    confirmingCancellation.value = false
+    transitionPreview.value = null
+    message.success('A votação foi desfeita. As Brasas voltaram ao lugar.')
+    await loadOverview()
+  } catch (error) {
+    message.error(getErrorMessage(error, 'Não foi possível desfazer a votação.'))
+  } finally {
+    cancellingElection.value = false
   }
 }
 
@@ -272,9 +294,9 @@ function getErrorMessage(error: unknown, fallback: string): string {
     <template v-else-if="overview && campaign">
       <header class="cycle-hero">
         <div>
-          <span class="cycle-eyebrow">{{ campaign.month }} · {{ campaign.year }}</span>
-          <h2 id="cycle-conductor-heading">Conduzir a passagem</h2>
-          <p>Da última conversa ao próximo jogo, cada passo fica visível antes de ganhar vida.</p>
+          <span class="cycle-eyebrow">Ciclo atual</span>
+          <h2 id="cycle-conductor-heading">{{ campaign.month }} de {{ campaign.year }}</h2>
+          <p>Componha a votação, acompanhe o resultado e prepare a próxima fogueira.</p>
         </div>
         <div class="cycle-status" :class="{ 'cycle-status--active': campaign.electionActive }">
           <span></span>
@@ -425,6 +447,49 @@ function getErrorMessage(error: unknown, fallback: string): string {
           </label>
         </div>
 
+        <aside class="cycle-undo" :class="{ 'cycle-undo--open': confirmingCancellation }">
+          <template v-if="!confirmingCancellation">
+            <div>
+              <strong>Abriu a votação sem querer?</strong>
+              <span>Você pode voltar às Brasas e fazer outro sorteio.</span>
+            </div>
+            <button type="button" class="cycle-quiet" @click="confirmingCancellation = true">
+              Desfazer abertura
+            </button>
+          </template>
+          <template v-else>
+            <div>
+              <strong>Apagar esta votação?</strong>
+              <span>
+                O pool será removido e
+                {{
+                  totalVotes === 1
+                    ? '1 voto será descartado'
+                    : `${totalVotes} votos serão descartados`
+                }}.
+              </span>
+            </div>
+            <div class="cycle-undo__actions">
+              <button
+                type="button"
+                class="cycle-quiet"
+                :disabled="cancellingElection"
+                @click="confirmingCancellation = false"
+              >
+                Manter votação
+              </button>
+              <button
+                type="button"
+                class="cycle-danger"
+                :disabled="cancellingElection"
+                @click="undoElection"
+              >
+                {{ cancellingElection ? 'Desfazendo…' : 'Sim, desfazer' }}
+              </button>
+            </div>
+          </template>
+        </aside>
+
         <p v-if="leadingOptions.length > 1" class="cycle-warning">
           Empate na liderança. Escolha acima qual jogo recebe a chama.
         </p>
@@ -450,8 +515,13 @@ function getErrorMessage(error: unknown, fallback: string): string {
           </div>
 
           <label class="cycle-field">
-            <span>Texto da campanha <small>opcional, a fogueira pode compor por você</small></span>
-            <textarea v-model="description" rows="5"></textarea>
+            <span>Frase da campanha <small>opcional, usamos o resumo curto do jogo</small></span>
+            <textarea
+              v-model="description"
+              rows="3"
+              maxlength="240"
+              placeholder="Uma frase curta sobre esta jornada."
+            ></textarea>
           </label>
 
           <label class="cycle-check">

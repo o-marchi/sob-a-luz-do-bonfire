@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import AuthCallbackPage from '@/views/AuthCallbackPage.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -49,6 +50,7 @@ const router = createRouter({
       meta: {
         pageTitle: 'Conduzir o ciclo',
         pageKicker: 'Da última brasa à próxima chama',
+        requiresConductor: true,
       },
     },
     {
@@ -66,6 +68,14 @@ const router = createRouter({
       },
     },
   ],
+})
+
+router.beforeEach(async (to) => {
+  if (!to.meta.requiresConductor) return true
+
+  const auth = useAuthStore()
+  await auth.init()
+  return auth.user?.isAdmin ? true : { name: 'home' }
 })
 
 export default router

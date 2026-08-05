@@ -1,6 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia, type Pinia } from 'pinia'
 import Backlog from '@/views/Backlog.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const gameServiceMocks = vi.hoisted(() => ({
   getGameBacklog: vi.fn(),
@@ -11,7 +13,11 @@ const gameServiceMocks = vi.hoisted(() => ({
 vi.mock('@/services/gameService', () => gameServiceMocks)
 
 describe('Backlog', () => {
+  let pinia: Pinia
+
   beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
     gameServiceMocks.getGameBacklog.mockResolvedValue({
       retirementThreshold: 3,
       targetPoolSize: 5,
@@ -39,7 +45,7 @@ describe('Backlog', () => {
   })
 
   it('separates pristine suggestions into the next-vote shelf', async () => {
-    const wrapper = mount(Backlog)
+    const wrapper = mount(Backlog, { global: { plugins: [pinia] } })
     await flushPromises()
 
     const nextVoteShelf = wrapper.get('.backlog-shelf--next-vote')
@@ -76,10 +82,28 @@ describe('Backlog', () => {
       ],
     })
 
-    const wrapper = mount(Backlog)
+    const wrapper = mount(Backlog, { global: { plugins: [pinia] } })
     await flushPromises()
 
     expect(wrapper.find('.backlog-shelf--next-vote').exists()).toBe(false)
     expect(wrapper.text()).toContain('Waiting Game')
+  })
+
+  it('shows the conductor entry only to the configured owner', async () => {
+    const auth = useAuthStore()
+    auth.user = { id: 1, name: 'Proper Pedestrian', isAdmin: true }
+    const ownerView = mount(Backlog, {
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: { template: '<a><slot /></a>' } },
+      },
+    })
+    await flushPromises()
+
+    expect(ownerView.get('.backlog-conductor-link').text()).toContain('Conduzir o ciclo')
+
+    auth.user = { id: 2, name: 'Someone else', isAdmin: false }
+    await ownerView.vm.$nextTick()
+    expect(ownerView.find('.backlog-conductor-link').exists()).toBe(false)
   })
 })

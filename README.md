@@ -127,7 +127,7 @@ DISCORD_CLIENT_ID=replace-with-discord-client-id
 DISCORD_CLIENT_SECRET=replace-with-discord-client-secret
 DISCORD_CALLBACK_URL=http://localhost:3000/auth/discord/callback
 DISCORD_GUILD_ID=1534325844619821170
-BONFIRE_ADMIN_DISCORD_IDS=replace-with-owner-discord-id
+BONFIRE_CONDUCTOR_DISCORD_ID=replace-with-owner-discord-id
 DISCORD_BOT_TOKEN=replace-with-private-bot-token
 CYCLE_AUTOMATION_SECRET=replace-with-a-separate-long-random-secret
 ```
@@ -136,10 +136,10 @@ In the Discord Developer Portal, configure the OAuth redirect URL to match `DISC
 Discord login requests `guilds.members.read`; only members of `DISCORD_GUILD_ID` are allowed to
 sign in. The Bonfire server ID above is also the application default.
 
-`BONFIRE_ADMIN_DISCORD_IDS` is a comma-separated allowlist for the private
-`/conduzir` workflow. Administrators need to sign in again after being added so
-their browser receives a fresh JWT. `DISCORD_BOT_TOKEN` remains server-side and
-is used only after the conductor reviews and confirms a channel/event plan. The
+`BONFIRE_CONDUCTOR_DISCORD_ID` identifies the one owner of the private
+`/conduzir` workflow. The conductor needs to sign in again after this value
+changes so the browser receives a fresh JWT. `DISCORD_BOT_TOKEN` remains
+server-side and is used only after the conductor reviews and confirms a channel/event plan. The
 bot needs permission to manage channels and permission overwrites, plus
 `CREATE_EVENTS` in the configured guild and meeting voice channel.
 `CYCLE_AUTOMATION_SECRET` is optional;
@@ -207,7 +207,7 @@ The server exposes routes for:
 - `GET /content/rules` — Markdown rules currently published on the website.
 - `PUT /campaign/update-player-game-information` — update authenticated player's current campaign progress.
 - `POST /campaign/vote` and `POST /campaign/undo-vote` — campaign voting actions.
-- `GET /cycle/overview`, `POST /cycle/draw`, and `POST /cycle/start-election` — guarded cycle composition and election launch.
+- `GET /cycle/overview`, `POST /cycle/draw`, `POST /cycle/start-election`, and `POST /cycle/cancel-election` — guarded cycle composition, election launch, and explicit rollback.
 - `POST /cycle/transition/preview` and `POST /cycle/transition/apply` — guarded, reviewed campaign and Discord transition.
 - `GET /auth/discord` — start Discord OAuth flow.
 - `GET /auth/discord/callback` — Discord OAuth callback.

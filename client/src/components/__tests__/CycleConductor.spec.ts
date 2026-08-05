@@ -9,6 +9,7 @@ const cycleServiceMocks = vi.hoisted(() => ({
   getCycleOverview: vi.fn(),
   drawCyclePool: vi.fn(),
   startCycleElection: vi.fn(),
+  cancelCycleElection: vi.fn(),
   previewCycleTransition: vi.fn(),
   applyCycleTransition: vi.fn(),
 }))
@@ -106,5 +107,44 @@ describe('CycleConductor', () => {
     expect(messageMocks.success).toHaveBeenCalledWith(
       'A votação está acesa. O grupo já pode votar.',
     )
+  })
+
+  it('requires a second click before undoing an opened election', async () => {
+    cycleServiceMocks.getCycleOverview.mockResolvedValue({
+      campaign: {
+        id: 17,
+        month: 'Agosto',
+        year: '2026',
+        current: true,
+        electionActive: true,
+        electionStartedAt: '2026-08-05T20:00:00-03:00',
+        pool: { options: [{ id: 1, game: { id: 1, title: 'Game' } }] },
+      },
+      guaranteedGames: [],
+      electionResult: [{ optionId: 1, gameId: 1, game: 'Game', tokens: 3, voters: ['Ana'] }],
+      targetPoolSize: 5,
+      nextCampaign: { month: 'Setembro', year: '2026' },
+      discordConfigured: false,
+    })
+    cycleServiceMocks.cancelCycleElection.mockResolvedValue({
+      id: 17,
+      month: 'Agosto',
+      year: '2026',
+      current: true,
+      electionActive: false,
+      electionStartedAt: null,
+      pool: null,
+    })
+    const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
+    await flushPromises()
+
+    await wrapper.get('.cycle-undo .cycle-quiet').trigger('click')
+    expect(cycleServiceMocks.cancelCycleElection).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('1 voto será descartado')
+
+    await wrapper.get('.cycle-danger').trigger('click')
+    await flushPromises()
+
+    expect(cycleServiceMocks.cancelCycleElection).toHaveBeenCalledOnce()
   })
 })

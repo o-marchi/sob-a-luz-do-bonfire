@@ -22,6 +22,7 @@ import { PoolOption } from '../pool/entities/pool-option.entity';
 import { Pool } from '../pool/entities/pool.entity';
 import {
   ApplyCycleTransitionDto,
+  CancelElectionDto,
   PreviewCycleTransitionDto,
   StartElectionDto,
 } from './dto/cycle-transition.dto';
@@ -353,6 +354,48 @@ export class CycleService {
     return campaign;
   }
 
+  async cancelElection(
+    dto: CancelElectionDto,
+    actor: Player,
+  ): Promise<Campaign> {
+    if (!dto.confirm) {
+      throw new BadRequestException('Confirme que deseja desfazer a votação.');
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const current = await this.findCurrentCampaignOrFail(manager);
+      if (!current.pool || !current.electionStartedAt) {
+        throw new BadRequestException(
+          'Não há uma votação iniciada pelo condutor para desfazer.',
+        );
+      }
+
+      const poolId = current.pool.id;
+      const gameIds = current.pool.options.map((option) => option.game.id);
+      const discardedVotes = current.pool.options.reduce(
+        (total, option) => total + option.players.length,
+        0,
+      );
+
+      current.pool = null;
+      current.electionActive = false;
+      current.electionStartedAt = null;
+      current.electionEndsAt = null;
+      current.electionClosedAt = null;
+      await manager.getRepository(Campaign).save(current);
+      await manager.getRepository(Pool).delete(poolId);
+      await this.writeAudit(
+        manager,
+        'cycle_election_cancelled',
+        actor,
+        { confirm: true },
+        { campaignId: current.id, poolId, gameIds, discardedVotes },
+      );
+
+      return this.findCurrentCampaignOrFail(manager);
+    });
+  }
+
   async previewTransition(
     dto: PreviewCycleTransitionDto,
   ): Promise<CycleTransitionPreview> {
@@ -395,8 +438,7 @@ export class CycleService {
     }
 
     const description = winner
-      ? dto.description?.trim() ||
-        this.buildCampaignDescription(winner, dto.month, dto.meetingAt)
+      ? dto.description?.trim() || this.buildCampaignDescription(winner)
       : '';
     const discordPreview = winner
       ? await this.discord.preview({
@@ -685,40 +727,17 @@ export class CycleService {
     return selected;
   }
 
-  private buildCampaignDescription(
-    game: Game,
-    month: string,
-    meetingAt?: string,
-  ): string {
-    const links = [
-      game.steam ? `[Steam](${game.steam})` : null,
-      game.trailer ? `[Trailer](${game.trailer})` : null,
-      game.howLongToBeatUrl
-        ? `[HowLongToBeat](${game.howLongToBeatUrl})${game.durationLabel ? ` ${game.durationLabel}` : ''}`
-        : null,
-    ].filter(Boolean);
-    const meeting = meetingAt
-      ? `\n\nO nosso próximo encontro será em ${new Intl.DateTimeFormat(
-          'pt-BR',
-          {
-            dateStyle: 'long',
-            timeStyle: 'short',
-            timeZone: 'America/Sao_Paulo',
-          },
-        ).format(new Date(meetingAt))}.`
-      : '';
+  private buildCampaignDescription(game: Game): string {
+    const summary =
+      game.summary?.replace(/\s+/g, ' ').trim() ||
+      'Uma nova jornada escolhida ao redor da fogueira.';
+    const firstSentence = summary.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim();
+    const phrase = firstSentence || summary;
+    if (phrase.length <= 220) return phrase;
 
-    return (
-      [
-        `O jogo do mês de ${month.trim()} é:`,
-        `**${game.title}**`,
-        game.summary?.trim() ||
-          'Uma nova jornada escolhida ao redor da fogueira.',
-        links.join(' · '),
-      ]
-        .filter(Boolean)
-        .join('\n\n') + meeting
-    );
+    const shortened = phrase.slice(0, 219);
+    const lastSpace = shortened.lastIndexOf(' ');
+    return `${shortened.slice(0, lastSpace > 160 ? lastSpace : 219).trim()}…`;
   }
 
   private getNextCampaignDefaults(campaign: Campaign): {

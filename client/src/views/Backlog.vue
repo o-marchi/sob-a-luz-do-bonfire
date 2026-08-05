@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import { LogoSteam, LogoYoutube, TimeOutline } from '@vicons/ionicons5'
 import { NIcon, NModal, NSpin, NTooltip } from 'naive-ui'
 import { formatDurationLabel, getGameBacklog, getGameCover } from '@/services/gameService'
 import type { BacklogGame, GameBacklog, GameRecommender } from '@/types/Game'
 import BacklogGameCard from '@/components/BacklogGameCard.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const { user } = storeToRefs(useAuthStore())
 
 const backlog = ref<GameBacklog | null>(null)
 const loading = ref(true)
@@ -473,9 +478,16 @@ onBeforeUnmount(() => {
           </p>
         </div>
 
-        <div class="backlog-limit" aria-label="Limite de passagens antes de virar cinza">
-          <strong>{{ backlog.retirementThreshold }}</strong>
-          <span>passagens<br />até as cinzas</span>
+        <div class="backlog-overview__aside">
+          <div class="backlog-limit" aria-label="Limite de passagens antes de virar cinza">
+            <strong>{{ backlog.retirementThreshold }}</strong>
+            <span>passagens<br />até as cinzas</span>
+          </div>
+
+          <RouterLink v-if="user?.isAdmin" class="backlog-conductor-link" to="/conduzir">
+            <span>Próxima votação</span>
+            <strong>Conduzir o ciclo →</strong>
+          </RouterLink>
         </div>
       </header>
 
