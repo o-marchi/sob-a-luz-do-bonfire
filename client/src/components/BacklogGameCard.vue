@@ -83,7 +83,7 @@ const hiddenRecommenderNames = () =>
       <div
         v-if="game.recommendedBy?.length"
         class="backlog-card__recommenders"
-        aria-label="Pessoas que apresentaram este jogo ao grupo"
+        aria-label="Pessoas que sugeriram este jogo ao grupo"
       >
         <n-tooltip
           v-for="recommender in visibleRecommenders()"
@@ -94,7 +94,7 @@ const hiddenRecommenderNames = () =>
             <span
               class="backlog-recommender"
               tabindex="0"
-              :aria-label="`Apresentado por ${recommender.name}`"
+              :aria-label="`Sugerido por ${recommender.name}`"
             >
               <img
                 v-if="hasRecommenderAvatar(recommender)"
@@ -105,7 +105,7 @@ const hiddenRecommenderNames = () =>
               <span v-else aria-hidden="true">{{ recommenderInitial(recommender) }}</span>
             </span>
           </template>
-          Apresentado por {{ recommender.name }}
+          Sugerido por {{ recommender.name }}
         </n-tooltip>
 
         <n-tooltip v-if="game.recommendedBy.length > 3" placement="top">
@@ -113,12 +113,12 @@ const hiddenRecommenderNames = () =>
             <span
               class="backlog-recommender backlog-recommender--more"
               tabindex="0"
-              :aria-label="`Mais ${game.recommendedBy.length - 3} pessoas apresentaram este jogo`"
+              :aria-label="`Mais ${game.recommendedBy.length - 3} pessoas sugeriram este jogo`"
             >
               +{{ game.recommendedBy.length - 3 }}
             </span>
           </template>
-          Também apresentado por {{ hiddenRecommenderNames() }}
+          Também sugerido por {{ hiddenRecommenderNames() }}
         </n-tooltip>
       </div>
 

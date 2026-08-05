@@ -382,7 +382,7 @@ onBeforeUnmount(() => {
             <div
               v-if="selectedRubbleGame.recommendedBy?.length"
               class="backlog-card__recommenders"
-              aria-label="Pessoas que apresentaram este jogo ao grupo"
+              aria-label="Pessoas que sugeriram este jogo ao grupo"
             >
               <n-tooltip
                 v-for="recommender in visibleRecommenders(selectedRubbleGame)"
@@ -393,7 +393,7 @@ onBeforeUnmount(() => {
                   <span
                     class="backlog-recommender"
                     tabindex="0"
-                    :aria-label="`Apresentado por ${recommender.name}`"
+                    :aria-label="`Sugerido por ${recommender.name}`"
                   >
                     <img
                       v-if="hasRecommenderAvatar(selectedRubbleGame, recommender)"
@@ -404,7 +404,7 @@ onBeforeUnmount(() => {
                     <span v-else aria-hidden="true">{{ recommenderInitial(recommender) }}</span>
                   </span>
                 </template>
-                Apresentado por {{ recommender.name }}
+                Sugerido por {{ recommender.name }}
               </n-tooltip>
 
               <n-tooltip v-if="selectedRubbleGame.recommendedBy.length > 3" placement="top">
@@ -412,12 +412,12 @@ onBeforeUnmount(() => {
                   <span
                     class="backlog-recommender backlog-recommender--more"
                     tabindex="0"
-                    :aria-label="`Mais ${selectedRubbleGame.recommendedBy.length - 3} pessoas apresentaram este jogo`"
+                    :aria-label="`Mais ${selectedRubbleGame.recommendedBy.length - 3} pessoas sugeriram este jogo`"
                   >
                     +{{ selectedRubbleGame.recommendedBy.length - 3 }}
                   </span>
                 </template>
-                Também apresentado por {{ hiddenRecommenderNames(selectedRubbleGame) }}
+                Também sugerido por {{ hiddenRecommenderNames(selectedRubbleGame) }}
               </n-tooltip>
             </div>
 

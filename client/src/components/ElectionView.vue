@@ -51,8 +51,8 @@ const hiddenRecommenderNames = (option: PoolOption) =>
 const recommenderLabel = (option: PoolOption) => {
   const names = (option.game.recommendedBy ?? []).map((recommender) => recommender.name)
   if (!names.length) return ''
-  if (names.length === 1) return `Apresentado por ${names[0]}`
-  return `Apresentado por ${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`
+  if (names.length === 1) return `Sugerido por ${names[0]}`
+  return `Sugerido por ${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`
 }
 
 const undoVoteAction = async () => {
@@ -108,7 +108,7 @@ const voteAction = async (optionId: number) => {
         >
           <div class="election-card__shade"></div>
 
-          <span v-if="didIVoteForThis(option.players ?? [])" class="election-card__selected-badge">
+          <span v-if="didIVoteForThis(option.players ?? [])" class="election-card__selected-bar">
             <n-icon size="14"><CheckmarkCircle /></n-icon>
             Sua escolha
           </span>
@@ -187,7 +187,7 @@ const voteAction = async (optionId: number) => {
                     <span v-else aria-hidden="true">{{ recommenderInitial(recommender) }}</span>
                   </span>
                 </template>
-                Apresentado por {{ recommender.name }}
+                Sugerido por {{ recommender.name }}
               </n-tooltip>
 
               <n-tooltip v-if="option.game.recommendedBy.length > 3" placement="top">
@@ -196,7 +196,7 @@ const voteAction = async (optionId: number) => {
                     +{{ option.game.recommendedBy.length - 3 }}
                   </span>
                 </template>
-                Também apresentado por {{ hiddenRecommenderNames(option) }}
+                Também sugerido por {{ hiddenRecommenderNames(option) }}
               </n-tooltip>
             </div>
             <span>{{ recommenderLabel(option) }}</span>

@@ -82,7 +82,7 @@ describe('ElectionView', () => {
     expect(wrapper.findAll('.election-card')).toHaveLength(2)
     expect(wrapper.text()).toContain('The First Game')
     expect(wrapper.text()).toContain('12 horas')
-    expect(wrapper.text()).toContain('Apresentado por Bia e Caio')
+    expect(wrapper.text()).toContain('Sugerido por Bia e Caio')
     expect(wrapper.text()).not.toContain('12 tokens')
     expect(wrapper.text()).not.toContain('4 tokens')
 

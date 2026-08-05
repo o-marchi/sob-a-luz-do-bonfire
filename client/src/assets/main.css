@@ -2346,8 +2346,13 @@ a.meeting-callout:focus-visible {
   position: absolute;
   top: 10px;
   right: 10px;
+  z-index: 6;
   display: flex;
   gap: 5px;
+}
+
+.election-card--selected .election-card__links {
+  top: 42px;
 }
 
 .election-card__links a {
@@ -2374,22 +2379,26 @@ a.meeting-callout:focus-visible {
   border-color: rgba(242, 164, 92, 0.38);
 }
 
-.election-card__selected-badge {
+.election-card__selected-bar {
   position: absolute;
-  top: 11px;
-  left: 11px;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 6;
   display: inline-flex;
-  padding: 6px 8px;
+  min-height: 31px;
+  padding: 6px 10px;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   color: #f2bb8d;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.03em;
-  background: rgba(39, 20, 19, 0.86);
-  border: 1px solid rgba(235, 151, 91, 0.35);
-  border-radius: 4px;
-  backdrop-filter: blur(8px);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(40, 20, 18, 0.9);
+  border-bottom: 1px solid rgba(235, 151, 91, 0.38);
+  backdrop-filter: blur(10px);
 }
 
 .election-card__title {
