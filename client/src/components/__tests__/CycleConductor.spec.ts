@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia, type Pinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import CycleConductor from '@/views/CycleConductor.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCampaignStore } from '@/stores/campaign'
@@ -63,10 +63,7 @@ describe('CycleConductor', () => {
       targetPoolSize: 5,
       guaranteedGames: [{ id: 1, title: 'Suggested Game', suggestion: true }],
       selectedFillers: [{ id: 2, title: 'Random Game', suggestion: true }],
-      revealOrder: [
-        { id: 2, title: 'Random Game', suggestion: true, mainExtraHours: 10 },
-        { id: 1, title: 'Suggested Game', suggestion: true, mainExtraHours: 12 },
-      ],
+      revealOrder: [{ id: 2, title: 'Random Game', suggestion: true, mainExtraHours: 10 }],
       excludedUnverified: [],
       selectionToken: 'signed-draw',
       warnings: [],
@@ -82,18 +79,24 @@ describe('CycleConductor', () => {
     })
   })
 
-  it('reveals a signed random selection before opening the election', async () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('shows guaranteed suggestions first and reveals only the random selection', async () => {
     const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
     await flushPromises()
 
     expect(wrapper.text()).toContain('Formar a próxima votação')
+    expect(wrapper.text()).toContain('Suggested Game')
+    expect(wrapper.text()).toContain('nenhum deles será removido')
+    expect(wrapper.get('[data-testid="draw-games"]').classes()).not.toContain('n-button')
     await wrapper.get('[data-testid="draw-games"]').trigger('click')
     await flushPromises()
 
     expect(cycleServiceMocks.drawCyclePool).toHaveBeenCalledOnce()
     expect(wrapper.findAll('.reveal-card')).toHaveLength(1)
 
-    await wrapper.get('.reveal-card--hidden').trigger('click')
     await wrapper.get('.reveal-card--hidden').trigger('click')
 
     expect(wrapper.text()).toContain('Random Game')
@@ -107,6 +110,31 @@ describe('CycleConductor', () => {
     expect(messageMocks.success).toHaveBeenCalledWith(
       'A votação está acesa. O grupo já pode votar.',
     )
+  })
+
+  it('sets election deadlines at the next Monday and month boundaries', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 7, 5, 12, 0, 0))
+    const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="draw-games"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('.reveal-card--hidden').trigger('click')
+
+    const deadlineInput = wrapper.get<HTMLInputElement>('input[type="datetime-local"]')
+    const mondayButton = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Virada para segunda'))
+    const monthButton = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Virada do mês'))
+
+    expect(mondayButton).toBeDefined()
+    expect(monthButton).toBeDefined()
+    await mondayButton?.trigger('click')
+    expect(deadlineInput.element.value).toBe('2026-08-10T00:00')
+    await monthButton?.trigger('click')
+    expect(deadlineInput.element.value).toBe('2026-09-01T00:00')
   })
 
   it('requires a second click before undoing an opened election', async () => {
@@ -138,7 +166,7 @@ describe('CycleConductor', () => {
     const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
     await flushPromises()
 
-    await wrapper.get('.cycle-undo .n-button').trigger('click')
+    await wrapper.get('.cycle-undo .game-links button').trigger('click')
     expect(cycleServiceMocks.cancelCycleElection).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('1 voto será descartado')
 

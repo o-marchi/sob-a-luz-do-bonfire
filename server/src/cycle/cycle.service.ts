@@ -210,7 +210,7 @@ export class CycleService {
       (game) => this.hasKnownDuration(game) && !this.isDurationEligible(game),
     );
     const selection = [...guaranteedGames, ...selectedFillers];
-    const revealOrder = this.shuffle(selection);
+    const revealOrder = this.shuffle(selectedFillers);
     const warnings: string[] = [];
 
     if (selectedFillers.length < fillCount) {

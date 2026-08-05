@@ -872,6 +872,154 @@ body.bonfire-inner-page .user-menu-popover {
   align-content: center;
 }
 
+.guaranteed-selection {
+  margin-top: 28px;
+}
+
+.guaranteed-selection > header,
+.random-selection > header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 14px;
+}
+
+.guaranteed-selection h4,
+.mystery-draw h4 {
+  margin: 5px 0 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'Mulish', sans-serif;
+  font-size: 18px;
+  font-weight: 820;
+}
+
+.guaranteed-selection > header > strong,
+.random-selection > header > strong {
+  color: rgba(247, 222, 208, 0.42);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.guaranteed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 9px;
+}
+
+.guaranteed-game {
+  display: flex;
+  min-width: 0;
+  min-height: 76px;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 6px;
+  background: rgba(9, 8, 12, 0.35);
+}
+
+.guaranteed-game__art {
+  width: 92px;
+  flex: 0 0 auto;
+  background-position: center;
+  background-size: cover;
+}
+
+.guaranteed-game > div:last-child {
+  display: grid;
+  min-width: 0;
+  padding: 10px 12px;
+  align-content: center;
+}
+
+.guaranteed-game small {
+  color: rgba(242, 164, 92, 0.72);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.guaranteed-game h5 {
+  margin: 3px 0 2px;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guaranteed-game span,
+.guaranteed-empty,
+.random-selection__empty,
+.mystery-draw p {
+  color: rgba(247, 222, 208, 0.46);
+  font-size: 11px;
+}
+
+.guaranteed-empty,
+.random-selection__empty {
+  margin: 25px 0 0;
+  padding: 14px 16px;
+  border: 1px dashed rgba(247, 222, 208, 0.12);
+  border-radius: 6px;
+}
+
+.mystery-draw {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.mystery-draw p {
+  max-width: 430px;
+  margin: 8px 0 17px;
+  line-height: 1.55;
+}
+
+.mystery-stack {
+  position: relative;
+  width: 92px;
+  height: 63px;
+  margin-bottom: 20px;
+}
+
+.mystery-stack span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(247, 181, 116, 0.82);
+  border: 1px solid rgba(242, 164, 92, 0.3);
+  border-radius: 6px;
+  background: linear-gradient(145deg, rgba(90, 38, 34, 0.92), rgba(22, 16, 23, 0.98));
+  box-shadow: 0 9px 20px rgba(0, 0, 0, 0.24);
+  font-family: 'Cinzel', serif;
+  font-size: 24px;
+}
+
+.mystery-stack span:first-child {
+  transform: translateX(-15px) rotate(-9deg);
+}
+
+.mystery-stack span:nth-child(2) {
+  transform: translateX(15px) rotate(9deg);
+}
+
+.mystery-stack span:last-child {
+  transform: translateY(-3px);
+}
+
+.random-selection {
+  margin-top: 30px;
+}
+
+.random-selection .reveal-grid {
+  grid-template-columns: repeat(auto-fill, minmax(168px, 220px));
+  justify-content: start;
+}
+
 .reveal-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
@@ -1264,6 +1412,10 @@ body.bonfire-inner-page .user-menu-popover {
     grid-template-columns: 1fr;
   }
 
+  .random-selection .reveal-grid {
+    grid-template-columns: 1fr;
+  }
+
   .result-row {
     flex-wrap: wrap;
     gap: 10px;
@@ -1477,7 +1629,8 @@ a.meeting-callout:focus-visible {
   gap: 8px;
 }
 
-.game-links a {
+.game-links a,
+.game-links button {
   display: inline-flex;
   min-height: 34px;
   padding: 7px 11px;
@@ -1496,11 +1649,25 @@ a.meeting-callout:focus-visible {
     background 180ms ease;
 }
 
+.game-links button {
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+
 .game-links a:hover,
-.game-links a:focus-visible {
+.game-links a:focus-visible,
+.game-links button:hover:not(:disabled),
+.game-links button:focus-visible {
   color: #f4b184;
   background: rgba(242, 164, 92, 0.055);
   border-color: rgba(242, 164, 92, 0.34);
+}
+
+.game-links button:disabled {
+  cursor: wait;
+  opacity: 0.5;
 }
 
 .hearth-community {

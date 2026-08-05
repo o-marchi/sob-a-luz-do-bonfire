@@ -185,7 +185,10 @@ describe('CycleService', () => {
       (game) => !fillerTitles.has(game.title),
     );
     expect(unexpectedFillers).toEqual([]);
-    expect(draw.revealOrder).toHaveLength(5);
+    expect(draw.revealOrder).toHaveLength(4);
+    expect(draw.revealOrder).toEqual(
+      expect.arrayContaining(draw.selectedFillers),
+    );
     expect(
       draw.excludedUnverified.every(
         (game) => game.title === 'Unchecked filler',
@@ -210,6 +213,55 @@ describe('CycleService', () => {
         actor: `player:${actor.id}`,
       }),
     ]);
+  });
+
+  it('keeps every meeting suggestion when the group suggests more than five games', async () => {
+    const suggestions: Game[] = [];
+    for (const index of Array.from({ length: 7 }, (_, value) => value)) {
+      const game = await saveGame({
+        title: `Meeting Suggestion ${index + 1}`,
+        suggestion: true,
+        mainExtraHours: 8 + index,
+      });
+      const playerRepository = dataSource.getRepository(Player);
+      const player = await playerRepository.save(
+        playerRepository.create({ name: `Recommender ${index + 1}` }),
+      );
+      await dataSource.getRepository(CampaignPlayer).save(
+        dataSource.getRepository(CampaignPlayer).create({
+          campaign,
+          player,
+          suggested_a_game: true,
+          suggestedGame: game,
+        }),
+      );
+      suggestions.push(game);
+    }
+    await saveGame({
+      title: 'Catalog game that must not displace a suggestion',
+      suggestion: true,
+      mainExtraHours: 6,
+    });
+
+    const draw = (await service.drawPool()) as {
+      guaranteedGames: Game[];
+      selectedFillers: Game[];
+      revealOrder: Game[];
+      selectionToken: string;
+    };
+
+    expect(draw.guaranteedGames).toHaveLength(7);
+    expect(draw.guaranteedGames.map((game) => game.id)).toEqual(
+      expect.arrayContaining(suggestions.map((game) => game.id)),
+    );
+    expect(draw.selectedFillers).toEqual([]);
+    expect(draw.revealOrder).toEqual([]);
+
+    const started = await service.startElection(
+      { selectionToken: draw.selectionToken },
+      actor,
+    );
+    expect(started.pool?.options).toHaveLength(7);
   });
 
   it('researches an unchecked catalog game and fails closed when no duration is found', async () => {

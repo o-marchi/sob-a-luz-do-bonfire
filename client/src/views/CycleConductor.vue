@@ -2,7 +2,7 @@
 import axios from 'axios'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, useMessage } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useCampaignStore } from '@/stores/campaign'
@@ -61,10 +61,18 @@ const campaign = computed(() => overview.value?.campaign ?? null)
 const hasElection = computed(() =>
   Boolean(campaign.value?.electionStartedAt && campaign.value?.pool?.options.length),
 )
+const guaranteedGames = computed(
+  () => draw.value?.guaranteedGames ?? overview.value?.guaranteedGames ?? [],
+)
+const fillerSlotsNeeded = computed(() =>
+  Math.max(0, (overview.value?.targetPoolSize ?? 0) - guaranteedGames.value.length),
+)
 const revealedGames = computed(() => draw.value?.revealOrder.slice(0, revealCount.value) ?? [])
 const allRevealed = computed(() =>
   Boolean(draw.value && revealCount.value >= draw.value.revealOrder.length),
 )
+const nextMondayDeadline = computed(() => getNextMondayBoundary())
+const nextMonthDeadline = computed(() => getNextMonthBoundary())
 const sortedElectionResult = computed(() =>
   [...(overview.value?.electionResult ?? [])].sort(
     (left, right) => right.tokens - left.tokens || left.game.localeCompare(right.game, 'pt-BR'),
@@ -150,13 +158,10 @@ function stopReveal() {
   }
 }
 
-function isGuaranteed(gameId: number) {
-  return draw.value?.guaranteedGames.some((game) => game.id === gameId) ?? false
-}
-
-function setElectionDuration(hours: number) {
-  const date = new Date(Date.now() + hours * 60 * 60 * 1000)
-  electionEndsAt.value = toLocalDateTimeInput(date)
+function setElectionBoundary(boundary: 'monday' | 'month') {
+  electionEndsAt.value = toLocalDateTimeInput(
+    boundary === 'monday' ? nextMondayDeadline.value : nextMonthDeadline.value,
+  )
 }
 
 async function openElection() {
@@ -264,6 +269,28 @@ function toLocalDateTimeInput(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
+function getNextMondayBoundary(from = new Date()): Date {
+  const boundary = new Date(from)
+  boundary.setHours(0, 0, 0, 0)
+  const daysUntilMonday = (8 - boundary.getDay()) % 7 || 7
+  boundary.setDate(boundary.getDate() + daysUntilMonday)
+  return boundary
+}
+
+function getNextMonthBoundary(from = new Date()): Date {
+  return new Date(from.getFullYear(), from.getMonth() + 1, 1, 0, 0, 0, 0)
+}
+
+function formatDeadline(date: Date): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
 function toOffsetIso(localValue: string): string {
   const date = new Date(localValue)
   const pad = (value: number) => String(Math.abs(value)).padStart(2, '0')
@@ -324,72 +351,141 @@ function getErrorMessage(error: unknown, fallback: string): string {
             <span class="cycle-eyebrow">O sorteio das Brasas</span>
             <h3>Formar a próxima votação</h3>
           </div>
-          <strong
-            >{{ overview.guaranteedGames.length }} sugeridos · até
-            {{ overview.targetPoolSize }}</strong
-          >
+          <strong>
+            {{ guaranteedGames.length }}
+            {{ guaranteedGames.length === 1 ? 'jogo garantido' : 'jogos garantidos' }}
+          </strong>
         </div>
 
         <p class="cycle-panel__copy">
-          Todas as sugestões desta reunião entram primeiro. Os lugares que faltarem são sorteados
-          entre jogos elegíveis do catálogo. Na primeira vez, a duração dos jogos sorteados pode ser
-          pesquisada antes da revelação.
+          Toda sugestão aceita nesta reunião entra na votação, sem limite e sem sorteio. Se houver
+          menos de {{ overview.targetPoolSize }}, completamos a roda com jogos elegíveis das Brasas.
+        </p>
+
+        <section v-if="guaranteedGames.length" class="guaranteed-selection">
+          <header>
+            <div>
+              <span class="cycle-eyebrow">Presenças confirmadas</span>
+              <h4>Estes jogos já estão na próxima votação</h4>
+            </div>
+            <strong>nenhum deles será removido</strong>
+          </header>
+          <div class="guaranteed-grid">
+            <article v-for="game in guaranteedGames" :key="game.id" class="guaranteed-game">
+              <div
+                class="guaranteed-game__art"
+                :style="{ backgroundImage: `url('${getGameCover(game)}')` }"
+              ></div>
+              <div>
+                <small>Sugestão da roda</small>
+                <h5>{{ game.title }}</h5>
+                <span>
+                  {{
+                    game.durationLabel ||
+                    (game.mainExtraHours != null ? `${game.mainExtraHours} h` : 'Duração pendente')
+                  }}
+                </span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <p v-else class="guaranteed-empty">
+          Ainda não há sugestões nesta reunião. As cinco vagas virão das Brasas.
         </p>
 
         <div v-if="!draw" class="draw-hearth">
-          <n-button
-            data-testid="draw-games"
-            size="large"
-            type="primary"
-            :loading="drawing"
-            @click="drawGames"
-          >
-            {{ drawing ? 'Pesquisando e misturando as brasas…' : 'Sortear os jogos' }}
-          </n-button>
+          <div class="mystery-draw">
+            <div v-if="fillerSlotsNeeded" class="mystery-stack" aria-hidden="true">
+              <span>?</span><span>?</span><span>?</span>
+            </div>
+            <span class="cycle-eyebrow">
+              {{ fillerSlotsNeeded ? `${fillerSlotsNeeded} lugares em aberto` : 'Roda completa' }}
+            </span>
+            <h4>
+              {{ fillerSlotsNeeded ? 'Quem vem das Brasas?' : 'Nenhum sorteio é necessário' }}
+            </h4>
+            <p v-if="fillerSlotsNeeded">
+              Só estes lugares são surpresa. Os jogos acima já estão a salvo na votação.
+            </p>
+            <p v-else>As sugestões já formam toda a roda. Vamos apenas conferir e continuar.</p>
+            <div class="game-links">
+              <button data-testid="draw-games" type="button" :disabled="drawing" @click="drawGames">
+                {{
+                  drawing
+                    ? 'Pesquisando as Brasas…'
+                    : fillerSlotsNeeded
+                      ? `Sortear ${fillerSlotsNeeded} ${fillerSlotsNeeded === 1 ? 'jogo' : 'jogos'}`
+                      : 'Continuar com os sugeridos'
+                }}
+              </button>
+            </div>
+          </div>
         </div>
 
         <template v-else>
-          <div class="reveal-grid" aria-live="polite">
-            <article
-              v-for="(game, index) in revealedGames"
-              :key="game.id"
-              class="reveal-card"
-              :style="{ '--reveal-index': index }"
-            >
-              <div
-                class="reveal-card__art"
-                :style="{ backgroundImage: `url('${getGameCover(game)}')` }"
+          <section v-if="draw.selectedFillers.length" class="random-selection">
+            <header>
+              <span class="cycle-eyebrow">Vindos das Brasas</span>
+              <strong>
+                {{ draw.selectedFillers.length }}
+                {{ draw.selectedFillers.length === 1 ? 'jogo sorteado' : 'jogos sorteados' }}
+              </strong>
+            </header>
+            <div class="reveal-grid" aria-live="polite">
+              <article
+                v-for="(game, index) in revealedGames"
+                :key="game.id"
+                class="reveal-card"
+                :style="{ '--reveal-index': index }"
               >
-                <span>{{
-                  isGuaranteed(game.id) ? 'Sugestão da roda' : 'Sorteado das Brasas'
-                }}</span>
-              </div>
-              <div class="reveal-card__body">
-                <small>{{ String(index + 1).padStart(2, '0') }}</small>
-                <h4>{{ game.title }}</h4>
-                <p>{{ game.durationLabel || `${game.mainExtraHours} h` }}</p>
-              </div>
-            </article>
+                <div
+                  class="reveal-card__art"
+                  :style="{ backgroundImage: `url('${getGameCover(game)}')` }"
+                >
+                  <span>Sorteado das Brasas</span>
+                </div>
+                <div class="reveal-card__body">
+                  <small>{{ String(index + 1).padStart(2, '0') }}</small>
+                  <h4>{{ game.title }}</h4>
+                  <p>
+                    {{
+                      game.durationLabel ||
+                      (game.mainExtraHours != null
+                        ? `${game.mainExtraHours} h`
+                        : 'Duração pendente')
+                    }}
+                  </p>
+                </div>
+              </article>
 
-            <button
-              v-if="!allRevealed"
-              class="reveal-card reveal-card--hidden"
-              type="button"
-              @click="revealNext"
-            >
-              <span>?</span>
-              <strong>Revelar a próxima brasa</strong>
-            </button>
-          </div>
+              <button
+                v-if="!allRevealed"
+                class="reveal-card reveal-card--hidden"
+                type="button"
+                @click="revealNext"
+              >
+                <span>?</span>
+                <strong>
+                  Qual é a
+                  {{ revealedGames.length ? 'próxima' : 'primeira' }} brasa?
+                </strong>
+              </button>
+            </div>
 
-          <div class="draw-actions">
-            <n-button v-if="!allRevealed" secondary @click="revealAll">
-              Revelar em sequência
-            </n-button>
-            <n-button quaternary :loading="drawing" @click="drawGames">
-              Sortear novamente
-            </n-button>
-          </div>
+            <div class="draw-actions game-links">
+              <button v-if="!allRevealed" type="button" @click="revealAll">
+                Revelar em sequência
+              </button>
+              <button type="button" :disabled="drawing" @click="drawGames">
+                {{ drawing ? 'Sorteando…' : 'Sortear novamente' }}
+              </button>
+            </div>
+          </section>
+
+          <p v-else class="random-selection__empty">
+            A votação será formada somente pelas sugestões confirmadas acima.
+          </p>
 
           <div v-if="allRevealed" class="election-launch">
             <div>
@@ -397,28 +493,28 @@ function getErrorMessage(error: unknown, fallback: string): string {
               <h3>Quando as urnas se fecham?</h3>
               <p>Você pode deixar sem prazo e encerrar manualmente depois.</p>
             </div>
-            <div class="duration-presets">
-              <n-button size="small" secondary @click="setElectionDuration(24)">24 h</n-button>
-              <n-button size="small" secondary @click="setElectionDuration(48)">48 h</n-button>
-              <n-button size="small" secondary @click="setElectionDuration(72)"> 3 dias </n-button>
-              <n-button size="small" secondary @click="setElectionDuration(168)">
-                1 semana
-              </n-button>
+            <div class="duration-presets game-links">
+              <button type="button" @click="setElectionBoundary('monday')">
+                Virada para segunda · {{ formatDeadline(nextMondayDeadline) }}
+              </button>
+              <button type="button" @click="setElectionBoundary('month')">
+                Virada do mês · {{ formatDeadline(nextMonthDeadline) }}
+              </button>
             </div>
             <label class="cycle-field">
               <span>Encerramento opcional</span>
               <input v-model="electionEndsAt" type="datetime-local" />
             </label>
-            <n-button
-              data-testid="start-election"
-              block
-              size="large"
-              type="primary"
-              :loading="startingElection"
-              @click="openElection"
-            >
-              {{ startingElection ? 'Acendendo a votação…' : 'Começar a eleição' }}
-            </n-button>
+            <div class="game-links">
+              <button
+                data-testid="start-election"
+                type="button"
+                :disabled="startingElection"
+                @click="openElection"
+              >
+                {{ startingElection ? 'Acendendo a votação…' : 'Começar a eleição' }}
+              </button>
+            </div>
           </div>
         </template>
       </section>
@@ -462,9 +558,11 @@ function getErrorMessage(error: unknown, fallback: string): string {
               <strong>Abriu a votação sem querer?</strong>
               <span>Você pode voltar às Brasas e fazer outro sorteio.</span>
             </div>
-            <n-button quaternary @click="confirmingCancellation = true">
-              Desfazer abertura
-            </n-button>
+            <div class="game-links">
+              <button type="button" @click="confirmingCancellation = true">
+                Desfazer abertura
+              </button>
+            </div>
           </template>
           <template v-else>
             <div>
@@ -478,23 +576,22 @@ function getErrorMessage(error: unknown, fallback: string): string {
                 }}.
               </span>
             </div>
-            <div class="cycle-undo__actions">
-              <n-button
-                quaternary
+            <div class="cycle-undo__actions game-links">
+              <button
+                type="button"
                 :disabled="cancellingElection"
                 @click="confirmingCancellation = false"
               >
                 Manter votação
-              </n-button>
-              <n-button
+              </button>
+              <button
                 data-testid="confirm-cancel-election"
-                secondary
-                type="error"
-                :loading="cancellingElection"
+                type="button"
+                :disabled="cancellingElection"
                 @click="undoElection"
               >
                 {{ cancellingElection ? 'Desfazendo…' : 'Sim, desfazer' }}
-              </n-button>
+              </button>
             </div>
           </template>
         </aside>
@@ -553,15 +650,10 @@ function getErrorMessage(error: unknown, fallback: string): string {
             <span>Permitir encerrar antes do horário programado.</span>
           </label>
 
-          <div class="transition-form__actions">
-            <n-button
-              attr-type="submit"
-              type="primary"
-              :loading="previewing"
-              :disabled="!winnerGameId"
-            >
+          <div class="transition-form__actions game-links">
+            <button type="submit" :disabled="previewing || !winnerGameId">
               {{ previewing ? 'Lendo a passagem…' : 'Revisar a passagem' }}
-            </n-button>
+            </button>
           </div>
         </form>
 
@@ -629,9 +721,11 @@ function getErrorMessage(error: unknown, fallback: string): string {
               <input v-model="newChannelTopic" />
             </label>
           </div>
-          <n-button secondary :loading="previewing" @click="prepareTransition">
-            Atualizar prévia
-          </n-button>
+          <div class="game-links">
+            <button type="button" :disabled="previewing" @click="prepareTransition">
+              {{ previewing ? 'Atualizando…' : 'Atualizar prévia' }}
+            </button>
+          </div>
         </div>
 
         <section v-if="transitionPreview" class="transition-preview" aria-live="polite">
@@ -677,16 +771,14 @@ function getErrorMessage(error: unknown, fallback: string): string {
             </ul>
           </template>
 
-          <n-button
+          <div
             v-if="transitionPreview.valid && transitionPreview.confirmationToken"
-            block
-            size="large"
-            type="primary"
-            :loading="applying"
-            @click="finishTransition"
+            class="game-links"
           >
-            {{ applying ? 'Passando a chama…' : 'Encerrar este ciclo e começar o próximo' }}
-          </n-button>
+            <button type="button" :disabled="applying" @click="finishTransition">
+              {{ applying ? 'Passando a chama…' : 'Encerrar este ciclo e começar o próximo' }}
+            </button>
+          </div>
         </section>
       </section>
     </template>
