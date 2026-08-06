@@ -11,6 +11,8 @@
   mainHours?: number | null
   mainExtraHours?: number | null
   howLongToBeatTitle?: string | null
+  researchCheckedAt?: string | null
+  researchStatus?: string | null
   recommendedBy?: GameRecommender[]
 }
 

@@ -11,6 +11,8 @@ import { JwtStrategy } from './strategies/jwt.strategy'; // assumes you have thi
 import { MediaModule } from '../media/media.module';
 import { DiscordMembershipService } from './discord-membership.service';
 import { DiscordCallbackGuard } from './guards/discord-callback.guard';
+import { BonfireAdminAccessService } from './bonfire-admin-access.service';
+import { BonfireAdminGuard } from './guards/bonfire-admin.guard';
 
 @Module({
   imports: [
@@ -34,7 +36,9 @@ import { DiscordCallbackGuard } from './guards/discord-callback.guard';
     DiscordMembershipService,
     DiscordCallbackGuard,
     JwtStrategy,
+    BonfireAdminAccessService,
+    BonfireAdminGuard,
   ],
-  exports: [AuthService],
+  exports: [AuthService, BonfireAdminAccessService, BonfireAdminGuard],
 })
 export class AuthModule {}

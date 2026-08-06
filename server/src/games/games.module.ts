@@ -14,6 +14,6 @@ import { GameResearchService } from './game-research.service';
   ],
   controllers: [GamesController],
   providers: [GamesService, GameResearchService],
-  exports: [TypeOrmModule],
+  exports: [TypeOrmModule, GameResearchService],
 })
 export class GamesModule {}

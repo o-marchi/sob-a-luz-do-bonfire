@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Game } from '../games/entities/game.entity';
+import { GameRecommendation } from '../games/entities/game-recommendation.entity';
 import { Player } from '../players/entities/player.entity';
 import { PoolOption } from '../pool/entities/pool-option.entity';
 import { Pool } from '../pool/entities/pool.entity';
@@ -17,7 +18,15 @@ describe('CampaignService voting', () => {
   beforeEach(async () => {
     dataSource = new DataSource({
       type: 'sqljs',
-      entities: [Campaign, CampaignPlayer, Game, Player, Pool, PoolOption],
+      entities: [
+        Campaign,
+        CampaignPlayer,
+        Game,
+        GameRecommendation,
+        Player,
+        Pool,
+        PoolOption,
+      ],
       synchronize: true,
     });
     await dataSource.initialize();
@@ -25,6 +34,7 @@ describe('CampaignService voting', () => {
     service = new CampaignService(
       dataSource.getRepository(Campaign),
       dataSource.getRepository(CampaignPlayer),
+      dataSource.getRepository(GameRecommendation),
       dataSource,
     );
 
@@ -88,6 +98,24 @@ describe('CampaignService voting', () => {
     ]);
   });
 
+  it('includes public recommenders with each current election game', async () => {
+    await dataSource.getRepository(GameRecommendation).save(
+      dataSource.getRepository(GameRecommendation).create({
+        game: options[0].game,
+        player,
+      }),
+    );
+
+    const campaign = await service.current();
+    const game = campaign.pool?.options[0].game as Game & {
+      recommendedBy: Array<{ id: number; name: string; avatar: string | null }>;
+    };
+
+    expect(game.recommendedBy).toEqual([
+      { id: player.id, name: 'Player', avatar: null },
+    ]);
+  });
+
   it('rejects an option belonging to another pool without changing the vote', async () => {
     await expect(service.vote(player, options[2].id)).rejects.toThrow(
       BadRequestException,
@@ -98,6 +126,24 @@ describe('CampaignService voting', () => {
       player.id,
     ]);
     expect(campaign.pool?.options[1].players).toHaveLength(0);
+  });
+
+  it('closes an expired election and rejects late votes', async () => {
+    const campaignRepository = dataSource.getRepository(Campaign);
+    const campaign = await campaignRepository.findOneByOrFail({
+      current: true,
+    });
+    campaign.electionStartedAt = '2026-08-01T20:00:00-03:00';
+    campaign.electionEndsAt = '2026-08-02T20:00:00-03:00';
+    await campaignRepository.save(campaign);
+
+    await expect(service.vote(player, options[1].id)).rejects.toThrow(
+      'A votação desta campanha está encerrada',
+    );
+
+    const current = await service.current();
+    expect(current.electionActive).toBe(false);
+    expect(current.electionClosedAt).toBeTruthy();
   });
 
   it('handles concurrent first visits without duplicating campaign membership', async () => {

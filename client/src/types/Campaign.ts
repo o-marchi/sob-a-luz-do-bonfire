@@ -34,6 +34,9 @@ export interface Campaign {
   meetingLocation?: string | null
   meetingUrl?: string | null
   electionActive: boolean
+  electionStartedAt?: string | null
+  electionEndsAt?: string | null
+  electionClosedAt?: string | null
   pool?: Pool | null
   game?: Game | null
   players?: CampaignPlayer[]

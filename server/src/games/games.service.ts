@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -20,6 +21,7 @@ import {
   SteamGameSearchResult,
   normalizeGameTitle,
 } from './game-research.service';
+import { normalizeTrailerPageUrl } from './trailer-url';
 
 const MAX_BACKLOG_APPEARANCES = 3;
 export const TARGET_POOL_SIZE = 5;
@@ -62,6 +64,11 @@ export interface CreatedGameRecommendation {
 export interface WithdrawnGameRecommendation {
   game: Game;
   hiddenFromCatalog: boolean;
+}
+
+export interface RetiredGameRotation {
+  game: Game;
+  retiredGameIds: number[];
 }
 
 export const extractSteamAppId = (steamUrl?: string | null): number | null => {
@@ -123,7 +130,7 @@ export const findGuaranteedNextVoteGames = async (
     .sort((left, right) => left.title.localeCompare(right.title, 'pt-BR'));
 };
 
-const findEligibleBacklogGames = async (
+export const findEligibleBacklogGames = async (
   manager: EntityManager,
   excludedIdentities: Set<string>,
 ): Promise<Game[]> => {
@@ -142,6 +149,7 @@ const findEligibleBacklogGames = async (
   const gamesByIdentity = new Map<string, Game[]>();
 
   for (const option of poolOptions) {
+    if (!option.pool) continue;
     const identity = normalizeGameIdentity(option.game);
     const poolIds = appearancesByIdentity.get(identity) ?? new Set<number>();
     poolIds.add(option.pool.id);
@@ -226,7 +234,11 @@ export class GamesService {
   ) {}
 
   create(createGameDto: CreateGameDto): Promise<Game> {
-    const entity: Game = this.gameRepository.create(createGameDto);
+    const trailer = this.validateTrailerInput(createGameDto.trailer);
+    const entity: Game = this.gameRepository.create({
+      ...createGameDto,
+      trailer,
+    });
     return this.gameRepository.save(entity);
   }
 
@@ -235,6 +247,11 @@ export class GamesService {
   }
 
   async searchRecommendations(query: string): Promise<SteamGameSearchResult[]> {
+    const campaign = await this.campaignRepository.findOneBy({
+      current: true,
+    });
+    this.assertRecommendationsOpen(campaign);
+
     const normalizedQuery = normalizeGameTitle(query);
     const localResults = (
       await this.gameRepository.find({ order: { title: 'ASC' } })
@@ -283,6 +300,7 @@ export class GamesService {
     if (!campaign) {
       throw new NotFoundException('No current campaign found');
     }
+    this.assertRecommendationsOpen(campaign);
 
     const localGame = (await this.gameRepository.find()).find(
       (game) => extractSteamAppId(game.steam) === steamAppId,
@@ -331,6 +349,10 @@ export class GamesService {
     assessmentToken: string,
     player: Player,
   ): Promise<CreatedGameRecommendation> {
+    this.assertRecommendationsOpen(
+      await this.campaignRepository.findOneBy({ current: true }),
+    );
+
     let researchedGame: ResearchedGame;
 
     try {
@@ -343,6 +365,8 @@ export class GamesService {
         'A verificação expirou. Selecione o jogo novamente.',
       );
     }
+
+    researchedGame.trailer = normalizeTrailerPageUrl(researchedGame.trailer);
 
     const result = await this.dataSource.transaction(async (manager) => {
       const campaign = await manager.getRepository(Campaign).findOne({
@@ -358,6 +382,7 @@ export class GamesService {
       if (!campaign) {
         throw new NotFoundException('No current campaign found');
       }
+      this.assertRecommendationsOpen(campaign);
 
       let game = await this.findEquivalentGame(manager, researchedGame);
       const alreadySuggestedGame = campaign.players.find(
@@ -397,7 +422,7 @@ export class GamesService {
         suggestion: true,
         cover: researchedGame.cover,
         steam: researchedGame.steam,
-        trailer: researchedGame.trailer,
+        trailer: normalizeTrailerPageUrl(researchedGame.trailer),
         summary: researchedGame.summary,
         howLongToBeatUrl: researchedGame.howLongToBeatUrl,
         durationLabel: researchedGame.durationLabel,
@@ -405,7 +430,8 @@ export class GamesService {
       game.suggestion = true;
       game.cover ||= researchedGame.cover;
       game.steam ||= researchedGame.steam;
-      game.trailer ||= researchedGame.trailer;
+      game.trailer =
+        normalizeTrailerPageUrl(game.trailer) ?? researchedGame.trailer;
       game.summary ||= researchedGame.summary;
       game.howLongToBeatUrl ||= researchedGame.howLongToBeatUrl;
       game.durationLabel ||= researchedGame.durationLabel;
@@ -466,6 +492,7 @@ export class GamesService {
       if (!campaign) {
         throw new NotFoundException('No current campaign found');
       }
+      this.assertRecommendationsOpen(campaign);
 
       const campaignPlayer = campaign.players.find(
         (entry) => entry.player.id === player.id,
@@ -507,13 +534,81 @@ export class GamesService {
     });
   }
 
+  async retireGameFromRotation(
+    gameId: number,
+    player: Player,
+  ): Promise<RetiredGameRotation> {
+    return this.dataSource.transaction(async (manager) => {
+      const gameRepository = manager.getRepository(Game);
+      const games = await gameRepository.find();
+      const selectedGame = games.find((game) => game.id === gameId);
+
+      if (!selectedGame) {
+        throw new NotFoundException(`Game #${gameId} not found`);
+      }
+
+      const identity = normalizeGameIdentity(selectedGame);
+      const recommendations = await manager
+        .getRepository(GameRecommendation)
+        .find({ relations: ['game', 'player'] });
+      const wasRecommendedByPlayer = recommendations.some(
+        (recommendation) =>
+          recommendation.player.id === player.id &&
+          normalizeGameIdentity(recommendation.game) === identity,
+      );
+
+      if (!wasRecommendedByPlayer) {
+        throw new ForbiddenException(
+          'Somente quem sugeriu este jogo pode retirá-lo da rotação.',
+        );
+      }
+
+      const currentCampaign = await manager.getRepository(Campaign).findOne({
+        where: { current: true },
+        relations: ['players', 'players.player', 'players.suggestedGame'],
+      });
+      const currentSuggestion = currentCampaign?.players.find(
+        (campaignPlayer) => campaignPlayer.player.id === player.id,
+      )?.suggestedGame;
+
+      if (
+        currentSuggestion &&
+        normalizeGameIdentity(currentSuggestion) === identity
+      ) {
+        throw new BadRequestException(
+          'Use a retirada da sugestão atual para este jogo neste ciclo.',
+        );
+      }
+
+      const matchingGames = games.filter(
+        (game) => normalizeGameIdentity(game) === identity,
+      );
+      matchingGames.forEach((game) => {
+        game.suggestion = false;
+      });
+      await gameRepository.save(matchingGames);
+
+      return {
+        game: { ...selectedGame, suggestion: false },
+        retiredGameIds: matchingGames.map((game) => game.id),
+      };
+    });
+  }
+
   async findBacklog(): Promise<GameBacklog> {
     const [games, poolOptions, campaigns, recommendersByIdentity] =
       await Promise.all([
         this.gameRepository.find({ order: { id: 'ASC' } }),
         this.poolOptionRepository.find({ relations: ['game', 'pool'] }),
         this.campaignRepository.find({
-          relations: ['game', 'players', 'players.suggestedGame'],
+          relations: [
+            'game',
+            'players',
+            'players.suggestedGame',
+            'pool',
+            'pool.options',
+            'pool.options.game',
+          ],
         }),
         this.findRecommendersByIdentity(),
       ]);
@@ -539,9 +634,18 @@ export class GamesService {
         .filter((game): game is Game => Boolean(game))
         .map(normalizeGameIdentity),
     );
+    const currentCampaign = campaigns.find((campaign) => campaign.current);
+    const currentVoteIdentities = new Set(
+      currentCampaign?.electionActive
+        ? (currentCampaign.pool?.options ?? []).map((option) =>
+            normalizeGameIdentity(option.game),
+          )
+        : [],
+    );
 
     const appearancesByIdentity = new Map<string, Set<number>>();
     for (const option of poolOptions) {
+      if (!option.pool) continue;
       const identity = normalizeGameIdentity(option.game);
       const poolIds = appearancesByIdentity.get(identity) ?? new Set<number>();
       poolIds.add(option.pool.id);
@@ -554,7 +658,8 @@ export class GamesService {
       const guaranteedNextVote = guaranteedIdentities.has(identity);
       if (
         (!matchingGames.some((game) => game.suggestion) &&
-          !guaranteedNextVote) ||
+          !guaranteedNextVote &&
+          !currentVoteIdentities.has(identity)) ||
         winningIdentities.has(identity)
       ) {
         continue;
@@ -607,6 +712,14 @@ export class GamesService {
         backlogGames.filter((game) => !game.guaranteedNextVote).length,
       ),
     };
+  }
+
+  private assertRecommendationsOpen(campaign: Campaign | null): void {
+    if (campaign?.electionActive) {
+      throw new BadRequestException(
+        'As sugestões ficam fechadas enquanto a votação está acesa.',
+      );
+    }
   }
 
   async findOne(id: number): Promise<GameWithRecommenders | null> {
@@ -694,7 +807,7 @@ export class GamesService {
       title: game.title,
       cover: game.cover ?? null,
       steam: game.steam ?? `https://store.steampowered.com/app/${steamAppId}/`,
-      trailer: game.trailer ?? null,
+      trailer: normalizeTrailerPageUrl(game.trailer),
       summary: game.summary ?? null,
       howLongToBeatUrl: game.howLongToBeatUrl ?? null,
       durationLabel: game.durationLabel ?? null,
@@ -733,9 +846,11 @@ export class GamesService {
   }
 
   async update(id: number, updateGameDto: UpdateGameDto): Promise<Game> {
+    const trailer = this.validateTrailerInput(updateGameDto.trailer);
     const entity: Game | undefined = await this.gameRepository.preload({
       id,
       ...updateGameDto,
+      ...(updateGameDto.trailer !== undefined ? { trailer } : {}),
     });
 
     if (!entity) {
@@ -743,6 +858,22 @@ export class GamesService {
     }
 
     return this.gameRepository.save(entity);
+  }
+
+  private validateTrailerInput(
+    trailer: string | null | undefined,
+  ): string | null | undefined {
+    if (trailer === undefined) return undefined;
+    if (trailer === null) return null;
+
+    const normalized = normalizeTrailerPageUrl(trailer);
+    if (!normalized) {
+      throw new BadRequestException(
+        'O trailer precisa ser uma página navegável, não um vídeo direto ou playlist HLS.',
+      );
+    }
+
+    return normalized;
   }
 
   remove(id: number): Promise<DeleteResult> {

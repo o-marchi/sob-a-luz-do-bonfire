@@ -37,4 +37,10 @@ export class Game {
 
   @Column({ name: 'how_long_to_beat_title', type: 'varchar', nullable: true })
   howLongToBeatTitle: string | null;
+
+  @Column({ name: 'research_checked_at', type: 'varchar', nullable: true })
+  researchCheckedAt: string | null;
+
+  @Column({ name: 'research_status', type: 'varchar', nullable: true })
+  researchStatus: string | null;
 }

@@ -6,6 +6,7 @@ import { Player } from '../players/entities/player.entity';
 import { MediaStorageService } from '../media/media-storage.service';
 import { DiscordMembershipService } from './discord-membership.service';
 import { BONFIRE_AUTH_VERSION } from './auth.constants';
+import { BonfireAdminAccessService } from './bonfire-admin-access.service';
 
 export type AuthPlayer = Player;
 
@@ -24,6 +25,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mediaStorageService: MediaStorageService,
     private readonly discordMembershipService: DiscordMembershipService,
+    private readonly adminAccess: BonfireAdminAccessService,
   ) {}
 
   async validateDiscordUser(
@@ -79,6 +81,7 @@ export class AuthService {
       email,
       name,
       discord,
+      isAdmin: this.adminAccess.isAdmin(player),
       authVersion: BONFIRE_AUTH_VERSION,
     });
   }

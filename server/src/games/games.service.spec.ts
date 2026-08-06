@@ -6,7 +6,7 @@ import { PoolOption } from '../pool/entities/pool-option.entity';
 import { Pool } from '../pool/entities/pool.entity';
 import { Game } from './entities/game.entity';
 import { GameRecommendation } from './entities/game-recommendation.entity';
-import { GamesService } from './games.service';
+import { findEligibleBacklogGames, GamesService } from './games.service';
 import { GameResearchService } from './game-research.service';
 
 describe('GamesService backlog', () => {
@@ -58,6 +58,15 @@ describe('GamesService backlog', () => {
     await dataSource.destroy();
   });
 
+  it('refuses to persist a direct HLS trailer URL', () => {
+    expect(() =>
+      service.create({
+        title: 'Streaming Asset',
+        trailer: 'https://cdn.example.com/trailer.m3u8',
+      }),
+    ).toThrow('página navegável');
+  });
+
   it('returns unwon suggestions ordered by distinct election appearances', async () => {
     const games = await saveGames([
       { title: 'Third chance', suggestion: true },
@@ -104,6 +113,30 @@ describe('GamesService backlog', () => {
       ['Fourth appearance', 4],
       ['Third chance', 3],
     ]);
+  });
+
+  it('ignores historical options whose pool no longer exists', async () => {
+    const [game] = await saveGames([
+      { title: 'Still eligible', suggestion: true },
+    ]);
+    await dataSource.query('PRAGMA foreign_keys = OFF');
+    await dataSource.query(
+      'INSERT INTO pool_options (game_id, pool_id) VALUES (?, ?)',
+      [game.id, 999_999],
+    );
+    await dataSource.query('PRAGMA foreign_keys = ON');
+
+    await expect(service.findBacklog()).resolves.toMatchObject({
+      games: [
+        expect.objectContaining({
+          id: game.id,
+          electionAppearances: 0,
+        }),
+      ],
+    });
+    await expect(
+      findEligibleBacklogGames(dataSource.manager, new Set()),
+    ).resolves.toContainEqual(expect.objectContaining({ id: game.id }));
   });
 
   it('collapses duplicate records and combines their pool appearances', async () => {
@@ -237,7 +270,7 @@ describe('GamesService backlog', () => {
           suggestion: false,
           steam: 'https://store.steampowered.com/app/42/',
           cover: 'https://example.com/header.jpg',
-          trailer: 'https://example.com/trailer',
+          trailer: 'https://example.com/trailer.m3u8',
           howLongToBeatUrl: 'https://howlongtobeat.com/game/42',
           durationLabel: '12–18 h',
           mainHours: 12,
@@ -278,7 +311,7 @@ describe('GamesService backlog', () => {
     expect(assessment).toMatchObject({
       eligible: true,
       assessmentToken: 'cached-token',
-      game: { title: game.title, mainExtraHours: 18 },
+      game: { title: game.title, trailer: null, mainExtraHours: 18 },
     });
     expect(researchService.assessResearchedGame).toHaveBeenCalledTimes(1);
     expect(researchService.assessSteamGame).not.toHaveBeenCalled();
@@ -355,6 +388,43 @@ describe('GamesService backlog', () => {
         },
       ],
     });
+  });
+
+  it('blocks recommendation work while the current election is active', async () => {
+    const player = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Ana' }));
+    const campaign = await dataSource.getRepository(Campaign).save(
+      dataSource.getRepository(Campaign).create({
+        month: 'Agosto',
+        year: '2026',
+        current: true,
+        electionActive: true,
+        players: [],
+      }),
+    );
+    await dataSource.getRepository(CampaignPlayer).save(
+      dataSource.getRepository(CampaignPlayer).create({
+        campaign,
+        player,
+        suggested_a_game: false,
+      }),
+    );
+
+    await expect(service.searchRecommendations('game')).rejects.toThrow(
+      'As sugestões ficam fechadas enquanto a votação está acesa.',
+    );
+    await expect(service.assessRecommendation(42, player)).rejects.toThrow(
+      'As sugestões ficam fechadas enquanto a votação está acesa.',
+    );
+    await expect(service.recommend('signed-token', player)).rejects.toThrow(
+      'As sugestões ficam fechadas enquanto a votação está acesa.',
+    );
+    await expect(service.withdrawRecommendation(player)).rejects.toThrow(
+      'As sugestões ficam fechadas enquanto a votação está acesa.',
+    );
+    expect(researchService.searchSteam).not.toHaveBeenCalled();
+    expect(researchService.assessSteamGame).not.toHaveBeenCalled();
   });
 
   it('keeps an explicitly re-suggested ashes game in the next-vote shelf', async () => {
@@ -449,6 +519,146 @@ describe('GamesService backlog', () => {
       suggested_a_game: false,
       suggestedGame: null,
     });
+  });
+
+  it('retires a historical recommendation from rotation without deleting its provenance or metadata', async () => {
+    const game = (
+      await saveGames([
+        {
+          title: 'A Game From Last Year',
+          suggestion: true,
+          cover: 'https://example.com/cover.jpg',
+          trailer: 'https://www.youtube.com/watch?v=historical',
+          mainExtraHours: 9,
+        },
+      ])
+    )[0];
+    const player = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Ana' }));
+    await dataSource
+      .getRepository(GameRecommendation)
+      .save(
+        dataSource.getRepository(GameRecommendation).create({ game, player }),
+      );
+
+    await expect(
+      service.retireGameFromRotation(game.id, player),
+    ).resolves.toMatchObject({
+      game: { id: game.id, suggestion: false },
+      retiredGameIds: [game.id],
+    });
+    await expect(
+      dataSource.getRepository(Game).findOneByOrFail({ id: game.id }),
+    ).resolves.toMatchObject({
+      suggestion: false,
+      cover: 'https://example.com/cover.jpg',
+      trailer: 'https://www.youtube.com/watch?v=historical',
+      mainExtraHours: 9,
+    });
+    await expect(
+      dataSource.getRepository(GameRecommendation).count(),
+    ).resolves.toBe(1);
+    await expect(service.findBacklog()).resolves.toMatchObject({ games: [] });
+  });
+
+  it('rejects catalog retirement when the player never recommended the game', async () => {
+    const game = (
+      await saveGames([{ title: "Someone Else's Game", suggestion: true }])
+    )[0];
+    const player = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Ana' }));
+
+    await expect(
+      service.retireGameFromRotation(game.id, player),
+    ).rejects.toThrow('Somente quem sugeriu este jogo');
+    await expect(
+      dataSource.getRepository(Game).findOneByOrFail({ id: game.id }),
+    ).resolves.toMatchObject({ suggestion: true });
+  });
+
+  it('keeps a retired game visible until its active election finishes', async () => {
+    const game = (
+      await saveGames([{ title: 'Already On The Ballot', suggestion: true }])
+    )[0];
+    const player = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Ana' }));
+    await dataSource
+      .getRepository(GameRecommendation)
+      .save(
+        dataSource.getRepository(GameRecommendation).create({ game, player }),
+      );
+    const pool = await dataSource
+      .getRepository(Pool)
+      .save(dataSource.getRepository(Pool).create({ options: [] }));
+    await dataSource.getRepository(PoolOption).save(
+      dataSource.getRepository(PoolOption).create({
+        pool,
+        game,
+        players: [],
+      }),
+    );
+    await dataSource.getRepository(Campaign).save(
+      dataSource.getRepository(Campaign).create({
+        month: 'Agosto',
+        year: '2026',
+        current: true,
+        electionActive: true,
+        pool,
+        players: [],
+      }),
+    );
+
+    await service.retireGameFromRotation(game.id, player);
+
+    await expect(service.findBacklog()).resolves.toMatchObject({
+      games: [
+        expect.objectContaining({
+          id: game.id,
+          suggestion: false,
+          title: game.title,
+        }),
+      ],
+    });
+  });
+
+  it('keeps current-cycle withdrawal separate from historical catalog retirement', async () => {
+    const game = (
+      await saveGames([{ title: 'Current Suggestion', suggestion: true }])
+    )[0];
+    const player = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Ana' }));
+    await dataSource
+      .getRepository(GameRecommendation)
+      .save(
+        dataSource.getRepository(GameRecommendation).create({ game, player }),
+      );
+    const campaign = await dataSource.getRepository(Campaign).save(
+      dataSource.getRepository(Campaign).create({
+        month: 'Agosto',
+        year: '2026',
+        current: true,
+        players: [],
+      }),
+    );
+    await dataSource.getRepository(CampaignPlayer).save(
+      dataSource.getRepository(CampaignPlayer).create({
+        campaign,
+        player,
+        suggested_a_game: true,
+        suggestedGame: game,
+      }),
+    );
+
+    await expect(
+      service.retireGameFromRotation(game.id, player),
+    ).rejects.toThrow('retirada da sugestão atual');
+    await expect(
+      dataSource.getRepository(Game).findOneByOrFail({ id: game.id }),
+    ).resolves.toMatchObject({ suggestion: true });
   });
 
   const saveGames = (games: Array<Partial<Game> & Pick<Game, 'title'>>) => {
