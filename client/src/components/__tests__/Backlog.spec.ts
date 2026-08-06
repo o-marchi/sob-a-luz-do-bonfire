@@ -9,7 +9,7 @@ const gameServiceMocks = vi.hoisted(() => ({
   getGameBacklog: vi.fn(),
   getGameCover: vi.fn(() => ''),
   formatDurationLabel: vi.fn(() => ''),
-  deleteGameRecommendation: vi.fn(),
+  retireGameFromRotation: vi.fn(),
 }))
 const messageMocks = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
 
@@ -25,7 +25,7 @@ describe('Backlog', () => {
   beforeEach(() => {
     pinia = createPinia()
     setActivePinia(pinia)
-    gameServiceMocks.deleteGameRecommendation.mockResolvedValue(undefined)
+    gameServiceMocks.retireGameFromRotation.mockResolvedValue(undefined)
     gameServiceMocks.getGameBacklog.mockResolvedValue({
       retirementThreshold: 3,
       targetPoolSize: 5,
@@ -167,7 +167,7 @@ describe('Backlog', () => {
     expect(waitingShelf?.text()).not.toContain('Returning Game')
   })
 
-  it('lets the recommender withdraw their guaranteed game from its card menu', async () => {
+  it('lets a historical recommender retire their catalog game without touching the current suggestion', async () => {
     const auth = useAuthStore()
     auth.user = { id: 10, name: 'Ana', isAdmin: false }
     const campaign = useCampaignStore()
@@ -181,7 +181,6 @@ describe('Backlog', () => {
       partook_in_the_meeting: false,
       tokens: 0,
     }
-    vi.spyOn(campaign, 'init').mockResolvedValue()
     gameServiceMocks.getGameBacklog
       .mockResolvedValueOnce({
         retirementThreshold: 3,
@@ -203,7 +202,7 @@ describe('Backlog', () => {
             suggestion: true,
             electionAppearances: 1,
             guaranteedNextVote: false,
-            recommendedBy: [],
+            recommendedBy: [{ id: 10, name: 'Ana', avatar: null }],
           },
         ],
       })
@@ -214,12 +213,12 @@ describe('Backlog', () => {
         rubble: [],
         games: [
           {
-            id: 2,
-            title: 'Returning Game',
+            id: 1,
+            title: 'Fresh Game',
             suggestion: true,
-            electionAppearances: 1,
-            guaranteedNextVote: false,
-            recommendedBy: [],
+            electionAppearances: 0,
+            guaranteedNextVote: true,
+            recommendedBy: [{ id: 10, name: 'Ana', avatar: null }],
           },
         ],
       })
@@ -228,16 +227,17 @@ describe('Backlog', () => {
     await flushPromises()
 
     expect(wrapper.get('.backlog-card__menu summary').attributes('aria-label')).toContain(
-      'Fresh Game',
+      'Returning Game',
     )
+    expect(wrapper.get('.backlog-card__menu > button').text()).toContain('Retirar da rotação')
     await wrapper.get('.backlog-card__menu > button').trigger('click')
     await flushPromises()
 
-    expect(gameServiceMocks.deleteGameRecommendation).toHaveBeenCalledOnce()
-    expect(campaign.init).toHaveBeenCalledOnce()
-    expect(wrapper.text()).not.toContain('Fresh Game')
+    expect(gameServiceMocks.retireGameFromRotation).toHaveBeenCalledWith(2)
+    expect(wrapper.text()).toContain('Fresh Game')
+    expect(wrapper.text()).not.toContain('Returning Game')
     expect(messageMocks.success).toHaveBeenCalledWith(
-      'Fresh Game saiu das Brasas. Os detalhes continuam guardados.',
+      'Returning Game saiu das próximas rotações. O jogo e seus detalhes continuam guardados.',
     )
   })
 

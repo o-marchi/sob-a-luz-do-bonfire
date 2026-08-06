@@ -19,14 +19,14 @@ const props = withDefaults(
     retirementThreshold: number
     nextVote?: boolean
     currentVote?: boolean
-    canWithdraw?: boolean
-    withdrawing?: boolean
+    canRetire?: boolean
+    retiring?: boolean
   }>(),
-  { nextVote: false, currentVote: false, canWithdraw: false, withdrawing: false },
+  { nextVote: false, currentVote: false, canRetire: false, retiring: false },
 )
 
 const emit = defineEmits<{
-  withdraw: [game: BacklogGame]
+  retire: [game: BacklogGame]
 }>()
 
 const failedRecommenderAvatars = ref(new Set<number>())
@@ -84,25 +84,25 @@ const hiddenRecommenderNames = () =>
         class="backlog-card__count"
         :class="{
           'backlog-card__count--aside': featuredVote,
-          'backlog-card__count--with-menu': canWithdraw,
+          'backlog-card__count--with-menu': canRetire,
         }"
       >
         <strong>{{ game.electionAppearances }}</strong>
         / {{ retirementThreshold }}
       </span>
 
-      <details v-if="canWithdraw" class="backlog-card__menu">
+      <details v-if="canRetire" class="backlog-card__menu">
         <summary
           :aria-label="`Opções para ${game.title}`"
-          :aria-disabled="withdrawing"
-          @click="withdrawing && $event.preventDefault()"
+          :aria-disabled="retiring"
+          @click="retiring && $event.preventDefault()"
         >
-          <n-spin v-if="withdrawing" :size="13" />
+          <n-spin v-if="retiring" :size="13" />
           <n-icon v-else size="18"><EllipsisHorizontal /></n-icon>
         </summary>
-        <button type="button" :disabled="withdrawing" @click="emit('withdraw', game)">
+        <button type="button" :disabled="retiring" @click="emit('retire', game)">
           <n-icon size="15"><TrashOutline /></n-icon>
-          {{ withdrawing ? 'Retirando…' : 'Retirar das Brasas' }}
+          {{ retiring ? 'Retirando…' : 'Retirar da rotação' }}
         </button>
       </details>
 

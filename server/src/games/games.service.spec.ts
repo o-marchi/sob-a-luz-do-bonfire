@@ -521,6 +521,146 @@ describe('GamesService backlog', () => {
     });
   });
 
+  it('retires a historical recommendation from rotation without deleting its provenance or metadata', async () => {
+    const game = (
+      await saveGames([
+        {
+          title: 'A Game From Last Year',
+          suggestion: true,
+          cover: 'https://example.com/cover.jpg',
+          trailer: 'https://www.youtube.com/watch?v=historical',
+          mainExtraHours: 9,
+        },
+      ])
+    )[0];
+    const player = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Ana' }));
+    await dataSource
+      .getRepository(GameRecommendation)
+      .save(
+        dataSource.getRepository(GameRecommendation).create({ game, player }),
+      );
+
+    await expect(
+      service.retireGameFromRotation(game.id, player),
+    ).resolves.toMatchObject({
+      game: { id: game.id, suggestion: false },
+      retiredGameIds: [game.id],
+    });
+    await expect(
+      dataSource.getRepository(Game).findOneByOrFail({ id: game.id }),
+    ).resolves.toMatchObject({
+      suggestion: false,
+      cover: 'https://example.com/cover.jpg',
+      trailer: 'https://www.youtube.com/watch?v=historical',
+      mainExtraHours: 9,
+    });
+    await expect(
+      dataSource.getRepository(GameRecommendation).count(),
+    ).resolves.toBe(1);
+    await expect(service.findBacklog()).resolves.toMatchObject({ games: [] });
+  });
+
+  it('rejects catalog retirement when the player never recommended the game', async () => {
+    const game = (
+      await saveGames([{ title: "Someone Else's Game", suggestion: true }])
+    )[0];
+    const player = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Ana' }));
+
+    await expect(
+      service.retireGameFromRotation(game.id, player),
+    ).rejects.toThrow('Somente quem sugeriu este jogo');
+    await expect(
+      dataSource.getRepository(Game).findOneByOrFail({ id: game.id }),
+    ).resolves.toMatchObject({ suggestion: true });
+  });
+
+  it('keeps a retired game visible until its active election finishes', async () => {
+    const game = (
+      await saveGames([{ title: 'Already On The Ballot', suggestion: true }])
+    )[0];
+    const player = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Ana' }));
+    await dataSource
+      .getRepository(GameRecommendation)
+      .save(
+        dataSource.getRepository(GameRecommendation).create({ game, player }),
+      );
+    const pool = await dataSource
+      .getRepository(Pool)
+      .save(dataSource.getRepository(Pool).create({ options: [] }));
+    await dataSource.getRepository(PoolOption).save(
+      dataSource.getRepository(PoolOption).create({
+        pool,
+        game,
+        players: [],
+      }),
+    );
+    await dataSource.getRepository(Campaign).save(
+      dataSource.getRepository(Campaign).create({
+        month: 'Agosto',
+        year: '2026',
+        current: true,
+        electionActive: true,
+        pool,
+        players: [],
+      }),
+    );
+
+    await service.retireGameFromRotation(game.id, player);
+
+    await expect(service.findBacklog()).resolves.toMatchObject({
+      games: [
+        expect.objectContaining({
+          id: game.id,
+          suggestion: false,
+          title: game.title,
+        }),
+      ],
+    });
+  });
+
+  it('keeps current-cycle withdrawal separate from historical catalog retirement', async () => {
+    const game = (
+      await saveGames([{ title: 'Current Suggestion', suggestion: true }])
+    )[0];
+    const player = await dataSource
+      .getRepository(Player)
+      .save(dataSource.getRepository(Player).create({ name: 'Ana' }));
+    await dataSource
+      .getRepository(GameRecommendation)
+      .save(
+        dataSource.getRepository(GameRecommendation).create({ game, player }),
+      );
+    const campaign = await dataSource.getRepository(Campaign).save(
+      dataSource.getRepository(Campaign).create({
+        month: 'Agosto',
+        year: '2026',
+        current: true,
+        players: [],
+      }),
+    );
+    await dataSource.getRepository(CampaignPlayer).save(
+      dataSource.getRepository(CampaignPlayer).create({
+        campaign,
+        player,
+        suggested_a_game: true,
+        suggestedGame: game,
+      }),
+    );
+
+    await expect(
+      service.retireGameFromRotation(game.id, player),
+    ).rejects.toThrow('retirada da sugestão atual');
+    await expect(
+      dataSource.getRepository(Game).findOneByOrFail({ id: game.id }),
+    ).resolves.toMatchObject({ suggestion: true });
+  });
+
   const saveGames = (games: Array<Partial<Game> & Pick<Game, 'title'>>) => {
     const repository = dataSource.getRepository(Game);
     return repository.save(games.map((game) => repository.create(game)));

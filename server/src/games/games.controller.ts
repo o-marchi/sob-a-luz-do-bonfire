@@ -80,6 +80,16 @@ export class GamesController {
     return this.gamesService.withdrawRecommendation(player);
   }
 
+  @Delete(':id/rotation')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  retireGameFromRotation(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentPlayer() player: Player,
+  ) {
+    return this.gamesService.retireGameFromRotation(id, player);
+  }
+
   @Get(':id')
   findOne(
     @Param('id', ParseIntPipe) id: number,

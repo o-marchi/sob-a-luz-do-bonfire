@@ -5,10 +5,10 @@ import { storeToRefs } from 'pinia'
 import { LogoSteam, LogoYoutube, TimeOutline } from '@vicons/ionicons5'
 import { NIcon, NModal, NSpin, NTooltip, useMessage } from 'naive-ui'
 import {
-  deleteGameRecommendation,
   formatDurationLabel,
   getGameBacklog,
   getGameCover,
+  retireGameFromRotation,
 } from '@/services/gameService'
 import type { BacklogGame, Game, GameBacklog, GameRecommender } from '@/types/Game'
 import BacklogGameCard from '@/components/BacklogGameCard.vue'
@@ -28,7 +28,7 @@ const extractedRubbleIndex = ref<number | null>(null)
 const selectedRubbleGame = ref<BacklogGame | null>(null)
 const rubbleModalOpen = ref(false)
 const failedRecommenderAvatars = ref(new Set<string>())
-const withdrawingGameId = ref<number | null>(null)
+const retiringGameId = ref<number | null>(null)
 
 const steamAppId = (game: Pick<Game, 'steam'>) =>
   game.steam?.match(/store\.steampowered\.com\/app\/(\d+)/i)?.[1] ?? null
@@ -60,6 +60,16 @@ const isInCurrentVote = (game: BacklogGame) =>
 
 const isCurrentUserSuggestion = (game: BacklogGame) =>
   isSameGame(game, campaignUser.value?.suggestedGame)
+
+const wasRecommendedByCurrentUser = (game: BacklogGame) =>
+  Boolean(user.value && game.recommendedBy.some((recommender) => recommender.id === user.value?.id))
+
+const canRetireFromRotation = (game: BacklogGame) =>
+  game.suggestion &&
+  wasRecommendedByCurrentUser(game) &&
+  !isCurrentUserSuggestion(game) &&
+  !isGuaranteedNextVote(game) &&
+  !isInCurrentVote(game)
 
 const currentVoteGames = computed(() =>
   electionActive.value ? (backlog.value?.games.filter(isInCurrentVote) ?? []) : [],
@@ -365,22 +375,20 @@ const loadBacklog = async () => {
   }
 }
 
-const withdrawSuggestion = async (game: BacklogGame) => {
-  if (electionActive.value || !isCurrentUserSuggestion(game) || withdrawingGameId.value) return
+const retireFromRotation = async (game: BacklogGame) => {
+  if (!canRetireFromRotation(game) || retiringGameId.value) return
 
-  withdrawingGameId.value = game.id
+  retiringGameId.value = game.id
   try {
-    await deleteGameRecommendation()
-    const [refreshedBacklog] = await Promise.all([
-      getGameBacklog(),
-      campaignStore.init().catch(() => undefined),
-    ])
-    backlog.value = refreshedBacklog
-    message.success(`${game.title} saiu das Brasas. Os detalhes continuam guardados.`)
+    await retireGameFromRotation(game.id)
+    backlog.value = await getGameBacklog()
+    message.success(
+      `${game.title} saiu das próximas rotações. O jogo e seus detalhes continuam guardados.`,
+    )
   } catch {
-    message.error('Não foi possível retirar o jogo das Brasas. Tente novamente.')
+    message.error('Não foi possível retirar o jogo da rotação. Tente novamente.')
   } finally {
-    withdrawingGameId.value = null
+    retiringGameId.value = null
   }
 }
 
@@ -600,10 +608,7 @@ onBeforeUnmount(() => {
             :key="game.id"
             :game="game"
             :retirement-threshold="backlog.retirementThreshold"
-            :can-withdraw="isCurrentUserSuggestion(game)"
-            :withdrawing="withdrawingGameId === game.id"
             next-vote
-            @withdraw="withdrawSuggestion"
           />
 
           <article v-if="backlog.nextVoteFillCount" class="next-vote-fill-card">
@@ -649,9 +654,9 @@ onBeforeUnmount(() => {
             :key="game.id"
             :game="game"
             :retirement-threshold="backlog.retirementThreshold"
-            :can-withdraw="!electionActive && isCurrentUserSuggestion(game)"
-            :withdrawing="withdrawingGameId === game.id"
-            @withdraw="withdrawSuggestion"
+            :can-retire="canRetireFromRotation(game)"
+            :retiring="retiringGameId === game.id"
+            @retire="retireFromRotation"
           />
         </div>
       </section>
