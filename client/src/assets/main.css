@@ -3122,6 +3122,7 @@ a.meeting-callout:focus-visible {
 
 .backlog-card__count--with-menu {
   right: 51px;
+  left: auto;
 }
 
 .backlog-card__vote-state {
