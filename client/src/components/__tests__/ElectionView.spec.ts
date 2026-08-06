@@ -80,7 +80,6 @@ describe('ElectionView', () => {
 
     expect(wrapper.get('.election-hearth__heading > div > span').text()).toBe('Votação')
     expect(wrapper.get('#election-heading').text()).toBe('Acesa')
-    expect(wrapper.get('.election-hearth').text()).toContain('Qual jogo recebe a próxima chama?')
     expect(wrapper.findAll('.election-card')).toHaveLength(2)
     expect(wrapper.text()).toContain('The First Game')
     expect(wrapper.text()).toContain('12 horas')
@@ -101,14 +100,28 @@ describe('ElectionView', () => {
     campaign.election!.options[0].players = [{ id: 7, name: 'Ana', isAdmin: false }]
     const wrapper = mount(ElectionView, { global: { plugins: [pinia] } })
 
-    expect(wrapper.text()).toContain('Seu voto está guardado')
+    expect(wrapper.text()).toContain('Seu voto foi lançado à fogueira')
     expect(wrapper.text()).toContain('Sua escolha')
-    expect(wrapper.text()).toContain('Você já escolheu outra chama.')
+    expect(wrapper.text()).not.toContain('Você já escolheu outra chama.')
 
     await wrapper.get('.election-card--selected .game-links button').trigger('click')
     await flushPromises()
 
     expect(campaignServiceMocks.undoVote).toHaveBeenCalledOnce()
     expect(useCampaignStore().init).toHaveBeenCalledWith({ id: 17 })
+  })
+
+  it('keeps anonymous voting guidance out of every game card', () => {
+    const auth = useAuthStore()
+    auth.user = null
+    auth.isAuthenticated = false
+    const wrapper = mount(ElectionView, { global: { plugins: [pinia] } })
+
+    expect(wrapper.get('.election-hearth__receipt--locked').text()).toContain(
+      'Revele-se à fogueira para lançar seu voto',
+    )
+    expect(wrapper.findAll('.election-card footer')).toHaveLength(0)
+    expect(wrapper.findAll('.election-card button')).toHaveLength(0)
+    expect(wrapper.text()).not.toContain('Revele-se pelo Discord para votar.')
   })
 })

@@ -1404,7 +1404,6 @@ main {
     linear-gradient(155deg, rgba(29, 21, 29, 0.985), rgba(17, 14, 21, 0.99));
   border: 1px solid rgba(255, 255, 255, 0.065);
   border-top-color: rgba(238, 160, 105, 0.5);
-  border-bottom-color: rgba(0, 0, 0, 0.78);
   border-radius: 9px;
   box-shadow:
     0 -14px 38px rgba(174, 65, 32, 0.07),
@@ -1950,6 +1949,10 @@ a.meeting-callout:focus-visible {
   .journey-control button + button {
     box-shadow: inset 0 1px rgba(255, 255, 255, 0.055);
   }
+
+  .hearth-community__header span {
+    display: none;
+  }
 }
 
 .main-block {
@@ -2181,7 +2184,7 @@ a.meeting-callout:focus-visible {
   z-index: 1;
   display: flex;
   padding-bottom: 23px;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 28px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
@@ -2200,7 +2203,7 @@ a.meeting-callout:focus-visible {
 }
 
 .election-hearth__heading h2 {
-  margin: 3px 0 8px;
+  margin: 3px 0 0;
   color: rgba(255, 255, 255, 0.94);
   font-family: 'Cinzel Decorative', cursive;
   font-size: clamp(28px, 3.4vw, 38px);
@@ -2208,19 +2211,6 @@ a.meeting-callout:focus-visible {
   letter-spacing: 0.04em;
   line-height: 1.1;
   text-shadow: 0 7px 16px rgba(0, 0, 0, 0.58);
-}
-
-.election-hearth__heading p {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.election-hearth__heading p strong {
-  margin-right: 0.25em;
-  color: rgba(255, 255, 255, 0.8);
-  font-weight: 750;
 }
 
 .election-hearth__receipt {
@@ -2235,6 +2225,12 @@ a.meeting-callout:focus-visible {
   background: rgba(185, 93, 47, 0.09);
   border: 1px solid rgba(224, 140, 84, 0.25);
   border-radius: 5px;
+}
+
+.election-hearth__receipt--locked {
+  color: rgba(255, 255, 255, 0.52);
+  background: rgba(9, 7, 11, 0.2);
+  border-color: rgba(255, 255, 255, 0.11);
 }
 
 .election-grid {
@@ -2491,19 +2487,6 @@ a.meeting-callout:focus-visible {
   gap: 7px;
 }
 
-.election-card__body footer > small,
-.election-card__quiet-state {
-  color: rgba(255, 255, 255, 0.38);
-  font-size: 10px;
-  line-height: 1.4;
-}
-
-.election-card__quiet-state {
-  display: inline-flex;
-  min-height: 34px;
-  align-items: center;
-}
-
 @media (max-width: 680px) {
   .election-hearth {
     margin-bottom: 52px;
@@ -2517,6 +2500,10 @@ a.meeting-callout:focus-visible {
 
   .election-card {
     flex-basis: calc((100% - 15px) / 2);
+  }
+
+  .election-hearth__receipt {
+    white-space: normal;
   }
 }
 

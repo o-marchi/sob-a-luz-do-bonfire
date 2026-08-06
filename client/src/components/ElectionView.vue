@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { CheckmarkCircle, LogoSteam, LogoYoutube, TimeOutline } from '@vicons/ionicons5'
+import {
+  CheckmarkCircle,
+  LockClosedOutline,
+  LogoSteam,
+  LogoYoutube,
+  TimeOutline,
+} from '@vicons/ionicons5'
 import { NIcon, NTooltip, useMessage } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { useCampaignStore } from '@/stores/campaign'
@@ -86,14 +92,14 @@ const voteAction = async (optionId: number) => {
       <div>
         <span>Votação</span>
         <h2 id="election-heading">Acesa</h2>
-        <p>
-          <strong>Qual jogo recebe a próxima chama?</strong>
-          Conheça cada jornada e escolha com calma. A contagem permanece em segredo.
-        </p>
       </div>
       <div v-if="selectedOption" class="election-hearth__receipt">
         <n-icon size="17"><CheckmarkCircle /></n-icon>
-        <span>Seu voto está guardado</span>
+        <span>Seu voto foi lançado à fogueira</span>
+      </div>
+      <div v-else-if="!user" class="election-hearth__receipt election-hearth__receipt--locked">
+        <n-icon size="16"><LockClosedOutline /></n-icon>
+        <span>Revele-se à fogueira para lançar seu voto</span>
       </div>
     </header>
 
@@ -205,7 +211,7 @@ const voteAction = async (optionId: number) => {
             <span>{{ recommenderLabel(option) }}</span>
           </div>
 
-          <footer>
+          <footer v-if="user">
             <div v-if="didIVoteForThis(option.players ?? [])" class="game-links">
               <button type="button" :disabled="!!loadingVote" @click="undoVoteAction">
                 {{ loadingVote === true ? 'Retirando…' : 'Retirar meu voto' }}
@@ -220,8 +226,6 @@ const voteAction = async (optionId: number) => {
                 {{ loadingVote === option.id ? 'Guardando voto…' : 'Votar neste jogo' }}
               </button>
             </div>
-            <span v-else class="election-card__quiet-state">Você já escolheu outra chama.</span>
-            <small v-if="!user">Revele-se pelo Discord para votar.</small>
           </footer>
         </div>
       </article>
