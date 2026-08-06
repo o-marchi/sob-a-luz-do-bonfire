@@ -84,9 +84,12 @@ const voteAction = async (optionId: number) => {
   <section v-if="electionActive" class="election-hearth" aria-labelledby="election-heading">
     <header class="election-hearth__heading">
       <div>
-        <span>Votação acesa</span>
-        <h2 id="election-heading">Qual jogo recebe a próxima chama?</h2>
-        <p>Conheça cada jornada e escolha com calma. A contagem permanece em segredo.</p>
+        <span>Votação</span>
+        <h2 id="election-heading">Acesa</h2>
+        <p>
+          <strong>Qual jogo recebe a próxima chama?</strong>
+          Conheça cada jornada e escolha com calma. A contagem permanece em segredo.
+        </p>
       </div>
       <div v-if="selectedOption" class="election-hearth__receipt">
         <n-icon size="17"><CheckmarkCircle /></n-icon>

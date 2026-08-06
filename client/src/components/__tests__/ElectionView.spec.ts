@@ -78,6 +78,8 @@ describe('ElectionView', () => {
   it('presents the games without exposing live vote information', async () => {
     const wrapper = mount(ElectionView, { global: { plugins: [pinia] } })
 
+    expect(wrapper.get('.election-hearth__heading > div > span').text()).toBe('Votação')
+    expect(wrapper.get('#election-heading').text()).toBe('Acesa')
     expect(wrapper.get('.election-hearth').text()).toContain('Qual jogo recebe a próxima chama?')
     expect(wrapper.findAll('.election-card')).toHaveLength(2)
     expect(wrapper.text()).toContain('The First Game')
