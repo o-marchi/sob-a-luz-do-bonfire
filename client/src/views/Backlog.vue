@@ -3,13 +3,22 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { LogoSteam, LogoYoutube, TimeOutline } from '@vicons/ionicons5'
-import { NIcon, NModal, NSpin, NTooltip } from 'naive-ui'
-import { formatDurationLabel, getGameBacklog, getGameCover } from '@/services/gameService'
-import type { BacklogGame, GameBacklog, GameRecommender } from '@/types/Game'
+import { NIcon, NModal, NSpin, NTooltip, useMessage } from 'naive-ui'
+import {
+  deleteGameRecommendation,
+  formatDurationLabel,
+  getGameBacklog,
+  getGameCover,
+} from '@/services/gameService'
+import type { BacklogGame, Game, GameBacklog, GameRecommender } from '@/types/Game'
 import BacklogGameCard from '@/components/BacklogGameCard.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useCampaignStore } from '@/stores/campaign'
 
 const { user } = storeToRefs(useAuthStore())
+const campaignStore = useCampaignStore()
+const { campaignUser, electionActive, election } = storeToRefs(campaignStore)
+const message = useMessage()
 
 const backlog = ref<GameBacklog | null>(null)
 const loading = ref(true)
@@ -19,19 +28,57 @@ const extractedRubbleIndex = ref<number | null>(null)
 const selectedRubbleGame = ref<BacklogGame | null>(null)
 const rubbleModalOpen = ref(false)
 const failedRecommenderAvatars = ref(new Set<string>())
+const withdrawingGameId = ref<number | null>(null)
 
-const backlogCountLabel = computed(() => {
-  const count = backlog.value?.games.length ?? 0
-  return `${count} ${count === 1 ? 'jogo' : 'jogos'} à espera da fogueira`
-})
+const steamAppId = (game: Pick<Game, 'steam'>) =>
+  game.steam?.match(/store\.steampowered\.com\/app\/(\d+)/i)?.[1] ?? null
+
+const normalizedTitle = (title: string) =>
+  title
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim()
+    .toLocaleLowerCase('pt-BR')
+
+const isSameGame = (left: Game, right?: Game | null) => {
+  if (!right) return false
+  if (left.id === right.id) return true
+
+  const leftSteamAppId = steamAppId(left)
+  const rightSteamAppId = steamAppId(right)
+  return leftSteamAppId && rightSteamAppId
+    ? leftSteamAppId === rightSteamAppId
+    : normalizedTitle(left.title) === normalizedTitle(right.title)
+}
 
 const isGuaranteedNextVote = (game: BacklogGame) => game.guaranteedNextVote
+const isInCurrentVote = (game: BacklogGame) =>
+  Boolean(
+    electionActive.value && election.value?.options.some((option) => isSameGame(game, option.game)),
+  )
 
-const nextVoteGames = computed(() => backlog.value?.games.filter(isGuaranteedNextVote) ?? [])
+const isCurrentUserSuggestion = (game: BacklogGame) =>
+  isSameGame(game, campaignUser.value?.suggestedGame)
+
+const currentVoteGames = computed(() =>
+  electionActive.value ? (backlog.value?.games.filter(isInCurrentVote) ?? []) : [],
+)
+
+const nextVoteGames = computed(() =>
+  electionActive.value ? [] : (backlog.value?.games.filter(isGuaranteedNextVote) ?? []),
+)
 
 const returningGames = computed(
-  () => backlog.value?.games.filter((game) => !isGuaranteedNextVote(game)) ?? [],
+  () =>
+    backlog.value?.games.filter((game) => !isGuaranteedNextVote(game) && !isInCurrentVote(game)) ??
+    [],
 )
+
+const backlogCountLabel = computed(() => {
+  const count = returningGames.value.length
+  return `${count} ${count === 1 ? 'jogo' : 'jogos'} à espera da fogueira`
+})
 
 const appearanceLabel = (count: number) => {
   if (count === 0) return 'Ainda não passou'
@@ -318,6 +365,25 @@ const loadBacklog = async () => {
   }
 }
 
+const withdrawSuggestion = async (game: BacklogGame) => {
+  if (electionActive.value || !isCurrentUserSuggestion(game) || withdrawingGameId.value) return
+
+  withdrawingGameId.value = game.id
+  try {
+    await deleteGameRecommendation()
+    const [refreshedBacklog] = await Promise.all([
+      getGameBacklog(),
+      campaignStore.init().catch(() => undefined),
+    ])
+    backlog.value = refreshedBacklog
+    message.success(`${game.title} saiu das Brasas. Os detalhes continuam guardados.`)
+  } catch {
+    message.error('Não foi possível retirar o jogo das Brasas. Tente novamente.')
+  } finally {
+    withdrawingGameId.value = null
+  }
+}
+
 onMounted(() => {
   const initialWidth = document.documentElement.clientWidth
   viewportWidth.value = initialWidth
@@ -492,6 +558,30 @@ onBeforeUnmount(() => {
       </header>
 
       <section
+        v-if="currentVoteGames.length"
+        class="backlog-shelf backlog-shelf--current-vote"
+        aria-labelledby="current-vote-heading"
+      >
+        <header class="backlog-shelf__heading">
+          <div>
+            <span class="backlog-eyebrow">Chama acesa</span>
+            <h2 id="current-vote-heading">Na votação atual</h2>
+          </div>
+          <p>Estes jogos estão recebendo os votos deste ciclo.</p>
+        </header>
+
+        <div class="backlog-grid backlog-grid--current-vote">
+          <BacklogGameCard
+            v-for="game in currentVoteGames"
+            :key="game.id"
+            :game="game"
+            :retirement-threshold="backlog.retirementThreshold"
+            current-vote
+          />
+        </div>
+      </section>
+
+      <section
         v-if="nextVoteGames.length"
         class="backlog-shelf backlog-shelf--next-vote"
         aria-labelledby="next-vote-heading"
@@ -510,7 +600,10 @@ onBeforeUnmount(() => {
             :key="game.id"
             :game="game"
             :retirement-threshold="backlog.retirementThreshold"
+            :can-withdraw="isCurrentUserSuggestion(game)"
+            :withdrawing="withdrawingGameId === game.id"
             next-vote
+            @withdraw="withdrawSuggestion"
           />
 
           <article v-if="backlog.nextVoteFillCount" class="next-vote-fill-card">
@@ -530,10 +623,19 @@ onBeforeUnmount(() => {
       <section
         v-if="returningGames.length"
         class="backlog-shelf"
-        :aria-labelledby="nextVoteGames.length ? 'returning-games-heading' : undefined"
-        :aria-label="nextVoteGames.length ? undefined : 'Jogos que ainda guardam calor'"
+        :aria-labelledby="
+          currentVoteGames.length || nextVoteGames.length ? 'returning-games-heading' : undefined
+        "
+        :aria-label="
+          currentVoteGames.length || nextVoteGames.length
+            ? undefined
+            : 'Jogos que ainda guardam calor'
+        "
       >
-        <header v-if="nextVoteGames.length" class="backlog-shelf__heading">
+        <header
+          v-if="currentVoteGames.length || nextVoteGames.length"
+          class="backlog-shelf__heading"
+        >
           <div>
             <span class="backlog-eyebrow">Ainda nas Brasas</span>
             <h2 id="returning-games-heading">Outros jogos nas Brasas</h2>
@@ -547,6 +649,9 @@ onBeforeUnmount(() => {
             :key="game.id"
             :game="game"
             :retirement-threshold="backlog.retirementThreshold"
+            :can-withdraw="!electionActive && isCurrentUserSuggestion(game)"
+            :withdrawing="withdrawingGameId === game.id"
+            @withdraw="withdrawSuggestion"
           />
         </div>
       </section>

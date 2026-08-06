@@ -2949,7 +2949,8 @@ a.meeting-callout:focus-visible {
   margin-top: 66px;
 }
 
-.backlog-shelf--next-vote {
+.backlog-shelf--next-vote,
+.backlog-shelf--current-vote {
   position: relative;
   padding: 27px;
   background:
@@ -2958,6 +2959,13 @@ a.meeting-callout:focus-visible {
   border: 1px solid rgba(242, 164, 92, 0.14);
   border-radius: 9px;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
+}
+
+.backlog-shelf--current-vote {
+  background:
+    radial-gradient(ellipse 68% 190px at 50% 0, rgba(202, 75, 38, 0.14), transparent 76%),
+    rgba(16, 13, 19, 0.58);
+  border-color: rgba(242, 130, 72, 0.2);
 }
 
 .backlog-shelf__heading {
@@ -3018,6 +3026,14 @@ a.meeting-callout:focus-visible {
   box-shadow:
     0 15px 30px rgba(0, 0, 0, 0.24),
     inset 0 1px rgba(255, 224, 194, 0.035);
+}
+
+.backlog-card--current-vote {
+  border-top-color: rgba(235, 116, 62, 0.48);
+  box-shadow:
+    0 -8px 24px rgba(184, 64, 31, 0.08),
+    0 15px 30px rgba(0, 0, 0, 0.24),
+    inset 0 1px rgba(255, 224, 194, 0.04);
 }
 
 .next-vote-fill-card {
@@ -3104,7 +3120,11 @@ a.meeting-callout:focus-visible {
   left: auto;
 }
 
-.backlog-card__next-vote {
+.backlog-card__count--with-menu {
+  right: 51px;
+}
+
+.backlog-card__vote-state {
   position: absolute;
   top: 12px;
   left: 12px;
@@ -3124,6 +3144,84 @@ a.meeting-callout:focus-visible {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.28);
   text-transform: uppercase;
   backdrop-filter: blur(6px);
+}
+
+.backlog-card__vote-state--current {
+  color: #ef9b68;
+  background: rgba(35, 14, 13, 0.88);
+  border-color: rgba(239, 125, 68, 0.34);
+}
+
+.backlog-card__menu {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+}
+
+.backlog-card__menu summary {
+  display: inline-flex;
+  width: 31px;
+  height: 29px;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.58);
+  background: rgba(9, 7, 11, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 5px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  list-style: none;
+  backdrop-filter: blur(6px);
+}
+
+.backlog-card__menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.backlog-card__menu summary:hover,
+.backlog-card__menu summary:focus-visible,
+.backlog-card__menu[open] summary {
+  color: #f4b184;
+  border-color: rgba(242, 164, 92, 0.34);
+  outline: none;
+}
+
+.backlog-card__menu > button {
+  position: absolute;
+  top: 35px;
+  right: 0;
+  display: inline-flex;
+  min-width: 148px;
+  min-height: 34px;
+  padding: 8px 10px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  color: #dfa08e;
+  font:
+    650 10px 'Mulish',
+    sans-serif;
+  white-space: nowrap;
+  background: rgba(24, 16, 20, 0.98);
+  border: 1px solid rgba(207, 104, 76, 0.24);
+  border-radius: 5px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.42);
+  cursor: pointer;
+}
+
+.backlog-card__menu > button:hover,
+.backlog-card__menu > button:focus-visible {
+  color: #f1b09d;
+  background: rgba(48, 25, 27, 0.98);
+  border-color: rgba(207, 104, 76, 0.4);
+  outline: none;
+}
+
+.backlog-card__menu > button:disabled,
+.backlog-card__menu summary[aria-disabled='true'] {
+  cursor: wait;
+  opacity: 0.64;
 }
 
 .backlog-card__title {
@@ -3578,7 +3676,8 @@ a.meeting-callout:focus-visible {
     font-size: 42px;
   }
 
-  .backlog-shelf--next-vote {
+  .backlog-shelf--next-vote,
+  .backlog-shelf--current-vote {
     padding: 21px;
   }
 
