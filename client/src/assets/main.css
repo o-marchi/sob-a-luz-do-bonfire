@@ -2342,8 +2342,11 @@ a.meeting-callout:focus-visible {
   position: absolute;
   inset: 0;
   background:
+    repeating-linear-gradient(0deg, rgba(8, 7, 10, 0.1) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(8, 7, 10, 0.08) 0 1px, transparent 1px 4px),
     linear-gradient(180deg, rgba(4, 3, 6, 0.28), rgba(4, 3, 6, 0.15) 35%, rgba(7, 5, 9, 0.94)),
     radial-gradient(ellipse 72% 110px at 50% 0, rgba(238, 139, 82, 0.08), transparent 74%);
+  pointer-events: none;
 }
 
 .election-card__links {
@@ -2654,6 +2657,8 @@ a.meeting-callout:focus-visible {
   position: absolute;
   inset: 0;
   background:
+    repeating-linear-gradient(0deg, rgba(8, 7, 10, 0.1) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(8, 7, 10, 0.08) 0 1px, transparent 1px 4px),
     radial-gradient(ellipse at 50% 0, rgba(255, 194, 143, 0.18), transparent 52%),
     linear-gradient(
       180deg,
@@ -2662,6 +2667,7 @@ a.meeting-callout:focus-visible {
       rgba(8, 7, 10, 0.28) 62%,
       rgba(8, 7, 10, 0.92) 100%
     );
+  pointer-events: none;
 }
 
 .campaign-history-card__heading {
@@ -3089,8 +3095,11 @@ a.meeting-callout:focus-visible {
   position: absolute;
   inset: 0;
   background:
+    repeating-linear-gradient(0deg, rgba(8, 7, 10, 0.1) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(8, 7, 10, 0.08) 0 1px, transparent 1px 4px),
     linear-gradient(180deg, rgba(12, 10, 15, 0.12), transparent 42%),
     linear-gradient(0deg, rgba(9, 7, 11, 0.95), transparent 66%);
+  pointer-events: none;
 }
 
 .backlog-card__count {
