@@ -18,6 +18,8 @@ import { CampaignPlayer } from './entities/campaign-player.entity';
 import { Player } from '../players/entities/player.entity';
 import { UpdateGameInformationDto } from './dto/update-game-information.dto';
 import { PoolOption } from '../pool/entities/pool-option.entity';
+import { GameRecommendation } from '../games/entities/game-recommendation.entity';
+import { GameRecommender, normalizeGameIdentity } from '../games/games.service';
 
 const normalizeMonth = (month: string): string =>
   month
@@ -76,6 +78,8 @@ export class CampaignService {
     private campaignRepository: Repository<Campaign>,
     @InjectRepository(CampaignPlayer)
     private campaignPlayerRepository: Repository<CampaignPlayer>,
+    @InjectRepository(GameRecommendation)
+    private gameRecommendationRepository: Repository<GameRecommendation>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -205,20 +209,70 @@ export class CampaignService {
         relations: this.defaultRelations,
       });
 
-    if (!player) {
-      return currentCampaign;
-    }
-
-    const wasPlayerAdded = await this.addPlayer(currentCampaign, player);
-
-    if (wasPlayerAdded) {
-      return this.campaignRepository.findOneOrFail({
-        where: { current: true },
-        relations: this.defaultRelations,
+    if (this.isElectionExpired(currentCampaign)) {
+      const closedAt = new Date().toISOString();
+      await this.campaignRepository.update(currentCampaign.id, {
+        electionActive: false,
+        electionClosedAt: closedAt,
       });
+      currentCampaign.electionActive = false;
+      currentCampaign.electionClosedAt = closedAt;
     }
 
-    return currentCampaign;
+    if (player) {
+      const wasPlayerAdded = await this.addPlayer(currentCampaign, player);
+
+      if (wasPlayerAdded) {
+        const reloadedCampaign = await this.campaignRepository.findOneOrFail({
+          where: { current: true },
+          relations: this.defaultRelations,
+        });
+        return this.attachPoolRecommenders(reloadedCampaign);
+      }
+    }
+
+    return this.attachPoolRecommenders(currentCampaign);
+  }
+
+  private async attachPoolRecommenders(campaign: Campaign): Promise<Campaign> {
+    if (!campaign.pool?.options.length) return campaign;
+
+    const recommendations = await this.gameRecommendationRepository.find({
+      relations: ['game', 'player'],
+    });
+    const recommendersByIdentity = new Map<
+      string,
+      Map<number, GameRecommender>
+    >();
+
+    for (const recommendation of recommendations) {
+      const identity = normalizeGameIdentity(recommendation.game);
+      const recommenders =
+        recommendersByIdentity.get(identity) ??
+        new Map<number, GameRecommender>();
+      const player = recommendation.player;
+      recommenders.set(player.id, {
+        id: player.id,
+        name:
+          player.discord?.globalName ??
+          player.name ??
+          player.discord?.username ??
+          'Participante',
+        avatar: player.discord?.avatar ?? null,
+      });
+      recommendersByIdentity.set(identity, recommenders);
+    }
+
+    for (const option of campaign.pool.options) {
+      const recommenders = Array.from(
+        recommendersByIdentity
+          .get(normalizeGameIdentity(option.game))
+          ?.values() ?? [],
+      ).sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+      Object.assign(option.game, { recommendedBy: recommenders });
+    }
+
+    return campaign;
   }
 
   getPlayerCampaign(campaign: Campaign, player: Player): CampaignPlayer | null {
@@ -257,6 +311,7 @@ export class CampaignService {
   async undoVote(player: Player): Promise<Campaign> {
     await this.dataSource.transaction(async (manager) => {
       const currentCampaign = await this.findCurrentCampaignOrFail(manager);
+      this.assertElectionOpen(currentCampaign);
       const pool = currentCampaign.pool;
 
       if (!pool) {
@@ -282,6 +337,7 @@ export class CampaignService {
   async vote(player: Player, optionId: number): Promise<Campaign> {
     await this.dataSource.transaction(async (manager) => {
       const currentCampaign = await this.findCurrentCampaignOrFail(manager);
+      this.assertElectionOpen(currentCampaign);
       const pool = currentCampaign.pool;
 
       if (!pool) {
@@ -356,6 +412,10 @@ export class CampaignService {
     const campaign = await manager.getRepository(Campaign).findOne({
       where: { current: true },
       relations: this.defaultRelations,
+      lock:
+        manager.connection.options.type === 'postgres'
+          ? { mode: 'pessimistic_write' }
+          : undefined,
     });
 
     if (!campaign) {
@@ -363,5 +423,16 @@ export class CampaignService {
     }
 
     return campaign;
+  }
+
+  private assertElectionOpen(campaign: Campaign): void {
+    if (!campaign.electionActive || this.isElectionExpired(campaign)) {
+      throw new BadRequestException('A votação desta campanha está encerrada');
+    }
+  }
+
+  private isElectionExpired(campaign: Campaign): boolean {
+    if (!campaign.electionEndsAt) return false;
+    return new Date(campaign.electionEndsAt).getTime() <= Date.now();
   }
 }

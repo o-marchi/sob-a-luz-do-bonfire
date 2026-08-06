@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { GameResearchService } from './game-research.service';
+import { normalizeTrailerPageUrl } from './trailer-url';
 
 describe('GameResearchService', () => {
   let service: GameResearchService;
@@ -54,7 +55,7 @@ describe('GameResearchService', () => {
         title: 'Example Game',
         cover: 'https://example.com/header.jpg',
         steam: 'https://store.steampowered.com/app/42/',
-        trailer: 'https://example.com/trailer.m3u8',
+        trailer: null,
         howLongToBeatUrl: 'https://howlongtobeat.com/game/99',
         durationLabel: '12–18 h',
         mainHours: 12,
@@ -71,6 +72,115 @@ describe('GameResearchService', () => {
     expect(assessment.eligible).toBe(false);
     expect(assessment.reason).toBe('too_long');
     expect(assessment.game.mainExtraHours).toBeGreaterThan(20);
+  });
+
+  it('prefers the publisher and accepts a verified official franchise channel', async () => {
+    mockAssessmentRequests(18 * 3600, {
+      title: 'SILENT HILL f',
+      developers: ['NeoBards Entertainment Ltd.'],
+      publishers: ['KONAMI'],
+      videos: [
+        youtubeVideo(
+          '0OqTeE3y1x0',
+          'SILENT HILL f | Launch Trailer | KONAMI',
+          'SILENT HILL (Official)',
+        ),
+      ],
+    });
+
+    const assessment = await service.assessSteamGame(42);
+
+    expect(assessment.game.trailer).toBe(
+      'https://www.youtube.com/watch?v=0OqTeE3y1x0',
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        search: '?search_query=SILENT+HILL+f+official+trailer+KONAMI',
+      }),
+    );
+  });
+
+  it('accepts a matching trailer from a verified platform channel', async () => {
+    mockAssessmentRequests(18 * 3600, {
+      videos: [
+        youtubeVideo(
+          'platform-trailer',
+          'Example Game - Official Reveal Trailer',
+          'PlayStation',
+        ),
+      ],
+    });
+
+    const assessment = await service.assessSteamGame(42);
+
+    expect(assessment.game.trailer).toBe(
+      'https://www.youtube.com/watch?v=platform-trailer',
+    );
+  });
+
+  it('rejects HLS playlists and direct media while preserving watch pages', () => {
+    expect(
+      normalizeTrailerPageUrl('https://cdn.example.com/trailer.m3u8?token=1'),
+    ).toBeNull();
+    expect(
+      normalizeTrailerPageUrl('https://cdn.example.com/trailer.mp4'),
+    ).toBeNull();
+    expect(
+      normalizeTrailerPageUrl('https://www.youtube.com/watch?v=0OqTeE3y1x0'),
+    ).toBe('https://www.youtube.com/watch?v=0OqTeE3y1x0');
+    expect(
+      normalizeTrailerPageUrl('https://www.youtube.com/playlist?list=123'),
+    ).toBeNull();
+  });
+
+  it('researches a legacy catalog title without replacing its curated identity', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          '2369900': {
+            success: true,
+            data: {
+              type: 'game',
+              name: 'Castlevania Dominus Collection',
+              header_image: 'https://example.com/collection.jpg',
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ token: 'token' }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: [
+            {
+              game_id: 123,
+              game_name: 'Castlevania: Order of Ecclesia',
+              game_type: 'game',
+              comp_main: 11 * 3600,
+              comp_plus: 16 * 3600,
+            },
+          ],
+        }),
+      );
+
+    const assessment = await service.assessCatalogGame({
+      title: 'Castlevania: Order of Ecclesia',
+      steam:
+        'https://store.steampowered.com/app/2369900/Castlevania_Dominus_Collection/',
+      cover: 'https://example.com/curated.jpg',
+      trailer: 'https://example.com/curated-trailer',
+      summary: 'Curated summary.',
+    });
+
+    expect(assessment).toMatchObject({
+      eligible: true,
+      game: {
+        title: 'Castlevania: Order of Ecclesia',
+        cover: 'https://example.com/curated.jpg',
+        trailer: 'https://example.com/curated-trailer',
+        summary: 'Curated summary.',
+        mainExtraHours: 16,
+      },
+    });
   });
 
   it('issues player-bound, expiring assessment tokens', () => {
@@ -95,7 +205,16 @@ describe('GameResearchService', () => {
     );
   });
 
-  const mockAssessmentRequests = (mainExtraSeconds: number) => {
+  const mockAssessmentRequests = (
+    mainExtraSeconds: number,
+    options: {
+      title?: string;
+      developers?: string[];
+      publishers?: string[];
+      videos?: unknown[];
+    } = {},
+  ) => {
+    const title = options.title ?? 'Example Game';
     fetchMock
       .mockResolvedValueOnce(
         jsonResponse({
@@ -103,11 +222,11 @@ describe('GameResearchService', () => {
             success: true,
             data: {
               type: 'game',
-              name: 'Example Game',
+              name: title,
               header_image: 'https://example.com/header.jpg',
               short_description: 'A compact adventure.',
-              developers: ['Example Studio'],
-              publishers: ['Example Publisher'],
+              developers: options.developers ?? ['Example Studio'],
+              publishers: options.publishers ?? ['Example Publisher'],
               movies: [
                 {
                   name: 'Official trailer',
@@ -119,7 +238,9 @@ describe('GameResearchService', () => {
         }),
       )
       .mockResolvedValueOnce(
-        htmlResponse('<script>var ytInitialData = {"contents":[]};</script>'),
+        htmlResponse(
+          `<script>var ytInitialData = ${JSON.stringify({ contents: options.videos ?? [] })};</script>`,
+        ),
       )
       .mockResolvedValueOnce(
         jsonResponse({ token: 'token', hpKey: 'field', hpVal: 'value' }),
@@ -129,7 +250,7 @@ describe('GameResearchService', () => {
           data: [
             {
               game_id: 99,
-              game_name: 'Example Game',
+              game_name: title,
               game_alias: '',
               game_type: 'game',
               comp_main: 12 * 3600,
@@ -139,6 +260,22 @@ describe('GameResearchService', () => {
         }),
       );
   };
+
+  const youtubeVideo = (videoId: string, title: string, owner: string) => ({
+    videoRenderer: {
+      videoId,
+      title: { runs: [{ text: title }] },
+      ownerText: { runs: [{ text: owner }] },
+      ownerBadges: [
+        {
+          metadataBadgeRenderer: {
+            style: 'BADGE_STYLE_TYPE_VERIFIED',
+            label: 'Verified',
+          },
+        },
+      ],
+    },
+  });
 
   const jsonResponse = (body: unknown) =>
     new Response(JSON.stringify(body), {

@@ -50,6 +50,15 @@ export class Campaign {
   @Column({ default: false })
   electionActive: boolean;
 
+  @Column({ name: 'election_started_at', type: 'varchar', nullable: true })
+  electionStartedAt: string | null;
+
+  @Column({ name: 'election_ends_at', type: 'varchar', nullable: true })
+  electionEndsAt: string | null;
+
+  @Column({ name: 'election_closed_at', type: 'varchar', nullable: true })
+  electionClosedAt: string | null;
+
   @ManyToOne(() => Pool, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'pool_id' })
   pool?: Pool | null;

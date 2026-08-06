@@ -12,7 +12,7 @@ const auth = useAuthStore()
 const { isAuthenticated, user } = storeToRefs(auth)
 
 const campaignStore = useCampaignStore()
-const { campaignUser } = storeToRefs(campaignStore)
+const { campaign, campaignUser } = storeToRefs(campaignStore)
 
 const userMenuOpen = ref(false)
 
@@ -29,6 +29,11 @@ const userInitial = computed(() => displayName.value.charAt(0).toUpperCase())
 const tokenBreakdown = computed(() => {
   return campaignUser.value ? getUserTokenBreakdown(campaignUser.value) : []
 })
+const showConductorShortcut = computed(() =>
+  Boolean(
+    user.value?.isAdmin && campaign.value?.electionStartedAt && campaign.value.pool?.options.length,
+  ),
+)
 
 onMounted(async () => {
   try {
@@ -53,6 +58,9 @@ const logout = async () => {
         <RouterLink to="/campanhas" class="top-navigation__link">Campanhas</RouterLink>
         <RouterLink to="/brasas" class="top-navigation__link">Brasas</RouterLink>
         <RouterLink to="/regras" class="top-navigation__link">Regras</RouterLink>
+        <RouterLink v-if="showConductorShortcut" to="/conduzir" class="top-navigation__link">
+          Conduzir
+        </RouterLink>
       </div>
 
       <div v-if="isAuthenticated" class="top-navigation__account">

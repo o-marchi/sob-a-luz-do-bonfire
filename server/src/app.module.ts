@@ -10,6 +10,7 @@ import { PoolModule } from './pool/pool.module';
 import { AdminModule } from './admin/admin.module';
 import { createTypeOrmModuleOptions } from './db/database.config';
 import { ContentModule } from './content/content.module';
+import { CycleModule } from './cycle/cycle.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ContentModule } from './content/content.module';
     PoolModule,
     ContentModule,
     AdminModule,
+    CycleModule,
   ],
   controllers: [],
   providers: [],

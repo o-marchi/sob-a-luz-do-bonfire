@@ -7,6 +7,7 @@ import type { Profile } from 'passport-discord';
 import { Player } from '../players/entities/player.entity';
 import { DiscordMembershipService } from './discord-membership.service';
 import { BONFIRE_AUTH_VERSION } from './auth.constants';
+import { BonfireAdminAccessService } from './bonfire-admin-access.service';
 
 describe('AuthService', () => {
   it('does not include the Discord access token in the signed JWT payload', async () => {
@@ -22,6 +23,10 @@ describe('AuthService', () => {
         {
           provide: DiscordMembershipService,
           useValue: { assertBonfireMember: jest.fn() },
+        },
+        {
+          provide: BonfireAdminAccessService,
+          useValue: { isAdmin: jest.fn().mockReturnValue(true) },
         },
       ],
     }).compile();
@@ -40,6 +45,7 @@ describe('AuthService', () => {
       email: player.email,
       name: player.name,
       discord: player.discord,
+      isAdmin: true,
       authVersion: BONFIRE_AUTH_VERSION,
     });
     expect(signAsync.mock.calls[0][0]).not.toHaveProperty('accessToken');
@@ -70,6 +76,9 @@ describe('AuthService', () => {
       {} as JwtService,
       mediaStorageService as unknown as MediaStorageService,
       discordMembershipService as unknown as DiscordMembershipService,
+      {
+        isAdmin: jest.fn().mockReturnValue(false),
+      } as unknown as BonfireAdminAccessService,
     );
     const profile = {
       id: '1234',
@@ -109,6 +118,9 @@ describe('AuthService', () => {
       {} as JwtService,
       {} as MediaStorageService,
       discordMembershipService as unknown as DiscordMembershipService,
+      {
+        isAdmin: jest.fn().mockReturnValue(false),
+      } as unknown as BonfireAdminAccessService,
     );
     const profile = {
       id: 'outsider-id',

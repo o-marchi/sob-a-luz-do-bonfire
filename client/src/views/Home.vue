@@ -116,6 +116,9 @@ const recalculateElection = async () => {
       @change-journey="changeJourney"
     />
 
-    <GameRecommendation v-if="campaign && isAuthenticated" :campaign-user="campaignUser" />
+    <GameRecommendation
+      v-if="campaign && isAuthenticated && !campaign.electionActive"
+      :campaign-user="campaignUser"
+    />
   </div>
 </template>

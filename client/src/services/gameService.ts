@@ -45,6 +45,10 @@ export const deleteGameRecommendation = async (): Promise<void> => {
   await api.delete('/games/recommendations')
 }
 
+export const retireGameFromRotation = async (gameId: number): Promise<void> => {
+  await api.delete(`/games/${gameId}/rotation`)
+}
+
 export const getGameCover = (game?: Game | null): string => {
   return game?.cover || ''
 }

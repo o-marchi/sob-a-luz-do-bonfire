@@ -6,6 +6,8 @@ import { CurrentGameDetails1785736800000 } from './migrations/1785736800000-Curr
 import { GameRecommendations1785795104186 } from './migrations/1785795104186-GameRecommendations';
 import { GameRecommendationRegistry1785796200000 } from './migrations/1785796200000-GameRecommendationRegistry';
 import { GameResearchCache1785797300000 } from './migrations/1785797300000-GameResearchCache';
+import { CycleAutomation1785888000000 } from './migrations/1785888000000-CycleAutomation';
+import { NavigableTrailerLinks1785974400000 } from './migrations/1785974400000-NavigableTrailerLinks';
 
 const sqlitePath = process.env.DATABASE_SQLITE_PATH || 'data/local.sqlite';
 const safeRuntimeMigrations = [
@@ -15,6 +17,8 @@ const safeRuntimeMigrations = [
   GameRecommendations1785795104186,
   GameRecommendationRegistry1785796200000,
   GameResearchCache1785797300000,
+  CycleAutomation1785888000000,
+  NavigableTrailerLinks1785974400000,
 ];
 
 const getDatabasePort = (): number => {
