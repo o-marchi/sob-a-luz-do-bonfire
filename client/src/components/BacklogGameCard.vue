@@ -84,7 +84,6 @@ const hiddenRecommenderNames = () =>
         class="backlog-card__count"
         :class="{
           'backlog-card__count--aside': featuredVote,
-          'backlog-card__count--with-menu': canRetire,
         }"
       >
         <strong>{{ game.electionAppearances }}</strong>
