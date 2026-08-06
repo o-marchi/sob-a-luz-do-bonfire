@@ -58,6 +58,15 @@ describe('GamesService backlog', () => {
     await dataSource.destroy();
   });
 
+  it('refuses to persist a direct HLS trailer URL', () => {
+    expect(() =>
+      service.create({
+        title: 'Streaming Asset',
+        trailer: 'https://cdn.example.com/trailer.m3u8',
+      }),
+    ).toThrow('página navegável');
+  });
+
   it('returns unwon suggestions ordered by distinct election appearances', async () => {
     const games = await saveGames([
       { title: 'Third chance', suggestion: true },
@@ -261,7 +270,7 @@ describe('GamesService backlog', () => {
           suggestion: false,
           steam: 'https://store.steampowered.com/app/42/',
           cover: 'https://example.com/header.jpg',
-          trailer: 'https://example.com/trailer',
+          trailer: 'https://example.com/trailer.m3u8',
           howLongToBeatUrl: 'https://howlongtobeat.com/game/42',
           durationLabel: '12–18 h',
           mainHours: 12,
@@ -302,7 +311,7 @@ describe('GamesService backlog', () => {
     expect(assessment).toMatchObject({
       eligible: true,
       assessmentToken: 'cached-token',
-      game: { title: game.title, mainExtraHours: 18 },
+      game: { title: game.title, trailer: null, mainExtraHours: 18 },
     });
     expect(researchService.assessResearchedGame).toHaveBeenCalledTimes(1);
     expect(researchService.assessSteamGame).not.toHaveBeenCalled();

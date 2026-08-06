@@ -12,6 +12,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { IsTrailerPageUrl } from '../../games/trailer-url';
 
 export class AdminGameInputDto {
   @IsOptional()
@@ -39,6 +40,7 @@ export class AdminGameInputDto {
 
   @IsOptional()
   @IsString()
+  @IsTrailerPageUrl()
   trailer?: string;
 
   @IsOptional()

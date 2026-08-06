@@ -14,6 +14,7 @@ import { SiteContent } from '../content/entities/site-content.entity';
 import { Game } from '../games/entities/game.entity';
 import { GameRecommendation } from '../games/entities/game-recommendation.entity';
 import { buildNextVotePoolGames } from '../games/games.service';
+import { normalizeTrailerPageUrl } from '../games/trailer-url';
 import { Player } from '../players/entities/player.entity';
 import { PoolOption } from '../pool/entities/pool-option.entity';
 import { Pool } from '../pool/entities/pool.entity';
@@ -888,7 +889,13 @@ export class AdminService {
       }
 
       if (input.trailer !== undefined) {
-        game.trailer = input.trailer ?? null;
+        const trailer = normalizeTrailerPageUrl(input.trailer);
+        if (input.trailer && !trailer) {
+          throw new BadRequestException(
+            'Trailer must be a navigable page, not a direct video or HLS playlist.',
+          );
+        }
+        game.trailer = trailer;
       }
 
       if (input.summary !== undefined) {

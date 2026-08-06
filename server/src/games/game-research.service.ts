@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { normalizeTrailerPageUrl } from './trailer-url';
 
 const STEAM_SEARCH_URL = 'https://store.steampowered.com/search/suggest';
 const STEAM_DETAILS_URL = 'https://store.steampowered.com/api/appdetails';
@@ -60,11 +61,6 @@ export interface CatalogGameResearchInput {
   summary?: string | null;
 }
 
-interface SteamMovie {
-  name?: string;
-  hls_h264?: string;
-}
-
 interface SteamAppDetails {
   type?: string;
   name?: string;
@@ -73,7 +69,6 @@ interface SteamAppDetails {
   short_description?: string;
   developers?: string[];
   publishers?: string[];
-  movies?: SteamMovie[];
 }
 
 interface SteamAppDetailsResponse {
@@ -116,6 +111,13 @@ interface YoutubeVideoRenderer {
   videoId?: string;
   title?: YoutubeText;
   ownerText?: YoutubeText;
+  ownerBadges?: Array<{
+    metadataBadgeRenderer?: {
+      style?: string;
+      label?: string;
+      tooltip?: string;
+    };
+  }>;
 }
 
 const decodeHtml = (value: string): string =>
@@ -248,6 +250,46 @@ const organizationsMatch = (left: string, right: string): boolean => {
   );
 };
 
+const PLATFORM_CHANNELS = ['playstation', 'xbox', 'nintendo'];
+const GENERIC_TITLE_TOKENS = new Set([
+  'and',
+  'edition',
+  'game',
+  'remake',
+  'the',
+]);
+
+const hasVerifiedOwnerBadge = (video: YoutubeVideoRenderer): boolean =>
+  (video.ownerBadges ?? []).some(({ metadataBadgeRenderer: badge }) =>
+    [badge?.style, badge?.label, badge?.tooltip].some((value) =>
+      /verified|verificado/i.test(value ?? ''),
+    ),
+  );
+
+const verifiedChannelMatches = (
+  video: YoutubeVideoRenderer,
+  title: string,
+): boolean => {
+  if (!hasVerifiedOwnerBadge(video)) return false;
+
+  const owner = normalizeGameTitle(textValue(video.ownerText));
+  if (
+    PLATFORM_CHANNELS.some((platform) => owner.split(' ').includes(platform))
+  ) {
+    return true;
+  }
+
+  const franchiseTokens = normalizeGameTitle(title)
+    .split(' ')
+    .filter((token) => token.length >= 3 && !GENERIC_TITLE_TOKENS.has(token));
+  const matchingTokens = franchiseTokens.filter((token) =>
+    owner.split(' ').includes(token),
+  );
+  const requiredMatches = Math.min(2, franchiseTokens.length);
+
+  return requiredMatches > 0 && matchingTokens.length >= requiredMatches;
+};
+
 const formatHours = (hours: number): string => {
   const rounded = Math.round(hours * 2) / 2;
   return Number.isInteger(rounded)
@@ -356,7 +398,7 @@ export class GameResearchService {
         title: input.title,
         cover: input.cover ?? null,
         steam: input.steam ?? '',
-        trailer: input.trailer ?? null,
+        trailer: normalizeTrailerPageUrl(input.trailer),
         summary: input.summary ?? null,
         howLongToBeatUrl: null,
         durationLabel: null,
@@ -374,7 +416,8 @@ export class GameResearchService {
       cover: input.cover ?? steamDetails.header_image ?? null,
       steam: input.steam ?? `https://store.steampowered.com/app/${steamAppId}/`,
       trailer:
-        input.trailer ?? (await this.findOfficialTrailer(steamDetails, title)),
+        normalizeTrailerPageUrl(input.trailer) ??
+        (await this.findOfficialTrailer(steamDetails, title)),
       summary: input.summary ?? steamDetails.short_description?.trim() ?? null,
       howLongToBeatUrl: null,
       durationLabel: null,
@@ -609,8 +652,8 @@ export class GameResearchService {
     title: string,
   ): Promise<string | null> {
     const organizations = [
-      ...(details.developers ?? []),
       ...(details.publishers ?? []),
+      ...(details.developers ?? []),
     ];
 
     try {
@@ -642,9 +685,13 @@ export class GameResearchService {
           const ownerMatches = organizations.some((organization) =>
             organizationsMatch(organization, owner),
           );
+          const verifiedOfficialChannel = verifiedChannelMatches(video, title);
 
           return Boolean(
-            video.videoId && titleMatches && trailerMatches && ownerMatches,
+            video.videoId &&
+              titleMatches &&
+              trailerMatches &&
+              (ownerMatches || verifiedOfficialChannel),
           );
         });
 
@@ -658,7 +705,7 @@ export class GameResearchService {
       );
     }
 
-    return details.movies?.find((movie) => movie.hls_h264)?.hls_h264 ?? null;
+    return null;
   }
 
   private signTokenPayload(encodedPayload: string): string {

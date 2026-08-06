@@ -20,6 +20,7 @@ import {
   SteamGameSearchResult,
   normalizeGameTitle,
 } from './game-research.service';
+import { normalizeTrailerPageUrl } from './trailer-url';
 
 const MAX_BACKLOG_APPEARANCES = 3;
 export const TARGET_POOL_SIZE = 5;
@@ -227,7 +228,11 @@ export class GamesService {
   ) {}
 
   create(createGameDto: CreateGameDto): Promise<Game> {
-    const entity: Game = this.gameRepository.create(createGameDto);
+    const trailer = this.validateTrailerInput(createGameDto.trailer);
+    const entity: Game = this.gameRepository.create({
+      ...createGameDto,
+      trailer,
+    });
     return this.gameRepository.save(entity);
   }
 
@@ -355,6 +360,8 @@ export class GamesService {
       );
     }
 
+    researchedGame.trailer = normalizeTrailerPageUrl(researchedGame.trailer);
+
     const result = await this.dataSource.transaction(async (manager) => {
       const campaign = await manager.getRepository(Campaign).findOne({
         where: { current: true },
@@ -409,7 +416,7 @@ export class GamesService {
         suggestion: true,
         cover: researchedGame.cover,
         steam: researchedGame.steam,
-        trailer: researchedGame.trailer,
+        trailer: normalizeTrailerPageUrl(researchedGame.trailer),
         summary: researchedGame.summary,
         howLongToBeatUrl: researchedGame.howLongToBeatUrl,
         durationLabel: researchedGame.durationLabel,
@@ -417,7 +424,8 @@ export class GamesService {
       game.suggestion = true;
       game.cover ||= researchedGame.cover;
       game.steam ||= researchedGame.steam;
-      game.trailer ||= researchedGame.trailer;
+      game.trailer =
+        normalizeTrailerPageUrl(game.trailer) ?? researchedGame.trailer;
       game.summary ||= researchedGame.summary;
       game.howLongToBeatUrl ||= researchedGame.howLongToBeatUrl;
       game.durationLabel ||= researchedGame.durationLabel;
@@ -716,7 +724,7 @@ export class GamesService {
       title: game.title,
       cover: game.cover ?? null,
       steam: game.steam ?? `https://store.steampowered.com/app/${steamAppId}/`,
-      trailer: game.trailer ?? null,
+      trailer: normalizeTrailerPageUrl(game.trailer),
       summary: game.summary ?? null,
       howLongToBeatUrl: game.howLongToBeatUrl ?? null,
       durationLabel: game.durationLabel ?? null,
@@ -755,9 +763,11 @@ export class GamesService {
   }
 
   async update(id: number, updateGameDto: UpdateGameDto): Promise<Game> {
+    const trailer = this.validateTrailerInput(updateGameDto.trailer);
     const entity: Game | undefined = await this.gameRepository.preload({
       id,
       ...updateGameDto,
+      ...(updateGameDto.trailer !== undefined ? { trailer } : {}),
     });
 
     if (!entity) {
@@ -765,6 +775,22 @@ export class GamesService {
     }
 
     return this.gameRepository.save(entity);
+  }
+
+  private validateTrailerInput(
+    trailer: string | null | undefined,
+  ): string | null | undefined {
+    if (trailer === undefined) return undefined;
+    if (trailer === null) return null;
+
+    const normalized = normalizeTrailerPageUrl(trailer);
+    if (!normalized) {
+      throw new BadRequestException(
+        'O trailer precisa ser uma página navegável, não um vídeo direto ou playlist HLS.',
+      );
+    }
+
+    return normalized;
   }
 
   remove(id: number): Promise<DeleteResult> {

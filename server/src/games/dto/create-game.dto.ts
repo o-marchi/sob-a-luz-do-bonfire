@@ -6,6 +6,7 @@ import {
   IsString,
   Min,
 } from 'class-validator';
+import { IsTrailerPageUrl } from '../trailer-url';
 
 export class CreateGameDto {
   @IsString()
@@ -26,6 +27,7 @@ export class CreateGameDto {
 
   @IsString()
   @IsOptional()
+  @IsTrailerPageUrl()
   trailer?: string;
 
   @IsString()
