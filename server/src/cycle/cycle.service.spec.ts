@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { AdminAuditLog } from '../admin/entities/admin-audit-log.entity';
 import { CampaignPlayer } from '../campaign/entities/campaign-player.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
@@ -302,6 +302,43 @@ describe('CycleService', () => {
       service.startElection({ selectionToken: tampered }, actor),
     ).rejects.toThrow('Token de confirmação inválido');
     await expect(dataSource.getRepository(Pool).count()).resolves.toBe(0);
+  });
+
+  it('locks only the campaign row before loading nullable relations on postgres', async () => {
+    const findOne = jest
+      .fn()
+      .mockResolvedValueOnce({ id: campaign.id })
+      .mockResolvedValueOnce(campaign);
+    const manager = {
+      queryRunner: { isTransactionActive: true },
+      connection: { options: { type: 'postgres' } },
+      getRepository: jest.fn().mockReturnValue({ findOne }),
+    } as unknown as EntityManager;
+
+    const result = await (
+      service as unknown as {
+        findCurrentCampaignOrFail(manager: EntityManager): Promise<Campaign>;
+      }
+    ).findCurrentCampaignOrFail(manager);
+
+    expect(result).toBe(campaign);
+    expect(findOne).toHaveBeenNthCalledWith(1, {
+      where: { current: true },
+      lock: { mode: 'pessimistic_write' },
+    });
+    expect(findOne).toHaveBeenNthCalledWith(2, {
+      where: { id: campaign.id },
+      relations: [
+        'game',
+        'players',
+        'players.player',
+        'players.suggestedGame',
+        'pool',
+        'pool.options',
+        'pool.options.game',
+        'pool.options.players',
+      ],
+    });
   });
 
   it('closes the old election and creates the next current campaign without replacing history', async () => {
