@@ -679,14 +679,33 @@ export class CycleService {
   private async findCurrentCampaignOrFail(
     manager: EntityManager = this.dataSource.manager,
   ): Promise<Campaign> {
-    const campaign = await manager.getRepository(Campaign).findOne({
+    const repository = manager.getRepository(Campaign);
+    const shouldLock =
+      manager.queryRunner?.isTransactionActive &&
+      manager.connection.options.type === 'postgres';
+
+    if (shouldLock) {
+      const lockedCampaign = await repository.findOne({
+        where: { current: true },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!lockedCampaign) {
+        throw new NotFoundException('No current campaign found');
+      }
+
+      const campaign = await repository.findOne({
+        where: { id: lockedCampaign.id },
+        relations: campaignRelations,
+      });
+      if (!campaign) {
+        throw new NotFoundException('No current campaign found');
+      }
+      return campaign;
+    }
+
+    const campaign = await repository.findOne({
       where: { current: true },
       relations: campaignRelations,
-      lock:
-        manager.queryRunner?.isTransactionActive &&
-        manager.connection.options.type === 'postgres'
-          ? { mode: 'pessimistic_write' }
-          : undefined,
     });
     if (!campaign) throw new NotFoundException('No current campaign found');
     return campaign;
