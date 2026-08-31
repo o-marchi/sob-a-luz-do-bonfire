@@ -42,6 +42,48 @@ const disabledDiscordPreview: DiscordCyclePreview = {
   errors: [],
 };
 
+const enabledDiscordPreview: DiscordCyclePreview = {
+  ...disabledDiscordPreview,
+  configured: true,
+  enabled: true,
+  channels: {
+    text: [
+      {
+        id: 'current-channel',
+        name: 'current-game',
+        type: 0,
+        parent_id: 'discussion-category',
+      },
+    ],
+    categories: [
+      {
+        id: 'discussion-category',
+        name: 'O Círculo',
+        type: 4,
+        parent_id: null,
+      },
+    ],
+    voice: [],
+  },
+  plan: {
+    ...disabledDiscordPreview.plan,
+    oldChannel: {
+      id: 'current-channel',
+      name: 'current-game',
+      type: 0,
+      parent_id: 'discussion-category',
+    },
+    discussionCategory: {
+      id: 'discussion-category',
+      name: 'O Círculo',
+      type: 4,
+      parent_id: null,
+    },
+    newChannelName: 'winning-game',
+    newChannelTopic: 'Next game',
+  },
+};
+
 describe('CycleService', () => {
   let dataSource: DataSource;
   let service: CycleService;
@@ -341,7 +383,7 @@ describe('CycleService', () => {
     });
   });
 
-  it('closes the old election and creates the next current campaign without replacing history', async () => {
+  it('applies after the UI fills equivalent Discord selections from the preview', async () => {
     const winner = await saveGame({
       title: 'Winning Game',
       suggestion: true,
@@ -393,11 +435,12 @@ describe('CycleService', () => {
     winnerOption.players = [voter];
     await dataSource.getRepository(PoolOption).save(winnerOption);
 
+    discord.preview.mockResolvedValue(enabledDiscordPreview);
     const input = {
       winnerGameId: winner.id,
       month: 'Setembro',
       year: '2026',
-      discord: { enabled: false },
+      discord: { enabled: true },
     };
     const preview = await service.previewTransition(input);
 
@@ -413,14 +456,33 @@ describe('CycleService', () => {
     });
     expect(preview.confirmationToken).toBeTruthy();
 
-    const applied = (await service.applyTransition(
-      {
-        ...input,
-        confirm: true,
-        confirmationToken: preview.confirmationToken ?? '',
+    const applyInput = {
+      ...input,
+      discord: {
+        enabled: true,
+        oldChannelId: 'current-channel',
+        discussionCategoryId: 'discussion-category',
+        newChannelName: 'winning-game',
+        newChannelTopic: 'Next game',
       },
-      actor,
-    )) as { campaign: Campaign };
+      confirm: true,
+      confirmationToken: preview.confirmationToken ?? '',
+    };
+    discord.preview.mockResolvedValue({
+      ...enabledDiscordPreview,
+      plan: {
+        ...enabledDiscordPreview.plan,
+        newChannelTopic: 'A changed plan',
+      },
+    });
+    await expect(service.applyTransition(applyInput, actor)).rejects.toThrow(
+      'A votação ou o plano mudou desde a prévia',
+    );
+
+    discord.preview.mockResolvedValue(enabledDiscordPreview);
+    const applied = (await service.applyTransition(applyInput, actor)) as {
+      campaign: Campaign;
+    };
 
     expect(applied.campaign).toMatchObject({
       month: 'Setembro',
