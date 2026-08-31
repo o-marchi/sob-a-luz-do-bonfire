@@ -411,7 +411,9 @@ export class CycleService {
             campaignId: campaign.id,
             winnerGameId: winner.id,
             voteFingerprint: this.fingerprint(result),
-            inputFingerprint: this.fingerprint(this.transitionInput(dto)),
+            inputFingerprint: this.fingerprint(
+              this.transitionConfirmationInput(dto),
+            ),
             discordFingerprint: this.fingerprint(
               this.discordPlanFingerprint(discordPreview),
             ),
@@ -472,7 +474,7 @@ export class CycleService {
       campaignId: current.id,
       winnerGameId: preview.winner.id,
       voteFingerprint: this.fingerprint(preview.electionResult),
-      inputFingerprint: this.fingerprint(this.transitionInput(dto)),
+      inputFingerprint: this.fingerprint(this.transitionConfirmationInput(dto)),
       discordFingerprint: this.fingerprint(
         this.discordPlanFingerprint(preview.discord),
       ),
@@ -737,6 +739,18 @@ export class CycleService {
       meetingAt: dto.meetingAt ?? null,
       meetingLocation: dto.meetingLocation?.trim() ?? null,
       discord: dto.discord ?? { enabled: true },
+      allowEarlyClose: dto.allowEarlyClose ?? false,
+    };
+  }
+
+  private transitionConfirmationInput(dto: PreviewCycleTransitionDto): unknown {
+    return {
+      winnerGameId: dto.winnerGameId ?? null,
+      month: dto.month.trim(),
+      year: dto.year.trim(),
+      description: dto.description?.trim() ?? null,
+      meetingAt: dto.meetingAt ?? null,
+      meetingLocation: dto.meetingLocation?.trim() ?? null,
       allowEarlyClose: dto.allowEarlyClose ?? false,
     };
   }
