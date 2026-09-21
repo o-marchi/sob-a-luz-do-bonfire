@@ -243,6 +243,56 @@ The MCP/admin API also exposes guarded `GET /admin/rules` and
 these endpoints so the published Markdown can be reviewed and changed without a
 code deployment.
 
+## Image hosting (Cloudflare R2)
+
+Project images use the existing R2 bucket and `R2_PUBLIC_BASE_URL`. The current
+small deployment intentionally uses its `r2.dev` address; a custom domain can
+be configured later. R2 credentials stay on the server.
+
+The admin API supports two authenticated operations (the same bearer token as
+the other `/admin` routes):
+
+- `POST /admin/media/upload`: multipart `file`, plus an optional `category`
+  (`banners`, `pictures`, or `assets`; defaults to `banners`).
+- `POST /admin/media/import`: JSON `{ "sourceUrl": "https://i.postimg.cc/.../image.png", "category": "banners" }`.
+  Remote imports accept direct HTTPS images from `i.postimg.cc` and the listed
+  Steam image CDN hosts in `ImageImportService`; redirects are rejected.
+
+Both operations accept PNG, JPEG, GIF, and WebP up to 8 MiB and 20 million
+decoded pixels, preserve the original bytes, use a SHA-256 filename, and verify
+the public copy before returning `{ url, sha256, bytes, contentType, width, height }`.
+They do not update game records automatically. Use the returned URL as the game's
+`cover`. The MCP tools `upload_image` (local `filePath`) and `import_image`
+(`sourceUrl`) expose this workflow to the project assistant without Postimages.
+
+### Migrate existing Postimages covers
+
+Build the server, then inject the target environment's `DATABASE_URI` and R2
+variables into the following commands. Do not store credentials in the report
+or pass them as command arguments.
+
+```sh
+pnpm --filter ./server build
+# Inventory only; no uploads or database writes.
+pnpm --filter ./server media:migrate-postimages --manifest /absolute/path/preview.json
+# Explicitly authorized migration. Use a new manifest filename for each run.
+pnpm --filter ./server media:migrate-postimages --apply --manifest /absolute/path/applied.json
+```
+
+The script inventories `games.cover` direct Postimages URLs, imports each unique
+source once, saves a rollback mapping before database changes, and updates only
+verified copies. It uses a transaction with locked rows, original-value checks,
+an admin audit entry, and post-commit readback. A failed source (including a 503
+response with an image error graphic) keeps its original URL. Exit code 2 means
+some sources remain unavailable; rerun with a new manifest after recovery.
+Content-based object names make retries safe and preserve shared image URLs.
+
+For rollback, use the manifest's `id`, `originalUrl`, and `newUrl` values in a
+transaction, restoring `originalUrl` only while the current cover still equals
+`newUrl`. A `commit-outcome-unknown` report requires database readback before any
+retry. No source images or R2 objects are deleted by this script. Read back the
+public API and check the affected screens after applying a migration.
+
 ## Testing
 
 - Client tests use Vitest and live alongside frontend source files.
