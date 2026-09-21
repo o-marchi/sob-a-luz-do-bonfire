@@ -132,6 +132,31 @@ DISCORD_BOT_TOKEN=replace-with-private-bot-token
 CYCLE_AUTOMATION_SECRET=replace-with-a-separate-long-random-secret
 ```
 
+### Game duration lookup
+
+Recommendations require a matched HowLongToBeat **Main + Extras** duration of
+at most 20 hours. Provider failures, missing durations, unmatched titles and
+ambiguous titles have separate responses; none can issue an approval token.
+
+The lookup uses `/api/search/site` and can rediscover the search endpoint from
+HowLongToBeat's public search scripts if initialization or search returns 404/410.
+Discovery only reads same-site Next.js chunks and never executes their code.
+The public protocol is also implemented by
+[howlongtobeatpy](https://github.com/ScrappyCocco/HowLongToBeat-PythonAPI/blob/4d27345f2bff691adfa5da779a635370c52dda8d/howlongtobeatpy/howlongtobeatpy/HTMLRequests.py)
+and [rshero/hltb](https://github.com/rshero/hltb/blob/07400ebe41e8fb9bdc2aaaa16059b7a3898195d8/client.go).
+
+- Each lookup has a 15-second total deadline and at most one retry.
+- Successful nonempty searches are cached in memory for six hours (up to 200
+  queries); concurrent identical searches share one request. Empty searches and
+  failures are not cached. Existing catalog duration records remain available.
+- If the provider changes its protocol, server logs distinguish HTTP failures
+  from invalid responses. An optional `HLTB_SEARCH_PATH=/api/search/site` server
+  setting can override the initial path; only relative `/api/` paths are accepted.
+- Regression tests simulate the provider, including endpoint changes, outages,
+  malformed data, title ambiguity, and the 20-hour boundary. They do not establish
+  any particular game's current duration. Verify a real lookup in the deployment
+  environment before claiming a live game is eligible.
+
 In the Discord Developer Portal, configure the OAuth redirect URL to match `DISCORD_CALLBACK_URL`.
 Discord login requests `guilds.members.read`; only members of `DISCORD_GUILD_ID` are allowed to
 sign in. The Bonfire server ID above is also the application default.
