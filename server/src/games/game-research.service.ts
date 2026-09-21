@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { normalizeTrailerPageUrl } from './trailer-url';
+import { HowLongToBeatClient, HltbGame } from './howlongtobeat.client';
 
 const STEAM_SEARCH_URL = 'https://store.steampowered.com/search/suggest';
 const STEAM_DETAILS_URL = 'https://store.steampowered.com/api/appdetails';
@@ -28,6 +29,9 @@ export type GameAssessmentReason =
   | 'eligible'
   | 'too_long'
   | 'duration_unavailable'
+  | 'lookup_failed'
+  | 'game_not_found'
+  | 'ambiguous_match'
   | 'not_a_game'
   | 'already_played'
   | 'already_suggested';
@@ -74,25 +78,6 @@ interface SteamAppDetails {
 interface SteamAppDetailsResponse {
   success?: boolean;
   data?: SteamAppDetails;
-}
-
-interface HltbSecurityInit {
-  token?: string;
-  hpKey?: string;
-  hpVal?: string;
-}
-
-interface HltbGame {
-  game_id?: number;
-  game_name?: string;
-  game_alias?: string;
-  game_type?: string;
-  comp_main?: number;
-  comp_plus?: number;
-}
-
-interface HltbSearchResponse {
-  data?: HltbGame[];
 }
 
 interface RecommendationTokenPayload {
@@ -301,7 +286,11 @@ const formatHours = (hours: number): string => {
 export class GameResearchService {
   private readonly logger = new Logger(GameResearchService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  private readonly hltb: HowLongToBeatClient;
+
+  constructor(private readonly config: ConfigService) {
+    this.hltb = new HowLongToBeatClient(config.get<string>('HLTB_SEARCH_PATH'));
+  }
 
   async searchSteam(query: string): Promise<SteamGameSearchResult[]> {
     const normalizedQuery = query.trim().replace(/\s+/g, ' ');
@@ -362,27 +351,7 @@ export class GameResearchService {
       return this.assessment(false, 'not_a_game', baseGame);
     }
 
-    const hltbMatch = await this.findHowLongToBeatMatch(title);
-    if (!hltbMatch?.game_id || !hltbMatch.comp_plus) {
-      return this.assessment(false, 'duration_unavailable', baseGame);
-    }
-
-    const mainHours = hltbMatch.comp_main ? hltbMatch.comp_main / 3600 : null;
-    const mainExtraHours = hltbMatch.comp_plus / 3600;
-    const durationLabel =
-      mainHours && Math.abs(mainHours - mainExtraHours) >= 0.25
-        ? `${formatHours(mainHours)}–${formatHours(mainExtraHours)} h`
-        : `${formatHours(mainExtraHours)} h`;
-    const game: ResearchedGame = {
-      ...baseGame,
-      howLongToBeatUrl: `${HLTB_URL}/game/${hltbMatch.game_id}`,
-      durationLabel,
-      mainHours,
-      mainExtraHours,
-      howLongToBeatTitle: hltbMatch.game_name?.trim() || title,
-    };
-
-    return this.assessResearchedGame(game);
+    return this.assessDuration(baseGame);
   }
 
   async assessCatalogGame(
@@ -430,17 +399,36 @@ export class GameResearchService {
       return this.assessment(false, 'not_a_game', baseGame);
     }
 
-    const hltbMatch = await this.findHowLongToBeatMatch(title);
-    if (!hltbMatch?.game_id || !hltbMatch.comp_plus) {
-      return this.assessment(false, 'duration_unavailable', baseGame);
-    }
+    return this.assessDuration(baseGame);
+  }
 
-    const mainHours = hltbMatch.comp_main ? hltbMatch.comp_main / 3600 : null;
-    const mainExtraHours = hltbMatch.comp_plus / 3600;
+  private async assessDuration(
+    baseGame: ResearchedGame,
+  ): Promise<GameResearchAssessment> {
+    let match: { game: HltbGame | null; reason: GameAssessmentReason };
+    try {
+      match = await this.findHowLongToBeatMatch(baseGame.title);
+    } catch (error: unknown) {
+      this.logger.warn(
+        `HowLongToBeat lookup failed for Steam ${baseGame.steamAppId}: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
+      return this.assessment(false, 'lookup_failed', baseGame);
+    }
+    const hltbMatch = match.game;
+    if (!hltbMatch) return this.assessment(false, match.reason, baseGame);
+
+    const validHours = (seconds: unknown): number | null =>
+      typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0
+        ? seconds / 3600
+        : null;
+    const mainHours = validHours(hltbMatch.comp_main);
+    const mainExtraHours = validHours(hltbMatch.comp_plus);
     const durationLabel =
-      mainHours && Math.abs(mainHours - mainExtraHours) >= 0.25
-        ? `${formatHours(mainHours)}–${formatHours(mainExtraHours)} h`
-        : `${formatHours(mainExtraHours)} h`;
+      mainExtraHours === null
+        ? null
+        : mainHours && Math.abs(mainHours - mainExtraHours) >= 0.25
+          ? `${formatHours(mainHours)}–${formatHours(mainExtraHours)} h`
+          : `${formatHours(mainExtraHours)} h`;
 
     return this.assessResearchedGame({
       ...baseGame,
@@ -448,12 +436,16 @@ export class GameResearchService {
       durationLabel,
       mainHours,
       mainExtraHours,
-      howLongToBeatTitle: hltbMatch.game_name?.trim() || title,
+      howLongToBeatTitle: hltbMatch.game_name.trim(),
     });
   }
 
   assessResearchedGame(game: ResearchedGame): GameResearchAssessment {
-    if (game.mainExtraHours === null) {
+    if (
+      typeof game.mainExtraHours !== 'number' ||
+      !Number.isFinite(game.mainExtraHours) ||
+      game.mainExtraHours <= 0
+    ) {
       return this.assessment(false, 'duration_unavailable', game);
     }
 
@@ -511,7 +503,9 @@ export class GameResearchService {
       payload.expiresAt < Math.floor(Date.now() / 1000) ||
       !Number.isInteger(payload.game?.steamAppId) ||
       !payload.game?.title ||
-      payload.game.mainExtraHours === null ||
+      typeof payload.game.mainExtraHours !== 'number' ||
+      !Number.isFinite(payload.game.mainExtraHours) ||
+      payload.game.mainExtraHours <= 0 ||
       payload.game.mainExtraHours > MAX_RECOMMENDATION_HOURS
     ) {
       throw new Error('Expired or invalid assessment token');
@@ -551,100 +545,41 @@ export class GameResearchService {
 
   private async findHowLongToBeatMatch(
     title: string,
-  ): Promise<HltbGame | null> {
-    try {
-      const results = await this.searchHowLongToBeat(title);
-      const scored = results
-        .filter((entry) => entry.game_name && entry.game_type !== 'mod')
-        .map((entry) => ({
-          entry,
-          score: Math.max(
-            titleSimilarity(title, entry.game_name ?? ''),
-            titleSimilarity(title, entry.game_alias ?? ''),
+  ): Promise<{ game: HltbGame | null; reason: GameAssessmentReason }> {
+    const results = await this.hltb.search(title);
+    const numbers = (value: string) =>
+      normalizeGameTitle(value).match(/\d+/g)?.join(',') ?? '';
+    const scored = [
+      ...new Map(results.map((entry) => [entry.game_id, entry])).values(),
+    ]
+      .filter(
+        (entry) =>
+          entry.game_name && !['mod', 'dlc'].includes(entry.game_type ?? ''),
+      )
+      .map((entry) => ({
+        entry,
+        score: Math.max(
+          ...[entry.game_name, ...(entry.game_alias ?? '').split(/[;\n]/)].map(
+            (name) =>
+              numbers(title) === numbers(name)
+                ? titleSimilarity(title, name)
+                : 0,
           ),
-        }))
-        .sort((left, right) => right.score - left.score);
-      const best = scored[0];
-      const second = scored[1];
+        ),
+      }))
+      .sort((left, right) => right.score - left.score);
+    const best = scored[0];
+    const second = scored[1];
 
-      if (!best || best.score < 0.72) return null;
-      if (best.score < 1 && second && best.score - second.score < 0.08) {
-        return null;
-      }
-
-      return best.entry;
-    } catch (error: unknown) {
-      this.logger.warn(
-        `HowLongToBeat check failed: ${error instanceof Error ? error.message : 'unknown error'}`,
-      );
-      return null;
+    if (!best || best.score < 0.72)
+      return { game: null, reason: 'game_not_found' };
+    if (
+      second &&
+      (best.score === 1 ? second.score === 1 : best.score - second.score < 0.08)
+    ) {
+      return { game: null, reason: 'ambiguous_match' };
     }
-  }
-
-  private async searchHowLongToBeat(title: string): Promise<HltbGame[]> {
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      const init = await this.fetchJson<HltbSecurityInit>(
-        new URL(`/api/bleed/init?t=${Date.now()}`, HLTB_URL),
-        'HowLongToBeat eligibility check',
-      );
-      if (!init.token) throw new Error('HowLongToBeat did not issue a token');
-
-      const payload: Record<string, unknown> = {
-        searchType: 'games',
-        searchTerms: title.trim().split(/\s+/),
-        searchPage: 1,
-        size: 20,
-        searchOptions: {
-          games: {
-            userId: 0,
-            platform: '',
-            sortCategory: 'popular',
-            rangeCategory: 'main',
-            rangeTime: { min: null, max: null },
-            gameplay: {
-              perspective: '',
-              flow: '',
-              genre: '',
-              difficulty: '',
-            },
-            rangeYear: { min: '', max: '' },
-            modifier: '',
-          },
-          users: { sortCategory: 'postcount' },
-          lists: { sortCategory: 'follows' },
-          filter: '',
-          sort: 0,
-          randomizer: 0,
-        },
-        useCache: true,
-      };
-      if (init.hpKey) payload[init.hpKey] = init.hpVal;
-
-      const response = await fetch(new URL('/api/bleed', HLTB_URL), {
-        method: 'POST',
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        headers: {
-          'content-type': 'application/json',
-          'user-agent': USER_AGENT,
-          origin: HLTB_URL,
-          referer: `${HLTB_URL}/`,
-          'x-auth-token': init.token,
-          'x-hp-key': init.hpKey ?? '',
-          'x-hp-val': init.hpVal ?? '',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.status === 403 && attempt === 0) continue;
-      if (!response.ok) {
-        throw new Error(`HowLongToBeat returned HTTP ${response.status}`);
-      }
-
-      const body = (await response.json()) as HltbSearchResponse;
-      return Array.isArray(body.data) ? body.data : [];
-    }
-
-    return [];
+    return { game: best.entry, reason: 'eligible' };
   }
 
   private async findOfficialTrailer(

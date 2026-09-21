@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { GameResearchService } from './game-research.service';
 import { normalizeTrailerPageUrl } from './trailer-url';
+import { HowLongToBeatClient } from './howlongtobeat.client';
 
 describe('GameResearchService', () => {
   let service: GameResearchService;
@@ -180,6 +181,130 @@ describe('GameResearchService', () => {
         summary: 'Curated summary.',
         mainExtraHours: 16,
       },
+    });
+  });
+
+  const catalogInput = {
+    title: 'PRAGMATA',
+    steam: 'https://store.steampowered.com/app/3357650/',
+    trailer: 'https://www.youtube.com/watch?v=example',
+  };
+  const mockCatalog = () =>
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        '3357650': { success: true, data: { type: 'game', name: 'PRAGMATA' } },
+      }),
+    );
+  const hltbGame = {
+    game_id: 80101,
+    game_name: 'PRAGMATA',
+    comp_main: 36000,
+    comp_plus: 57600,
+  };
+
+  it('reports provider outages separately from missing duration', async () => {
+    mockCatalog();
+    jest
+      .spyOn(HowLongToBeatClient.prototype, 'search')
+      .mockRejectedValue(new Error('HTTP 404'));
+    expect(await service.assessCatalogGame(catalogInput)).toMatchObject({
+      eligible: false,
+      reason: 'lookup_failed',
+    });
+  });
+
+  it('reports a successful search without a matching game', async () => {
+    mockCatalog();
+    jest
+      .spyOn(HowLongToBeatClient.prototype, 'search')
+      .mockResolvedValue([{ ...hltbGame, game_name: 'Unrelated title' }]);
+    expect(await service.assessCatalogGame(catalogInput)).toMatchObject({
+      eligible: false,
+      reason: 'game_not_found',
+    });
+  });
+
+  it('rejects ambiguous exact names instead of arbitrarily approving a remake', async () => {
+    mockCatalog();
+    jest
+      .spyOn(HowLongToBeatClient.prototype, 'search')
+      .mockResolvedValue([hltbGame, { ...hltbGame, game_id: 123 }]);
+    expect(await service.assessCatalogGame(catalogInput)).toMatchObject({
+      eligible: false,
+      reason: 'ambiguous_match',
+    });
+  });
+
+  it('prefers a unique exact title over a very similar title', async () => {
+    mockCatalog();
+    jest.spyOn(HowLongToBeatClient.prototype, 'search').mockResolvedValue([
+      { ...hltbGame, game_name: 'Silent Hill Homecoming' },
+      { ...hltbGame, game_id: 123, game_name: 'Silent Hills Homecoming' },
+    ]);
+    expect(
+      await service.assessCatalogGame({
+        ...catalogInput,
+        title: 'Silent Hill Homecoming',
+      }),
+    ).toMatchObject({
+      eligible: true,
+      game: { howLongToBeatTitle: 'Silent Hill Homecoming' },
+    });
+  });
+
+  it('does not confuse a sequel with the selected game', async () => {
+    mockCatalog();
+    jest
+      .spyOn(HowLongToBeatClient.prototype, 'search')
+      .mockResolvedValue([{ ...hltbGame, game_name: 'PRAGMATA 2' }]);
+    expect(await service.assessCatalogGame(catalogInput)).toMatchObject({
+      eligible: false,
+      reason: 'game_not_found',
+    });
+  });
+
+  it('matches an exact alias and ignores duplicate results for the same game', async () => {
+    mockCatalog();
+    const entry = {
+      ...hltbGame,
+      game_name: 'A localized title',
+      game_alias: 'Another alias;PRAGMATA',
+    };
+    jest
+      .spyOn(HowLongToBeatClient.prototype, 'search')
+      .mockResolvedValue([entry, entry]);
+    expect(await service.assessCatalogGame(catalogInput)).toMatchObject({
+      eligible: true,
+      game: { mainExtraHours: 16 },
+    });
+  });
+
+  it.each([0, -1, NaN, Infinity, undefined])(
+    'requires a positive, finite Main + Extras duration (%s)',
+    async (seconds) => {
+      mockCatalog();
+      jest
+        .spyOn(HowLongToBeatClient.prototype, 'search')
+        .mockResolvedValue([{ ...hltbGame, comp_plus: seconds }]);
+      expect(await service.assessCatalogGame(catalogInput)).toMatchObject({
+        eligible: false,
+        reason: 'duration_unavailable',
+        game: {
+          mainExtraHours: null,
+          howLongToBeatUrl: 'https://howlongtobeat.com/game/80101',
+        },
+      });
+    },
+  );
+
+  it('accepts exactly twenty hours', async () => {
+    mockCatalog();
+    jest
+      .spyOn(HowLongToBeatClient.prototype, 'search')
+      .mockResolvedValue([{ ...hltbGame, comp_plus: 20 * 3600 }]);
+    expect(await service.assessCatalogGame(catalogInput)).toMatchObject({
+      eligible: true,
+      game: { mainExtraHours: 20 },
     });
   });
 

@@ -97,6 +97,108 @@ describe('GameRecommendation', () => {
     expect(wrapper.text()).toContain('lugar garantido na próxima votação')
   })
 
+  const match = { steamAppId: 3357650, title: 'PRAGMATA', source: 'steam' }
+  const failedAssessment = { eligible: false, reason: 'lookup_failed', limitHours: 20, game: match }
+  const renderAndSelect = async () => {
+    gameServiceMocks.searchGameRecommendations.mockResolvedValue([match])
+    const wrapper = mount(GameRecommendation, {
+      props: { campaignUser: null },
+      global: { plugins: [pinia] },
+    })
+    await wrapper.get('input').setValue('Pragmata')
+    await vi.advanceTimersByTimeAsync(350)
+    await wrapper.get('[role="option"]').trigger('click')
+    await flushPromises()
+    return wrapper
+  }
+
+  it('explains an outage and retries the same game without allowing a suggestion', async () => {
+    gameServiceMocks.assessGameRecommendation
+      .mockResolvedValueOnce(failedAssessment)
+      .mockResolvedValueOnce({
+        ...failedAssessment,
+        eligible: true,
+        reason: 'eligible',
+        assessmentToken: 'verified',
+        game: { ...match, mainExtraHours: 16 },
+      })
+    const wrapper = await renderAndSelect()
+    expect(wrapper.text()).toContain('Verificação pendente')
+    expect(wrapper.text()).toContain('Não foi possível consultar')
+    expect(wrapper.text()).not.toContain('Fora da regra')
+    expect(wrapper.text()).not.toContain('Sugerir este jogo')
+    await wrapper.get('.recommendation-try-another').trigger('click')
+    await flushPromises()
+    expect(gameServiceMocks.assessGameRecommendation).toHaveBeenNthCalledWith(2, 3357650)
+    expect(wrapper.text()).toContain('Sugerir este jogo')
+    expect(gameServiceMocks.createGameRecommendation).not.toHaveBeenCalled()
+  })
+
+  it('offers a retry after the assessment request itself fails', async () => {
+    gameServiceMocks.assessGameRecommendation
+      .mockRejectedValueOnce(new Error('Network failed'))
+      .mockResolvedValueOnce(failedAssessment)
+    const wrapper = await renderAndSelect()
+    expect(wrapper.get('[role="alert"]').text()).toContain('A verificação não terminou')
+    await wrapper.get('.recommendation-try-another').trigger('click')
+    await flushPromises()
+    expect(gameServiceMocks.assessGameRecommendation).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('Não foi possível consultar o HowLongToBeat')
+  })
+
+  it.each([
+    ['duration_unavailable', 'ainda não tem uma estimativa'],
+    ['game_not_found', 'Não encontramos este jogo'],
+    ['ambiguous_match', 'nomes semelhantes'],
+    ['too_long', 'O limite do grupo é 20 h'],
+  ])('distinguishes %s and never offers an unverified suggestion', async (reason, message) => {
+    gameServiceMocks.assessGameRecommendation.mockResolvedValue({
+      ...failedAssessment,
+      reason,
+      game: { ...match, mainExtraHours: reason === 'too_long' ? 24 : null },
+    })
+    const wrapper = await renderAndSelect()
+    expect(wrapper.text()).toContain(message)
+    expect(wrapper.text()).not.toContain('Sugerir este jogo')
+    expect(wrapper.text()).not.toContain('Verificar novamente')
+  })
+
+  it('ignores an old assessment after the query changes', async () => {
+    let resolve!: (value: unknown) => void
+    gameServiceMocks.assessGameRecommendation.mockReturnValue(
+      new Promise((done) => {
+        resolve = done
+      }),
+    )
+    const wrapper = await renderAndSelect()
+    await wrapper.get('input').setValue('Another game')
+    resolve({ ...failedAssessment, eligible: true, reason: 'eligible', assessmentToken: 'stale' })
+    await flushPromises()
+    expect(wrapper.find('.recommendation-check').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Sugerir este jogo')
+    wrapper.unmount()
+  })
+
+  it('ignores a late search result after the input is cleared', async () => {
+    let resolve!: (value: unknown) => void
+    gameServiceMocks.searchGameRecommendations.mockReturnValue(
+      new Promise((done) => {
+        resolve = done
+      }),
+    )
+    const wrapper = mount(GameRecommendation, {
+      props: { campaignUser: null },
+      global: { plugins: [pinia] },
+    })
+    await wrapper.get('input').setValue('Pragmata')
+    await vi.advanceTimersByTimeAsync(350)
+    await wrapper.get('input').setValue('')
+    resolve([match])
+    await flushPromises()
+    expect(wrapper.find('[role="option"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('hides search while a suggestion exists and removes it immediately', async () => {
     gameServiceMocks.deleteGameRecommendation.mockResolvedValue(undefined)
     const wrapper = mount(GameRecommendation, {
