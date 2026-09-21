@@ -13,11 +13,14 @@ import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { AdminAuditLog } from './entities/admin-audit-log.entity';
 import { AdminApiKeyGuard } from './guards/admin-api-key.guard';
+import { MediaModule } from '../media/media.module';
+import { AdminMediaController } from './admin-media.controller';
 
 @Module({
   imports: [
     ConfigModule,
     ContentModule,
+    MediaModule,
     TypeOrmModule.forFeature([
       Campaign,
       CampaignPlayer,
@@ -29,7 +32,7 @@ import { AdminApiKeyGuard } from './guards/admin-api-key.guard';
       AdminAuditLog,
     ]),
   ],
-  controllers: [AdminController],
+  controllers: [AdminController, AdminMediaController],
   providers: [AdminService, AdminApiKeyGuard],
 })
 export class AdminModule {}

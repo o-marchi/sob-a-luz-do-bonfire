@@ -2,6 +2,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { adminApi } from "./apiClient.js";
+import { readFile, stat } from "node:fs/promises";
+import { extname } from "node:path";
+import { z } from "zod";
 import {
   applyMonthlyPlanSchema,
   attachPoolToCampaignSchema,
@@ -29,6 +32,49 @@ const jsonContent = (value: unknown) => ({
     },
   ],
 });
+
+const imageCategory = z
+  .enum(["banners", "pictures", "assets"])
+  .default("banners");
+
+server.registerTool(
+  "import_image",
+  {
+    title: "Import image into R2",
+    description:
+      "Copies a direct Postimages or Steam image to the project's R2 bucket and verifies its public URL. Requires user authorization to upload. Returns a URL for a subsequent game update; does not change game records.",
+    inputSchema: { sourceUrl: z.string().url(), category: imageCategory },
+  },
+  async (input) =>
+    jsonContent(await adminApi.post("/admin/media/import", input)),
+);
+
+server.registerTool(
+  "upload_image",
+  {
+    title: "Upload local image to R2",
+    description:
+      "Uploads a user-authorized local PNG, JPEG, GIF, or WebP file (up to 8 MiB) to R2 and returns its verified public URL. The path is on the machine running this MCP server. Does not change game records.",
+    inputSchema: { filePath: z.string().min(1), category: imageCategory },
+  },
+  async ({ filePath, category }) => {
+    const contentTypes: Record<string, string> = {
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".gif": "image/gif",
+      ".webp": "image/webp",
+    };
+    const contentType = contentTypes[extname(filePath).toLowerCase()];
+    const info = await stat(filePath);
+    if (!contentType || !info.isFile() || info.size > 8 * 1024 * 1024)
+      throw new Error("Choose a PNG, JPEG, GIF, or WebP file up to 8 MiB.");
+    const file = new Uint8Array(await readFile(filePath));
+    if (file.byteLength > 8 * 1024 * 1024)
+      throw new Error("The image exceeds 8 MiB.");
+    return jsonContent(await adminApi.uploadImage(file, contentType, category));
+  },
+);
 
 server.registerTool(
   "get_admin_state",

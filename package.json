@@ -19,7 +19,7 @@
     "type-check": "pnpm --filter ./client type-check",
     "lint": "pnpm --filter ./server lint",
     "format": "pnpm --filter ./client format && pnpm --filter ./server format",
-    "test": "pnpm --filter ./client test:run && pnpm --filter ./server test",
+    "test": "pnpm --filter ./client test:run && pnpm --filter ./server test && pnpm --filter ./server test:media-migration",
     "test:client": "pnpm --filter ./client test:run",
     "test:server": "pnpm --filter ./server test",
     "test:cov": "pnpm --filter ./server test:cov",
