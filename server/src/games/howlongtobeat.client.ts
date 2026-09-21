@@ -1,3 +1,5 @@
+import { setTimeout as delay } from 'node:timers/promises';
+
 const BASE_URL = 'https://howlongtobeat.com';
 const DEFAULT_SEARCH_PATH = '/api/search/site';
 const LOOKUP_TIMEOUT_MS = 15_000;
@@ -245,4 +247,3 @@ export class HowLongToBeatClient {
     return response.text();
   }
 }
-import { setTimeout as delay } from 'node:timers/promises';
