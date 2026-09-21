@@ -32,6 +32,27 @@ export class AdminApiClient {
     return this.request<T>(path, { method: "PATCH", body });
   }
 
+  async uploadImage(
+    file: Uint8Array<ArrayBuffer>,
+    contentType: string,
+    category: string,
+  ): Promise<unknown> {
+    const form = new FormData();
+    form.set("file", new Blob([file], { type: contentType }), "image");
+    form.set("category", category);
+    const response = await fetch(this.url("/admin/media/upload"), {
+      method: "POST",
+      headers: { Authorization: `Bearer ${this.token}` },
+      body: form,
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!response.ok)
+      throw new Error(
+        `Image upload failed with ${response.status}: ${await response.text()}`,
+      );
+    return response.json();
+  }
+
   private async request<T>(
     path: string,
     init: { method: string; body?: unknown },

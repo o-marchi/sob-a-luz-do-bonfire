@@ -21,7 +21,9 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
-    "db:sync:prod": "ts-node -r tsconfig-paths/register src/db/sync-production-to-sqlite.ts"
+    "db:sync:prod": "ts-node -r tsconfig-paths/register src/db/sync-production-to-sqlite.ts",
+    "media:migrate-postimages": "node scripts/migrate-postimages.cjs",
+    "test:media-migration": "node --test scripts/migrate-postimages.test.cjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1102.0",
@@ -48,6 +50,7 @@
     "raw-body": "^3.0.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sharp": "^0.35.4",
     "sql.js": "^1.14.1",
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.25"
