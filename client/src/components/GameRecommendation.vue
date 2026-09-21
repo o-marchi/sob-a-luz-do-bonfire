@@ -49,10 +49,23 @@ const removingSuggestion = ref(false)
 let searchTimer: number | undefined
 let searchController: AbortController | null = null
 let searchSequence = 0
+let assessmentSequence = 0
 
 const existingSuggestion = computed(
   () => props.campaignUser?.suggestedGame ?? recommendation.value?.game ?? null,
 )
+
+const assessmentLabel = computed(() => {
+  if (assessment.value?.eligible) return 'Dentro do limite'
+  if (assessment.value?.reason === 'too_long') return 'Acima do limite'
+  if (
+    ['lookup_failed', 'duration_unavailable', 'game_not_found', 'ambiguous_match'].includes(
+      assessment.value?.reason ?? '',
+    )
+  )
+    return 'Verificação pendente'
+  return 'Não disponível para sugestão'
+})
 
 const statusMessage = computed(() => {
   if (state.value === 'assessing') {
@@ -69,7 +82,13 @@ const statusMessage = computed(() => {
     case 'too_long':
       return `${assessment.value.game.title} leva cerca de ${formatHours(assessment.value.game.mainExtraHours)} na campanha com extras. O limite do grupo é ${assessment.value.limitHours} h.`
     case 'duration_unavailable':
-      return 'Não encontramos uma estimativa confiável para a campanha com extras. Por segurança, este jogo não pode ser sugerido agora.'
+      return 'Este jogo ainda não tem uma estimativa de campanha com extras no HowLongToBeat. Precisamos desse tempo para conferir o limite de 20 horas.'
+    case 'lookup_failed':
+      return 'Não foi possível consultar o HowLongToBeat agora. Tente verificar novamente em instantes.'
+    case 'game_not_found':
+      return 'Não encontramos este jogo no HowLongToBeat. Ainda não foi possível conferir sua duração.'
+    case 'ambiguous_match':
+      return 'Encontramos jogos com nomes semelhantes no HowLongToBeat. Ainda não foi possível confirmar qual é o jogo escolhido.'
     case 'not_a_game':
       return 'Este item da Steam não é um jogo completo.'
     case 'already_played':
@@ -88,6 +107,7 @@ const formatHours = (hours?: number | null) => {
 }
 
 const clearSearch = () => {
+  searchSequence += 1
   if (searchTimer) window.clearTimeout(searchTimer)
   searchController?.abort()
   searchController = null
@@ -97,6 +117,7 @@ const clearSearch = () => {
 watch(query, (value) => {
   if (selectedGame.value?.title === value) return
 
+  assessmentSequence += 1
   selectedGame.value = null
   assessment.value = null
   recommendation.value = null
@@ -128,6 +149,7 @@ watch(query, (value) => {
 })
 
 const selectGame = async (game: SteamGameSearchResult) => {
+  const sequence = ++assessmentSequence
   clearSearch()
   selectedGame.value = game
   query.value = game.title
@@ -137,9 +159,12 @@ const selectGame = async (game: SteamGameSearchResult) => {
   state.value = 'assessing'
 
   try {
-    assessment.value = await assessGameRecommendation(game.steamAppId)
+    const result = await assessGameRecommendation(game.steamAppId)
+    if (sequence !== assessmentSequence) return
+    assessment.value = result
     state.value = 'assessed'
   } catch {
+    if (sequence !== assessmentSequence) return
     state.value = 'error'
     errorMessage.value = 'A verificação não terminou. Tente selecionar o jogo novamente.'
   }
@@ -185,6 +210,7 @@ const removeSuggestion = async () => {
 }
 
 const resetSelection = () => {
+  assessmentSequence += 1
   selectedGame.value = null
   assessment.value = null
   recommendation.value = null
@@ -193,7 +219,10 @@ const resetSelection = () => {
   errorMessage.value = ''
 }
 
-onBeforeUnmount(clearSearch)
+onBeforeUnmount(() => {
+  assessmentSequence += 1
+  clearSearch()
+})
 </script>
 
 <template>
@@ -248,7 +277,7 @@ onBeforeUnmount(clearSearch)
           aria-label="Pesquisar jogo no acervo e na Steam"
           :aria-expanded="results.length > 0"
           aria-controls="game-search-results"
-          :disabled="state === 'assessing' || state === 'submitting'"
+          :disabled="state === 'submitting'"
         />
         <n-spin v-if="state === 'searching'" class="game-combobox__spinner" size="small" />
 
@@ -304,7 +333,7 @@ onBeforeUnmount(clearSearch)
           "
         ></div>
         <div class="recommendation-game__details">
-          <span>{{ assessment.eligible ? 'Dentro do limite' : 'Fora da regra' }}</span>
+          <span>{{ assessmentLabel }}</span>
           <h3>{{ assessment.game.title }}</h3>
           <p>{{ statusMessage }}</p>
           <a
@@ -324,6 +353,14 @@ onBeforeUnmount(clearSearch)
             Sugerir este jogo
           </button>
         </div>
+        <button
+          v-else-if="assessment.reason === 'lookup_failed' && selectedGame"
+          type="button"
+          class="recommendation-try-another"
+          @click="selectGame(selectedGame)"
+        >
+          Verificar novamente
+        </button>
         <button v-else type="button" class="recommendation-try-another" @click="resetSelection">
           Escolher outro
         </button>
@@ -332,6 +369,14 @@ onBeforeUnmount(clearSearch)
       <p v-if="state === 'error'" class="recommendation-error" role="alert">
         {{ errorMessage }}
       </p>
+      <button
+        v-if="state === 'error' && selectedGame && !assessment"
+        type="button"
+        class="recommendation-try-another"
+        @click="selectGame(selectedGame)"
+      >
+        Verificar novamente
+      </button>
     </div>
   </section>
 </template>
