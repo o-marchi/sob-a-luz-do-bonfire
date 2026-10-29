@@ -11,11 +11,13 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-export class StartElectionDto {
+export class DrawAshesDto {
   @IsString()
   @IsNotEmpty()
   selectionToken!: string;
+}
 
+export class StartElectionDto extends DrawAshesDto {
   @IsOptional()
   @IsISO8601()
   electionEndsAt?: string;

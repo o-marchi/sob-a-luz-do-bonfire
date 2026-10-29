@@ -1,13 +1,24 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  ClassSerializerInterceptor,
+  Controller,
+  Get,
+  Patch,
+  Post,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentPlayer } from '../auth/decorators/current-player.decorator';
 import { BonfireAdminGuard } from '../auth/guards/bonfire-admin.guard';
 import { Player } from '../players/entities/player.entity';
 import { CycleService } from './cycle.service';
+import { UpdateMeetingAttendanceDto } from './dto/meeting-attendance.dto';
 import {
   ApplyCycleTransitionDto,
   CancelElectionDto,
+  DrawAshesDto,
   PreviewCycleTransitionDto,
   StartElectionDto,
 } from './dto/cycle-transition.dto';
@@ -24,9 +35,23 @@ export class CycleController {
     return this.cycleService.getOverview();
   }
 
+  @Patch('attendance')
+  @UseInterceptors(ClassSerializerInterceptor)
+  updateAttendance(
+    @Body() body: UpdateMeetingAttendanceDto,
+    @CurrentPlayer() player: Player,
+  ) {
+    return this.cycleService.updateMeetingAttendance(body, player);
+  }
+
   @Post('draw')
   drawPool() {
     return this.cycleService.drawPool();
+  }
+
+  @Post('draw-ashes')
+  drawAshes(@Body() body: DrawAshesDto) {
+    return this.cycleService.drawAshes(body);
   }
 
   @Post('start-election')

@@ -966,6 +966,45 @@ body.bonfire-inner-page .user-menu-popover {
   margin-top: 30px;
 }
 
+.ashes-selection .draw-actions {
+  margin-top: 18px;
+}
+
+.meeting-attendance {
+  margin-bottom: 22px;
+}
+
+.meeting-attendance__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.meeting-attendance__person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 15px;
+  border: 1px solid rgba(247, 222, 208, 0.12);
+  border-radius: 6px;
+  background: rgba(247, 222, 208, 0.025);
+}
+
+.meeting-attendance__person input {
+  accent-color: #d18a4f;
+}
+
+.meeting-attendance__person span {
+  overflow-wrap: anywhere;
+}
+
+.meeting-attendance__person small {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: rgba(247, 222, 208, 0.55);
+}
+
 .cycle-catalog-grid {
   gap: 14px;
 }

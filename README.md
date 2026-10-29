@@ -233,6 +233,8 @@ The server exposes routes for:
 - `PUT /campaign/update-player-game-information` — update authenticated player's current campaign progress.
 - `POST /campaign/vote` and `POST /campaign/undo-vote` — campaign voting actions.
 - `GET /cycle/overview`, `POST /cycle/draw`, `POST /cycle/start-election`, and `POST /cycle/cancel-election` — guarded cycle composition, election launch, and explicit rollback.
+- `POST /cycle/draw-ashes` — add one random game from Cinzas to a signed draw with an empty voting slot. Keeps existing selections, excludes past campaign games and withdrawn suggestions, and preserves appearance history. The conductor reviews the rescued games before opening the election.
+- `PATCH /cycle/attendance` — conductor-only attendance for registered players in the current campaign. Marking grants the existing one-token meeting bonus; unmarking removes only that bonus. Saves are idempotent, preserve game progress and suggestions, and recalculate existing votes. The request includes the campaign ID to reject stale pages.
 - `POST /cycle/transition/preview` and `POST /cycle/transition/apply` — guarded, reviewed campaign and Discord transition.
 - `GET /auth/discord` — start Discord OAuth flow.
 - `GET /auth/discord/callback` — Discord OAuth callback.

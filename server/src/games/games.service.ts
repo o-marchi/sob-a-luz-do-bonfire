@@ -133,6 +133,17 @@ export const findGuaranteedNextVoteGames = async (
 export const findEligibleBacklogGames = async (
   manager: EntityManager,
   excludedIdentities: Set<string>,
+): Promise<Game[]> => findRotationGames(manager, excludedIdentities, false);
+
+export const findAshesGames = async (
+  manager: EntityManager,
+  excludedIdentities: Set<string>,
+): Promise<Game[]> => findRotationGames(manager, excludedIdentities, true);
+
+const findRotationGames = async (
+  manager: EntityManager,
+  excludedIdentities: Set<string>,
+  fromAshes: boolean,
 ): Promise<Game[]> => {
   const [games, poolOptions, campaigns] = await Promise.all([
     manager.getRepository(Game).find({ order: { id: 'ASC' } }),
@@ -166,6 +177,7 @@ export const findEligibleBacklogGames = async (
 
   return Array.from(gamesByIdentity, ([identity, matchingGames]) => ({
     identity,
+    suggested: matchingGames.some((game) => game.suggestion),
     appearances: appearancesByIdentity.get(identity)?.size ?? 0,
     game: [...matchingGames].sort(
       (left, right) =>
@@ -173,11 +185,13 @@ export const findEligibleBacklogGames = async (
     )[0],
   }))
     .filter(
-      ({ identity, appearances, game }) =>
-        game.suggestion &&
+      ({ identity, appearances, suggested }) =>
+        suggested &&
         !excludedIdentities.has(identity) &&
         !winningIdentities.has(identity) &&
-        appearances < MAX_BACKLOG_APPEARANCES,
+        (fromAshes
+          ? appearances >= MAX_BACKLOG_APPEARANCES
+          : appearances < MAX_BACKLOG_APPEARANCES),
     )
     .sort(
       (left, right) =>
