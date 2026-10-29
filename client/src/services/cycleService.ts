@@ -6,6 +6,8 @@ import type {
   CycleOverview,
   CycleTransitionInput,
   CycleTransitionPreview,
+  MeetingAttendanceInput,
+  MeetingAttendanceUpdate,
 } from '@/types/Cycle'
 
 export const getCycleOverview = async (): Promise<CycleOverview> => {
@@ -13,8 +15,20 @@ export const getCycleOverview = async (): Promise<CycleOverview> => {
   return data
 }
 
+export const updateMeetingAttendance = async (
+  input: MeetingAttendanceInput,
+): Promise<MeetingAttendanceUpdate> => {
+  const { data } = await api.patch<MeetingAttendanceUpdate>('/cycle/attendance', input)
+  return data
+}
+
 export const drawCyclePool = async (): Promise<CycleDraw> => {
   const { data } = await api.post<CycleDraw>('/cycle/draw')
+  return data
+}
+
+export const drawCycleAshes = async (selectionToken: string): Promise<CycleDraw> => {
+  const { data } = await api.post<CycleDraw>('/cycle/draw-ashes', { selectionToken })
   return data
 }
 

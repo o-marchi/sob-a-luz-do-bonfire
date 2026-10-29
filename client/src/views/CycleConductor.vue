@@ -11,9 +11,11 @@ import {
   applyCycleTransition,
   cancelCycleElection,
   drawCyclePool,
+  drawCycleAshes,
   getCycleOverview,
   previewCycleTransition,
   startCycleElection,
+  updateMeetingAttendance,
 } from '@/services/cycleService'
 import { getGameBacklog } from '@/services/gameService'
 import type {
@@ -22,6 +24,7 @@ import type {
   CycleTransitionInput,
   CycleTransitionPreview,
   ElectionResultOption,
+  MeetingAttendance,
 } from '@/types/Cycle'
 import type { BacklogGame, Game, GameBacklog } from '@/types/Game'
 
@@ -52,6 +55,8 @@ const draw = ref<CycleDraw | null>(null)
 const transitionPreview = ref<CycleTransitionPreview | null>(null)
 const loading = ref(true)
 const drawing = ref(false)
+const drawingAshes = ref(false)
+const savingAttendance = ref<number | null>(null)
 const startingElection = ref(false)
 const cancellingElection = ref(false)
 const confirmingCancellation = ref(false)
@@ -77,6 +82,9 @@ const newChannelTopic = ref('')
 let revealTimer: number | null = null
 
 const campaign = computed(() => overview.value?.campaign ?? null)
+const attendanceCount = computed(
+  () => (overview.value?.meetingAttendance ?? []).filter((entry) => entry.attended).length,
+)
 const hasElection = computed(() =>
   Boolean(campaign.value?.electionStartedAt && campaign.value?.pool?.options.length),
 )
@@ -85,6 +93,24 @@ const guaranteedGames = computed(
 )
 const fillerSlotsNeeded = computed(() =>
   Math.max(0, (overview.value?.targetPoolSize ?? 0) - guaranteedGames.value.length),
+)
+const selectedAshes = computed(() => draw.value?.selectedAshes ?? [])
+const selectionSize = computed(
+  () =>
+    guaranteedGames.value.length +
+    (draw.value?.selectedFillers.length ?? 0) +
+    selectedAshes.value.length,
+)
+const emptySlots = computed(() =>
+  Math.max(0, (overview.value?.targetPoolSize ?? 0) - selectionSize.value),
+)
+const availableAshes = computed(() =>
+  (backlog.value?.rubble ?? []).filter(
+    (game) =>
+      ![...guaranteedGames.value, ...selectedAshes.value].some(
+        (selected) => selected.id === game.id,
+      ),
+  ),
 )
 const revealedGames = computed(() => draw.value?.revealOrder.slice(0, revealCount.value) ?? [])
 const allRevealed = computed(() =>
@@ -212,6 +238,53 @@ async function drawGames() {
   }
 }
 
+async function changeAttendance(attendee: MeetingAttendance, event: Event) {
+  const checkbox = event.target as HTMLInputElement
+  const attended = checkbox.checked
+  checkbox.checked = attendee.attended
+  if (!overview.value || savingAttendance.value !== null) return
+  savingAttendance.value = attendee.playerId
+  try {
+    const result = await updateMeetingAttendance({
+      campaignId: overview.value.campaign.id,
+      playerId: attendee.playerId,
+      attended,
+    })
+    overview.value.campaign = result.campaign
+    overview.value.meetingAttendance = overview.value.meetingAttendance.map((entry) =>
+      entry.playerId === result.attendance.playerId ? result.attendance : entry,
+    )
+    overview.value.electionResult = result.electionResult
+    transitionPreview.value = null
+    setDefaultWinner(result.electionResult)
+    syncDescriptionWithWinner()
+    await campaignStore.init(result.campaign)
+    message.success(
+      attended
+        ? 'Presença marcada. Mais um token para este ciclo.'
+        : 'Presença desmarcada. O token do encontro foi removido.',
+    )
+  } catch (error) {
+    message.error(getErrorMessage(error, 'Não foi possível salvar a presença.'))
+  } finally {
+    savingAttendance.value = null
+  }
+}
+
+async function drawFromAshes() {
+  if (!draw.value || drawingAshes.value || !emptySlots.value) return
+  stopReveal()
+  drawingAshes.value = true
+  try {
+    const extendedDraw = await drawCycleAshes(draw.value.selectionToken)
+    draw.value = { ...extendedDraw, revealOrder: draw.value.revealOrder }
+  } catch (error) {
+    message.error(getErrorMessage(error, 'Não foi possível sortear um jogo das Cinzas.'))
+  } finally {
+    drawingAshes.value = false
+  }
+}
+
 function revealNext() {
   if (!draw.value || allRevealed.value) return
   revealCount.value += 1
@@ -240,7 +313,7 @@ function setElectionBoundary(boundary: 'monday' | 'month') {
 }
 
 async function openElection() {
-  if (!draw.value || !allRevealed.value) return
+  if (!draw.value || !allRevealed.value || drawingAshes.value || !selectionSize.value) return
   startingElection.value = true
   try {
     const updatedCampaign = await startCycleElection(
@@ -299,6 +372,7 @@ function buildTransitionInput(): CycleTransitionInput {
 }
 
 async function prepareTransition() {
+  if (savingAttendance.value !== null) return
   previewing.value = true
   try {
     transitionPreview.value = await previewCycleTransition(buildTransitionInput())
@@ -326,7 +400,7 @@ function syncDiscordSelections(preview: CycleTransitionPreview) {
 
 async function finishTransition() {
   const token = transitionPreview.value?.confirmationToken
-  if (!token) return
+  if (!token || savingAttendance.value !== null) return
   applying.value = true
   try {
     const result = await applyCycleTransition(buildTransitionInput(), token)
@@ -461,6 +535,53 @@ function getErrorMessage(error: unknown, fallback: string): string {
         </li>
       </ol>
 
+      <section class="cycle-panel meeting-attendance" aria-labelledby="meeting-attendance-heading">
+        <div class="cycle-panel__heading">
+          <div>
+            <span class="cycle-eyebrow">Ao redor da fogueira</span>
+            <h3 id="meeting-attendance-heading">Quem veio ao encontro?</h3>
+          </div>
+          <strong
+            >{{ attendanceCount }} {{ attendanceCount === 1 ? 'presente' : 'presentes' }}</strong
+          >
+        </div>
+        <p class="cycle-panel__copy">
+          Marque quem participou para dar mais um token neste ciclo, mesmo sem ter jogado. As
+          presenças são salvas na hora. Desmarcar retira apenas o token do encontro.
+        </p>
+        <div class="meeting-attendance__list" aria-live="polite">
+          <label
+            v-for="attendee in overview.meetingAttendance ?? []"
+            :key="attendee.playerId"
+            class="meeting-attendance__person"
+          >
+            <input
+              type="checkbox"
+              :data-testid="`attendance-${attendee.playerId}`"
+              :aria-label="`Presença de ${attendee.name}`"
+              :checked="attendee.attended"
+              :disabled="
+                savingAttendance !== null ||
+                applying ||
+                previewing ||
+                startingElection ||
+                cancellingElection
+              "
+              @change="changeAttendance(attendee, $event)"
+            />
+            <span>{{ attendee.name }}</span>
+            <small>{{
+              savingAttendance === attendee.playerId
+                ? 'Salvando…'
+                : `${attendee.tokens} ${attendee.tokens === 1 ? 'token' : 'tokens'}`
+            }}</small>
+          </label>
+        </div>
+        <p v-if="!overview.meetingAttendance?.length" class="cycle-panel__copy">
+          Ainda não há participantes cadastrados.
+        </p>
+      </section>
+
       <section v-if="!hasElection" class="cycle-panel cycle-draw-panel">
         <div class="cycle-panel__heading">
           <div>
@@ -476,6 +597,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
         <p class="cycle-panel__copy">
           Toda sugestão aceita nesta reunião entra na votação, sem limite e sem sorteio. Se houver
           menos de {{ overview.targetPoolSize }}, completamos a roda com jogos elegíveis das Brasas.
+          Se ainda faltarem jogos, você pode resgatar um por vez das Cinzas.
         </p>
 
         <section v-if="guaranteedGames.length" class="guaranteed-selection">
@@ -498,7 +620,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
         </section>
 
         <p v-else class="guaranteed-empty">
-          Ainda não há sugestões nesta reunião. As cinco vagas virão das Brasas.
+          Ainda não há sugestões nesta reunião. As vagas podem vir das Brasas e das Cinzas.
         </p>
 
         <div v-if="!draw" class="draw-hearth">
@@ -573,19 +695,62 @@ function getErrorMessage(error: unknown, fallback: string): string {
               <button v-if="!allRevealed" type="button" @click="revealAll">
                 Revelar em sequência
               </button>
-              <button type="button" :disabled="drawing" @click="drawGames">
+              <button type="button" :disabled="drawing || drawingAshes" @click="drawGames">
                 {{ drawing ? 'Sorteando…' : 'Sortear novamente' }}
               </button>
             </div>
           </section>
 
           <p v-else class="random-selection__empty">
-            A votação será formada somente pelas sugestões confirmadas acima.
+            Nenhum jogo das Brasas foi sorteado para completar as sugestões acima.
           </p>
+
+          <section
+            v-if="selectedAshes.length || emptySlots"
+            class="random-selection ashes-selection"
+          >
+            <header>
+              <span class="cycle-eyebrow">Resgatados das Cinzas</span>
+              <strong v-if="emptySlots">
+                {{ emptySlots }} {{ emptySlots === 1 ? 'lugar em aberto' : 'lugares em aberto' }}
+              </strong>
+            </header>
+            <p class="cycle-panel__copy">
+              Cada sorteio traz um jogo das Cinzas para esta votação. Os jogos já escolhidos e o
+              histórico de passagens são preservados.
+            </p>
+            <div
+              v-if="selectedAshes.length"
+              class="backlog-grid cycle-catalog-grid"
+              aria-live="polite"
+            >
+              <BacklogGameCard
+                v-for="game in selectedAshes"
+                :key="game.id"
+                :game="asBacklogGame(game)"
+                :retirement-threshold="retirementThreshold"
+              />
+            </div>
+            <template v-if="emptySlots">
+              <p v-if="!availableAshes.length">Não há mais jogos disponíveis nas Cinzas.</p>
+              <div class="draw-actions game-links">
+                <button
+                  data-testid="draw-ashes"
+                  type="button"
+                  :disabled="drawing || drawingAshes || startingElection || !availableAshes.length"
+                  @click="drawFromAshes"
+                >
+                  {{ drawingAshes ? 'Resgatando das Cinzas…' : 'Sortear 1 jogo das Cinzas' }}
+                </button>
+              </div>
+            </template>
+          </section>
 
           <div v-if="allRevealed" class="election-launch">
             <div>
-              <span class="cycle-eyebrow">A roda está formada</span>
+              <span class="cycle-eyebrow">{{
+                emptySlots ? 'A roda ainda tem vagas' : 'A roda está formada'
+              }}</span>
               <h3>Quando as urnas se fecham?</h3>
               <p>Você pode deixar sem prazo e encerrar manualmente depois.</p>
             </div>
@@ -605,7 +770,9 @@ function getErrorMessage(error: unknown, fallback: string): string {
               <button
                 data-testid="start-election"
                 type="button"
-                :disabled="startingElection"
+                :disabled="
+                  startingElection || drawingAshes || savingAttendance !== null || !selectionSize
+                "
                 @click="openElection"
               >
                 {{ startingElection ? 'Acendendo a votação…' : 'Começar a eleição' }}
@@ -769,7 +936,10 @@ function getErrorMessage(error: unknown, fallback: string): string {
           </label>
 
           <div class="transition-form__actions game-links">
-            <button type="submit" :disabled="previewing || !winnerGameId">
+            <button
+              type="submit"
+              :disabled="previewing || savingAttendance !== null || !winnerGameId"
+            >
               {{ previewing ? 'Lendo a passagem…' : 'Revisar a passagem' }}
             </button>
           </div>
@@ -893,7 +1063,11 @@ function getErrorMessage(error: unknown, fallback: string): string {
             v-if="transitionPreview.valid && transitionPreview.confirmationToken"
             class="game-links"
           >
-            <button type="button" :disabled="applying" @click="finishTransition">
+            <button
+              type="button"
+              :disabled="applying || savingAttendance !== null"
+              @click="finishTransition"
+            >
               {{ applying ? 'Passando a chama…' : 'Encerrar este ciclo e começar o próximo' }}
             </button>
           </div>

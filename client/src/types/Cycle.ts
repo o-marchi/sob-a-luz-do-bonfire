@@ -16,6 +16,26 @@ export interface CycleOverview {
   targetPoolSize: number
   nextCampaign: { month: string; year: string }
   discordConfigured: boolean
+  meetingAttendance: MeetingAttendance[]
+}
+
+export interface MeetingAttendance {
+  playerId: number
+  name: string
+  attended: boolean
+  tokens: number
+}
+
+export interface MeetingAttendanceInput {
+  campaignId: number
+  playerId: number
+  attended: boolean
+}
+
+export interface MeetingAttendanceUpdate {
+  campaign: Campaign
+  attendance: MeetingAttendance
+  electionResult: ElectionResultOption[]
 }
 
 export interface CycleDraw {
@@ -23,6 +43,7 @@ export interface CycleDraw {
   targetPoolSize: number
   guaranteedGames: Game[]
   selectedFillers: Game[]
+  selectedAshes: Game[]
   revealOrder: Game[]
   excludedUnverified: Game[]
   excludedTooLong: Game[]

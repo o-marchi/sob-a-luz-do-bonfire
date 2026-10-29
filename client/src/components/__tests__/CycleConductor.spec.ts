@@ -7,7 +7,9 @@ import { useCampaignStore } from '@/stores/campaign'
 
 const cycleServiceMocks = vi.hoisted(() => ({
   getCycleOverview: vi.fn(),
+  updateMeetingAttendance: vi.fn(),
   drawCyclePool: vi.fn(),
+  drawCycleAshes: vi.fn(),
   startCycleElection: vi.fn(),
   cancelCycleElection: vi.fn(),
   previewCycleTransition: vi.fn(),
@@ -41,6 +43,7 @@ describe('CycleConductor', () => {
   let pinia: Pinia
 
   beforeEach(() => {
+    vi.clearAllMocks()
     pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
@@ -64,6 +67,10 @@ describe('CycleConductor', () => {
       targetPoolSize: 5,
       nextCampaign: { month: 'Setembro', year: '2026' },
       discordConfigured: true,
+      meetingAttendance: [
+        { playerId: 1, name: 'Conductor', attended: false, tokens: 1 },
+        { playerId: 2, name: 'Listener', attended: false, tokens: 1 },
+      ],
     })
     gameServiceMocks.getGameBacklog.mockResolvedValue({
       games: [
@@ -84,7 +91,16 @@ describe('CycleConductor', () => {
           recommendedBy: [{ id: 8, name: 'Bia', avatar: null }],
         },
       ],
-      rubble: [],
+      rubble: [
+        {
+          id: 3,
+          title: 'Ash Game',
+          suggestion: true,
+          electionAppearances: 3,
+          guaranteedNextVote: false,
+          recommendedBy: [],
+        },
+      ],
       retirementThreshold: 3,
       targetPoolSize: 5,
       nextVoteFillCount: 4,
@@ -94,6 +110,7 @@ describe('CycleConductor', () => {
       targetPoolSize: 5,
       guaranteedGames: [{ id: 1, title: 'Suggested Game', suggestion: true }],
       selectedFillers: [{ id: 2, title: 'Random Game', suggestion: true }],
+      selectedAshes: [],
       revealOrder: [{ id: 2, title: 'Random Game', suggestion: true, mainExtraHours: 10 }],
       excludedUnverified: [],
       selectionToken: 'signed-draw',
@@ -112,6 +129,76 @@ describe('CycleConductor', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it('marks and unmarks attendance while keeping the in-progress game draw', async () => {
+    const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="draw-games"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('.reveal-card--hidden').trigger('click')
+    const campaign = {
+      id: 17,
+      month: 'Agosto',
+      year: '2026',
+      current: true,
+      electionActive: false,
+      pool: null,
+    }
+    cycleServiceMocks.updateMeetingAttendance.mockResolvedValue({
+      campaign,
+      attendance: { playerId: 2, name: 'Listener', attended: true, tokens: 2 },
+      electionResult: [],
+    })
+    await wrapper.get('[data-testid="attendance-2"]').setValue(true)
+    await flushPromises()
+    expect(cycleServiceMocks.updateMeetingAttendance).toHaveBeenCalledWith({
+      campaignId: 17,
+      playerId: 2,
+      attended: true,
+    })
+    expect(wrapper.get<HTMLInputElement>('[data-testid="attendance-2"]').element.checked).toBe(true)
+    expect(wrapper.text()).toContain('1 presente')
+    expect(wrapper.text()).toContain('2 tokens')
+    expect(wrapper.text()).toContain('Random Game')
+    expect(useCampaignStore().init).toHaveBeenCalledWith(campaign)
+
+    cycleServiceMocks.updateMeetingAttendance.mockResolvedValue({
+      campaign,
+      attendance: { playerId: 2, name: 'Listener', attended: false, tokens: 1 },
+      electionResult: [],
+    })
+    await wrapper.get('[data-testid="attendance-2"]').setValue(false)
+    await flushPromises()
+    expect(wrapper.get<HTMLInputElement>('[data-testid="attendance-2"]').element.checked).toBe(
+      false,
+    )
+    expect(messageMocks.success).toHaveBeenLastCalledWith(
+      'Presença desmarcada. O token do encontro foi removido.',
+    )
+  })
+
+  it('keeps the previous attendance when saving fails and blocks conflicting edits while saving', async () => {
+    const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
+    await flushPromises()
+    let rejectSave!: (error: Error) => void
+    cycleServiceMocks.updateMeetingAttendance.mockReturnValue(
+      new Promise((_, reject) => {
+        rejectSave = reject
+      }),
+    )
+    await wrapper.get('[data-testid="attendance-2"]').setValue(true)
+    expect(wrapper.get('[data-testid="attendance-1"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get<HTMLInputElement>('[data-testid="attendance-2"]').element.checked).toBe(
+      false,
+    )
+    rejectSave(new Error('Failed'))
+    await flushPromises()
+    expect(wrapper.get<HTMLInputElement>('[data-testid="attendance-2"]').element.checked).toBe(
+      false,
+    )
+    expect(wrapper.get('[data-testid="attendance-1"]').attributes('disabled')).toBeUndefined()
+    expect(messageMocks.error).toHaveBeenCalledWith('Não foi possível salvar a presença.')
   })
 
   it('shows guaranteed suggestions first and reveals only the random selection', async () => {
@@ -135,7 +222,7 @@ describe('CycleConductor', () => {
     expect(wrapper.text()).toContain('Random Game')
     expect(wrapper.text()).toContain('Suggested Game')
     expect(wrapper.findAll('.backlog-card')).toHaveLength(2)
-    expect(wrapper.text()).toContain('A roda está formada')
+    expect(wrapper.text()).toContain('A roda ainda tem vagas')
 
     await wrapper.get('[data-testid="start-election"]').trigger('click')
     await flushPromises()
@@ -147,6 +234,81 @@ describe('CycleConductor', () => {
     expect(messageMocks.success).toHaveBeenCalledWith(
       'A votação está acesa. O grupo já pode votar.',
     )
+  })
+
+  it('adds an ashes game without replacing or hiding the existing selection and starts with the new token', async () => {
+    const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="draw-games"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('.reveal-card--hidden').trigger('click')
+    const initial = await cycleServiceMocks.drawCyclePool.mock.results[0].value
+    cycleServiceMocks.drawCycleAshes.mockResolvedValue({
+      ...initial,
+      selectedAshes: [{ id: 3, title: 'Ash Game', suggestion: true }],
+      selectionToken: 'draw-with-ashes',
+    })
+
+    await wrapper.get('[data-testid="draw-ashes"]').trigger('click')
+    await flushPromises()
+
+    expect(cycleServiceMocks.drawCycleAshes).toHaveBeenCalledWith('signed-draw')
+    expect(wrapper.text()).toContain('Resgatados das Cinzas')
+    expect(wrapper.text()).toContain('Ash Game')
+    expect(wrapper.text()).toContain('Random Game')
+    expect(wrapper.text()).toContain('Suggested Game')
+    expect(wrapper.findAll('.backlog-card')).toHaveLength(3)
+    expect(wrapper.get('[data-testid="draw-ashes"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('[data-testid="start-election"]').trigger('click')
+    await flushPromises()
+    expect(cycleServiceMocks.startCycleElection).toHaveBeenCalledWith(
+      'draw-with-ashes',
+      expect.any(String),
+    )
+  })
+
+  it('blocks opening or redrawing while an ashes draw is pending and keeps the selection on failure', async () => {
+    const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="draw-games"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('.reveal-card--hidden').trigger('click')
+    let rejectDraw!: (error: Error) => void
+    cycleServiceMocks.drawCycleAshes.mockReturnValue(
+      new Promise((_, reject) => {
+        rejectDraw = reject
+      }),
+    )
+    await wrapper.get('[data-testid="draw-ashes"]').trigger('click')
+    expect(wrapper.get('[data-testid="draw-ashes"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="start-election"]').attributes('disabled')).toBeDefined()
+    const redraw = wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Sortear novamente')!
+    expect(redraw.attributes('disabled')).toBeDefined()
+    rejectDraw(new Error('Unavailable'))
+    await flushPromises()
+    expect(messageMocks.error).toHaveBeenCalledWith('Não foi possível sortear um jogo das Cinzas.')
+    expect(wrapper.text()).toContain('Random Game')
+    expect(wrapper.get('[data-testid="start-election"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('hides the ashes button when the pool is full', async () => {
+    cycleServiceMocks.drawCyclePool.mockResolvedValue({
+      campaignId: 17,
+      guaranteedGames: [{ id: 1, title: 'Suggested Game', suggestion: true }],
+      selectedFillers: [2, 3, 4, 5].map((id) => ({ id, title: `Game ${id}`, suggestion: true })),
+      selectedAshes: [],
+      revealOrder: [],
+      warnings: [],
+      selectionToken: 'full-draw',
+    })
+    const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="draw-games"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="draw-ashes"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('A roda está formada')
   })
 
   it('sets election deadlines at the next Monday and month boundaries', async () => {
