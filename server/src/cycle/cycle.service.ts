@@ -9,6 +9,7 @@ import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { AdminAuditLog } from '../admin/entities/admin-audit-log.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
+import { CampaignPlayer } from '../campaign/entities/campaign-player.entity';
 import { Game } from '../games/entities/game.entity';
 import {
   TARGET_POOL_SIZE,
@@ -31,6 +32,7 @@ import {
   DiscordCyclePreview,
   DiscordCycleService,
 } from './discord-cycle.service';
+import { UpdateMeetingAttendanceDto } from './dto/meeting-attendance.dto';
 
 const campaignRelations = [
   'game',
@@ -139,6 +141,7 @@ export class CycleService {
 
     return {
       campaign,
+      meetingAttendance: await this.getMeetingAttendance(campaign),
       guaranteedGames,
       electionResult: campaign.pool
         ? this.calculateElectionResult(campaign)
@@ -147,6 +150,99 @@ export class CycleService {
       nextCampaign: this.getNextCampaignDefaults(campaign),
       discordConfigured: this.discord.isConfigured(),
     };
+  }
+
+  async updateMeetingAttendance(
+    dto: UpdateMeetingAttendanceDto,
+    actor: Player,
+  ) {
+    return this.dataSource.transaction(async (manager) => {
+      const campaign = await this.findCurrentCampaignOrFail(manager);
+      if (campaign.id !== dto.campaignId) {
+        throw new BadRequestException(
+          'A campanha mudou. Atualize a página antes de marcar as presenças.',
+        );
+      }
+      const player = await manager
+        .getRepository(Player)
+        .findOneBy({ id: dto.playerId });
+      if (!player) throw new NotFoundException('Participante não encontrado.');
+
+      const membership = campaign.players.find(
+        (entry) => entry.player.id === player.id,
+      );
+      const previousAttendance = membership?.partook_in_the_meeting ?? false;
+      if (previousAttendance !== dto.attended) {
+        await manager.getRepository(CampaignPlayer).upsert(
+          {
+            campaign: { id: campaign.id },
+            player: { id: player.id },
+            partook_in_the_meeting: dto.attended,
+          },
+          ['campaign', 'player'],
+        );
+      }
+      const updated = await this.findCurrentCampaignOrFail(manager);
+      const updatedMembership = updated.players.find(
+        (entry) => entry.player.id === player.id,
+      );
+      const attendance = {
+        playerId: player.id,
+        name: this.getPlayerName(player),
+        attended: updatedMembership?.partook_in_the_meeting ?? false,
+        tokens: updatedMembership?.tokens ?? 1,
+      };
+      if (previousAttendance !== dto.attended) {
+        await this.writeAudit(
+          manager,
+          'cycle_meeting_attendance_updated',
+          actor,
+          dto,
+          {
+            campaignId: campaign.id,
+            playerId: player.id,
+            previousAttendance,
+            attended: attendance.attended,
+            tokens: attendance.tokens,
+          },
+        );
+      }
+      return {
+        campaign: updated,
+        attendance,
+        electionResult: this.calculateElectionResult(updated),
+      };
+    });
+  }
+
+  private getPlayerName(player: Player): string {
+    return (
+      player.name?.trim() ||
+      player.discord?.globalName?.trim() ||
+      player.discord?.username?.trim() ||
+      `#${player.id}`
+    );
+  }
+
+  private async getMeetingAttendance(campaign: Campaign) {
+    const players = await this.dataSource.getRepository(Player).find();
+    return players
+      .map((player) => {
+        const membership = campaign.players.find(
+          (entry) => entry.player.id === player.id,
+        );
+        return {
+          playerId: player.id,
+          name: this.getPlayerName(player),
+          attended: membership?.partook_in_the_meeting ?? false,
+          tokens: membership?.tokens ?? 1,
+        };
+      })
+      .sort(
+        (left, right) =>
+          left.name.localeCompare(right.name, 'pt-BR') ||
+          left.playerId - right.playerId,
+      );
   }
 
   async drawPool(): Promise<Record<string, unknown>> {

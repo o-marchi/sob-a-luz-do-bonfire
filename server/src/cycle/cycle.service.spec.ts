@@ -156,6 +156,174 @@ describe('CycleService', () => {
     await dataSource.destroy();
   });
 
+  it('lists registered members who have not joined the campaign for meeting attendance', async () => {
+    const listener = await dataSource
+      .getRepository(Player)
+      .save({ name: 'Listener' });
+    const overview = await service.getOverview();
+    expect(overview.meetingAttendance).toEqual([
+      { playerId: actor.id, name: actor.name, attended: false, tokens: 1 },
+      {
+        playerId: listener.id,
+        name: listener.name,
+        attended: false,
+        tokens: 1,
+      },
+    ]);
+    await expect(
+      dataSource.getRepository(CampaignPlayer).count(),
+    ).resolves.toBe(0);
+  });
+
+  it('grants exactly one attendance token, preserves other achievements and updates existing votes', async () => {
+    const suggestion = await saveGame({
+      title: 'Suggestion',
+      suggestion: true,
+    });
+    await attachSuggestion(suggestion);
+    const membership = await dataSource
+      .getRepository(CampaignPlayer)
+      .findOneByOrFail({
+        campaign: { id: campaign.id },
+        player: { id: actor.id },
+      });
+    await dataSource.getRepository(CampaignPlayer).update(membership.id, {
+      played_the_game: true,
+      finished_the_game: true,
+    });
+    const draw = (await service.drawPool()) as { selectionToken: string };
+    const opened = await service.startElection(draw, actor);
+    const option = opened.pool!.options[0];
+    option.players = [actor];
+    await dataSource.getRepository(PoolOption).save(option);
+
+    const input = {
+      campaignId: campaign.id,
+      playerId: actor.id,
+      attended: true,
+    };
+    const marked = await service.updateMeetingAttendance(input, actor);
+    expect(marked.attendance).toMatchObject({ attended: true, tokens: 3 });
+    expect(marked.electionResult[0].tokens).toBe(3);
+    const markedMembership = marked.campaign.players.find(
+      (entry) => entry.player.id === actor.id,
+    )!;
+    expect(markedMembership).toMatchObject({
+      played_the_game: true,
+      finished_the_game: true,
+      suggested_a_game: true,
+      suggestedGame: { id: suggestion.id },
+    });
+    expect(
+      (await service.updateMeetingAttendance(input, actor)).attendance.tokens,
+    ).toBe(3);
+    await expect(
+      dataSource.getRepository(CampaignPlayer).count(),
+    ).resolves.toBe(1);
+
+    const unmarked = await service.updateMeetingAttendance(
+      { ...input, attended: false },
+      actor,
+    );
+    expect(unmarked.attendance).toMatchObject({ attended: false, tokens: 2 });
+    expect(unmarked.electionResult[0].tokens).toBe(2);
+    expect(unmarked.campaign.players[0].suggestedGame?.id).toBe(suggestion.id);
+    const logs = await dataSource
+      .getRepository(AdminAuditLog)
+      .findBy({ action: 'cycle_meeting_attendance_updated' });
+    expect(logs).toHaveLength(2);
+    expect(logs[0].actor).toBe(`player:${actor.id}`);
+  });
+
+  it('awards the meeting bonus without requiring someone to play or suggest a game', async () => {
+    const listener = await dataSource
+      .getRepository(Player)
+      .save({ name: 'Listener' });
+    const input = {
+      campaignId: campaign.id,
+      playerId: listener.id,
+      attended: true,
+    };
+    const result = await service.updateMeetingAttendance(input, actor);
+    expect(result.attendance).toMatchObject({
+      playerId: listener.id,
+      attended: true,
+      tokens: 2,
+    });
+    expect(result.campaign.players[0]).toMatchObject({
+      played_the_game: false,
+      finished_the_game: false,
+      suggested_a_game: false,
+    });
+    await service.updateMeetingAttendance(input, actor);
+    const unmarked = await service.updateMeetingAttendance(
+      { ...input, attended: false },
+      actor,
+    );
+    expect(unmarked.attendance.tokens).toBe(1);
+    await expect(
+      dataSource.getRepository(CampaignPlayer).count(),
+    ).resolves.toBe(1);
+  });
+
+  it('rejects attendance for a stale campaign or an unknown player without changing records', async () => {
+    await expect(
+      service.updateMeetingAttendance(
+        { campaignId: campaign.id + 1, playerId: actor.id, attended: true },
+        actor,
+      ),
+    ).rejects.toThrow('A campanha mudou');
+    await expect(
+      service.updateMeetingAttendance(
+        { campaignId: campaign.id, playerId: 9999, attended: true },
+        actor,
+      ),
+    ).rejects.toThrow('Participante não encontrado');
+    await expect(
+      dataSource.getRepository(CampaignPlayer).count(),
+    ).resolves.toBe(0);
+    await expect(dataSource.getRepository(AdminAuditLog).count()).resolves.toBe(
+      0,
+    );
+  });
+
+  it('invalidates a transition preview if an attendance edit changes the votes', async () => {
+    const suggestion = await saveGame({
+      title: 'Suggestion',
+      suggestion: true,
+    });
+    await attachSuggestion(suggestion);
+    const draw = (await service.drawPool()) as { selectionToken: string };
+    const opened = await service.startElection(draw, actor);
+    const option = opened.pool!.options[0];
+    option.players = [actor];
+    await dataSource.getRepository(PoolOption).save(option);
+    const input = {
+      month: 'Setembro',
+      year: '2026',
+      discord: { enabled: false },
+    };
+    const preview = await service.previewTransition(input);
+    expect(preview.valid).toBe(true);
+    await service.updateMeetingAttendance(
+      { campaignId: campaign.id, playerId: actor.id, attended: true },
+      actor,
+    );
+    await expect(
+      service.applyTransition(
+        {
+          ...input,
+          confirm: true,
+          confirmationToken: preview.confirmationToken!,
+        },
+        actor,
+      ),
+    ).rejects.toThrow('A votação ou o plano mudou');
+    await expect(
+      dataSource.getRepository(Campaign).findOneBy({ id: campaign.id }),
+    ).resolves.toMatchObject({ current: true });
+  });
+
   it('fills empty slots from the ashes without repeats or changing prior selections', async () => {
     const guaranteed = await saveGame({
       title: 'Guaranteed',

@@ -6,10 +6,19 @@ import type {
   CycleOverview,
   CycleTransitionInput,
   CycleTransitionPreview,
+  MeetingAttendanceInput,
+  MeetingAttendanceUpdate,
 } from '@/types/Cycle'
 
 export const getCycleOverview = async (): Promise<CycleOverview> => {
   const { data } = await api.get<CycleOverview>('/cycle/overview')
+  return data
+}
+
+export const updateMeetingAttendance = async (
+  input: MeetingAttendanceInput,
+): Promise<MeetingAttendanceUpdate> => {
+  const { data } = await api.patch<MeetingAttendanceUpdate>('/cycle/attendance', input)
   return data
 }
 

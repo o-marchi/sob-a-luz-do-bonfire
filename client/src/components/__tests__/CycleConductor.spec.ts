@@ -7,6 +7,7 @@ import { useCampaignStore } from '@/stores/campaign'
 
 const cycleServiceMocks = vi.hoisted(() => ({
   getCycleOverview: vi.fn(),
+  updateMeetingAttendance: vi.fn(),
   drawCyclePool: vi.fn(),
   drawCycleAshes: vi.fn(),
   startCycleElection: vi.fn(),
@@ -42,6 +43,7 @@ describe('CycleConductor', () => {
   let pinia: Pinia
 
   beforeEach(() => {
+    vi.clearAllMocks()
     pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
@@ -65,6 +67,10 @@ describe('CycleConductor', () => {
       targetPoolSize: 5,
       nextCampaign: { month: 'Setembro', year: '2026' },
       discordConfigured: true,
+      meetingAttendance: [
+        { playerId: 1, name: 'Conductor', attended: false, tokens: 1 },
+        { playerId: 2, name: 'Listener', attended: false, tokens: 1 },
+      ],
     })
     gameServiceMocks.getGameBacklog.mockResolvedValue({
       games: [
@@ -123,6 +129,76 @@ describe('CycleConductor', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it('marks and unmarks attendance while keeping the in-progress game draw', async () => {
+    const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="draw-games"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('.reveal-card--hidden').trigger('click')
+    const campaign = {
+      id: 17,
+      month: 'Agosto',
+      year: '2026',
+      current: true,
+      electionActive: false,
+      pool: null,
+    }
+    cycleServiceMocks.updateMeetingAttendance.mockResolvedValue({
+      campaign,
+      attendance: { playerId: 2, name: 'Listener', attended: true, tokens: 2 },
+      electionResult: [],
+    })
+    await wrapper.get('[data-testid="attendance-2"]').setValue(true)
+    await flushPromises()
+    expect(cycleServiceMocks.updateMeetingAttendance).toHaveBeenCalledWith({
+      campaignId: 17,
+      playerId: 2,
+      attended: true,
+    })
+    expect(wrapper.get<HTMLInputElement>('[data-testid="attendance-2"]').element.checked).toBe(true)
+    expect(wrapper.text()).toContain('1 presente')
+    expect(wrapper.text()).toContain('2 tokens')
+    expect(wrapper.text()).toContain('Random Game')
+    expect(useCampaignStore().init).toHaveBeenCalledWith(campaign)
+
+    cycleServiceMocks.updateMeetingAttendance.mockResolvedValue({
+      campaign,
+      attendance: { playerId: 2, name: 'Listener', attended: false, tokens: 1 },
+      electionResult: [],
+    })
+    await wrapper.get('[data-testid="attendance-2"]').setValue(false)
+    await flushPromises()
+    expect(wrapper.get<HTMLInputElement>('[data-testid="attendance-2"]').element.checked).toBe(
+      false,
+    )
+    expect(messageMocks.success).toHaveBeenLastCalledWith(
+      'Presença desmarcada. O token do encontro foi removido.',
+    )
+  })
+
+  it('keeps the previous attendance when saving fails and blocks conflicting edits while saving', async () => {
+    const wrapper = mount(CycleConductor, { global: { plugins: [pinia] } })
+    await flushPromises()
+    let rejectSave!: (error: Error) => void
+    cycleServiceMocks.updateMeetingAttendance.mockReturnValue(
+      new Promise((_, reject) => {
+        rejectSave = reject
+      }),
+    )
+    await wrapper.get('[data-testid="attendance-2"]').setValue(true)
+    expect(wrapper.get('[data-testid="attendance-1"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get<HTMLInputElement>('[data-testid="attendance-2"]').element.checked).toBe(
+      false,
+    )
+    rejectSave(new Error('Failed'))
+    await flushPromises()
+    expect(wrapper.get<HTMLInputElement>('[data-testid="attendance-2"]').element.checked).toBe(
+      false,
+    )
+    expect(wrapper.get('[data-testid="attendance-1"]').attributes('disabled')).toBeUndefined()
+    expect(messageMocks.error).toHaveBeenCalledWith('Não foi possível salvar a presença.')
   })
 
   it('shows guaranteed suggestions first and reveals only the random selection', async () => {

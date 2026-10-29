@@ -15,6 +15,7 @@ import {
   getCycleOverview,
   previewCycleTransition,
   startCycleElection,
+  updateMeetingAttendance,
 } from '@/services/cycleService'
 import { getGameBacklog } from '@/services/gameService'
 import type {
@@ -23,6 +24,7 @@ import type {
   CycleTransitionInput,
   CycleTransitionPreview,
   ElectionResultOption,
+  MeetingAttendance,
 } from '@/types/Cycle'
 import type { BacklogGame, Game, GameBacklog } from '@/types/Game'
 
@@ -54,6 +56,7 @@ const transitionPreview = ref<CycleTransitionPreview | null>(null)
 const loading = ref(true)
 const drawing = ref(false)
 const drawingAshes = ref(false)
+const savingAttendance = ref<number | null>(null)
 const startingElection = ref(false)
 const cancellingElection = ref(false)
 const confirmingCancellation = ref(false)
@@ -79,6 +82,9 @@ const newChannelTopic = ref('')
 let revealTimer: number | null = null
 
 const campaign = computed(() => overview.value?.campaign ?? null)
+const attendanceCount = computed(
+  () => (overview.value?.meetingAttendance ?? []).filter((entry) => entry.attended).length,
+)
 const hasElection = computed(() =>
   Boolean(campaign.value?.electionStartedAt && campaign.value?.pool?.options.length),
 )
@@ -232,6 +238,39 @@ async function drawGames() {
   }
 }
 
+async function changeAttendance(attendee: MeetingAttendance, event: Event) {
+  const checkbox = event.target as HTMLInputElement
+  const attended = checkbox.checked
+  checkbox.checked = attendee.attended
+  if (!overview.value || savingAttendance.value !== null) return
+  savingAttendance.value = attendee.playerId
+  try {
+    const result = await updateMeetingAttendance({
+      campaignId: overview.value.campaign.id,
+      playerId: attendee.playerId,
+      attended,
+    })
+    overview.value.campaign = result.campaign
+    overview.value.meetingAttendance = overview.value.meetingAttendance.map((entry) =>
+      entry.playerId === result.attendance.playerId ? result.attendance : entry,
+    )
+    overview.value.electionResult = result.electionResult
+    transitionPreview.value = null
+    setDefaultWinner(result.electionResult)
+    syncDescriptionWithWinner()
+    await campaignStore.init(result.campaign)
+    message.success(
+      attended
+        ? 'Presença marcada. Mais um token para este ciclo.'
+        : 'Presença desmarcada. O token do encontro foi removido.',
+    )
+  } catch (error) {
+    message.error(getErrorMessage(error, 'Não foi possível salvar a presença.'))
+  } finally {
+    savingAttendance.value = null
+  }
+}
+
 async function drawFromAshes() {
   if (!draw.value || drawingAshes.value || !emptySlots.value) return
   stopReveal()
@@ -333,6 +372,7 @@ function buildTransitionInput(): CycleTransitionInput {
 }
 
 async function prepareTransition() {
+  if (savingAttendance.value !== null) return
   previewing.value = true
   try {
     transitionPreview.value = await previewCycleTransition(buildTransitionInput())
@@ -360,7 +400,7 @@ function syncDiscordSelections(preview: CycleTransitionPreview) {
 
 async function finishTransition() {
   const token = transitionPreview.value?.confirmationToken
-  if (!token) return
+  if (!token || savingAttendance.value !== null) return
   applying.value = true
   try {
     const result = await applyCycleTransition(buildTransitionInput(), token)
@@ -494,6 +534,53 @@ function getErrorMessage(error: unknown, fallback: string): string {
           <span>3</span> Passar a chama
         </li>
       </ol>
+
+      <section class="cycle-panel meeting-attendance" aria-labelledby="meeting-attendance-heading">
+        <div class="cycle-panel__heading">
+          <div>
+            <span class="cycle-eyebrow">Ao redor da fogueira</span>
+            <h3 id="meeting-attendance-heading">Quem veio ao encontro?</h3>
+          </div>
+          <strong
+            >{{ attendanceCount }} {{ attendanceCount === 1 ? 'presente' : 'presentes' }}</strong
+          >
+        </div>
+        <p class="cycle-panel__copy">
+          Marque quem participou para dar mais um token neste ciclo, mesmo sem ter jogado. As
+          presenças são salvas na hora. Desmarcar retira apenas o token do encontro.
+        </p>
+        <div class="meeting-attendance__list" aria-live="polite">
+          <label
+            v-for="attendee in overview.meetingAttendance ?? []"
+            :key="attendee.playerId"
+            class="meeting-attendance__person"
+          >
+            <input
+              type="checkbox"
+              :data-testid="`attendance-${attendee.playerId}`"
+              :aria-label="`Presença de ${attendee.name}`"
+              :checked="attendee.attended"
+              :disabled="
+                savingAttendance !== null ||
+                applying ||
+                previewing ||
+                startingElection ||
+                cancellingElection
+              "
+              @change="changeAttendance(attendee, $event)"
+            />
+            <span>{{ attendee.name }}</span>
+            <small>{{
+              savingAttendance === attendee.playerId
+                ? 'Salvando…'
+                : `${attendee.tokens} ${attendee.tokens === 1 ? 'token' : 'tokens'}`
+            }}</small>
+          </label>
+        </div>
+        <p v-if="!overview.meetingAttendance?.length" class="cycle-panel__copy">
+          Ainda não há participantes cadastrados.
+        </p>
+      </section>
 
       <section v-if="!hasElection" class="cycle-panel cycle-draw-panel">
         <div class="cycle-panel__heading">
@@ -683,7 +770,9 @@ function getErrorMessage(error: unknown, fallback: string): string {
               <button
                 data-testid="start-election"
                 type="button"
-                :disabled="startingElection || drawingAshes || !selectionSize"
+                :disabled="
+                  startingElection || drawingAshes || savingAttendance !== null || !selectionSize
+                "
                 @click="openElection"
               >
                 {{ startingElection ? 'Acendendo a votação…' : 'Começar a eleição' }}
@@ -847,7 +936,10 @@ function getErrorMessage(error: unknown, fallback: string): string {
           </label>
 
           <div class="transition-form__actions game-links">
-            <button type="submit" :disabled="previewing || !winnerGameId">
+            <button
+              type="submit"
+              :disabled="previewing || savingAttendance !== null || !winnerGameId"
+            >
               {{ previewing ? 'Lendo a passagem…' : 'Revisar a passagem' }}
             </button>
           </div>
@@ -971,7 +1063,11 @@ function getErrorMessage(error: unknown, fallback: string): string {
             v-if="transitionPreview.valid && transitionPreview.confirmationToken"
             class="game-links"
           >
-            <button type="button" :disabled="applying" @click="finishTransition">
+            <button
+              type="button"
+              :disabled="applying || savingAttendance !== null"
+              @click="finishTransition"
+            >
               {{ applying ? 'Passando a chama…' : 'Encerrar este ciclo e começar o próximo' }}
             </button>
           </div>
