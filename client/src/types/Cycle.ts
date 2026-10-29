@@ -23,6 +23,7 @@ export interface CycleDraw {
   targetPoolSize: number
   guaranteedGames: Game[]
   selectedFillers: Game[]
+  selectedAshes: Game[]
   revealOrder: Game[]
   excludedUnverified: Game[]
   excludedTooLong: Game[]

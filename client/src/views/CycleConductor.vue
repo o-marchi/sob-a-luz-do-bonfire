@@ -11,6 +11,7 @@ import {
   applyCycleTransition,
   cancelCycleElection,
   drawCyclePool,
+  drawCycleAshes,
   getCycleOverview,
   previewCycleTransition,
   startCycleElection,
@@ -52,6 +53,7 @@ const draw = ref<CycleDraw | null>(null)
 const transitionPreview = ref<CycleTransitionPreview | null>(null)
 const loading = ref(true)
 const drawing = ref(false)
+const drawingAshes = ref(false)
 const startingElection = ref(false)
 const cancellingElection = ref(false)
 const confirmingCancellation = ref(false)
@@ -85,6 +87,24 @@ const guaranteedGames = computed(
 )
 const fillerSlotsNeeded = computed(() =>
   Math.max(0, (overview.value?.targetPoolSize ?? 0) - guaranteedGames.value.length),
+)
+const selectedAshes = computed(() => draw.value?.selectedAshes ?? [])
+const selectionSize = computed(
+  () =>
+    guaranteedGames.value.length +
+    (draw.value?.selectedFillers.length ?? 0) +
+    selectedAshes.value.length,
+)
+const emptySlots = computed(() =>
+  Math.max(0, (overview.value?.targetPoolSize ?? 0) - selectionSize.value),
+)
+const availableAshes = computed(() =>
+  (backlog.value?.rubble ?? []).filter(
+    (game) =>
+      ![...guaranteedGames.value, ...selectedAshes.value].some(
+        (selected) => selected.id === game.id,
+      ),
+  ),
 )
 const revealedGames = computed(() => draw.value?.revealOrder.slice(0, revealCount.value) ?? [])
 const allRevealed = computed(() =>
@@ -212,6 +232,20 @@ async function drawGames() {
   }
 }
 
+async function drawFromAshes() {
+  if (!draw.value || drawingAshes.value || !emptySlots.value) return
+  stopReveal()
+  drawingAshes.value = true
+  try {
+    const extendedDraw = await drawCycleAshes(draw.value.selectionToken)
+    draw.value = { ...extendedDraw, revealOrder: draw.value.revealOrder }
+  } catch (error) {
+    message.error(getErrorMessage(error, 'Não foi possível sortear um jogo das Cinzas.'))
+  } finally {
+    drawingAshes.value = false
+  }
+}
+
 function revealNext() {
   if (!draw.value || allRevealed.value) return
   revealCount.value += 1
@@ -240,7 +274,7 @@ function setElectionBoundary(boundary: 'monday' | 'month') {
 }
 
 async function openElection() {
-  if (!draw.value || !allRevealed.value) return
+  if (!draw.value || !allRevealed.value || drawingAshes.value || !selectionSize.value) return
   startingElection.value = true
   try {
     const updatedCampaign = await startCycleElection(
@@ -476,6 +510,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
         <p class="cycle-panel__copy">
           Toda sugestão aceita nesta reunião entra na votação, sem limite e sem sorteio. Se houver
           menos de {{ overview.targetPoolSize }}, completamos a roda com jogos elegíveis das Brasas.
+          Se ainda faltarem jogos, você pode resgatar um por vez das Cinzas.
         </p>
 
         <section v-if="guaranteedGames.length" class="guaranteed-selection">
@@ -498,7 +533,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
         </section>
 
         <p v-else class="guaranteed-empty">
-          Ainda não há sugestões nesta reunião. As cinco vagas virão das Brasas.
+          Ainda não há sugestões nesta reunião. As vagas podem vir das Brasas e das Cinzas.
         </p>
 
         <div v-if="!draw" class="draw-hearth">
@@ -573,19 +608,62 @@ function getErrorMessage(error: unknown, fallback: string): string {
               <button v-if="!allRevealed" type="button" @click="revealAll">
                 Revelar em sequência
               </button>
-              <button type="button" :disabled="drawing" @click="drawGames">
+              <button type="button" :disabled="drawing || drawingAshes" @click="drawGames">
                 {{ drawing ? 'Sorteando…' : 'Sortear novamente' }}
               </button>
             </div>
           </section>
 
           <p v-else class="random-selection__empty">
-            A votação será formada somente pelas sugestões confirmadas acima.
+            Nenhum jogo das Brasas foi sorteado para completar as sugestões acima.
           </p>
+
+          <section
+            v-if="selectedAshes.length || emptySlots"
+            class="random-selection ashes-selection"
+          >
+            <header>
+              <span class="cycle-eyebrow">Resgatados das Cinzas</span>
+              <strong v-if="emptySlots">
+                {{ emptySlots }} {{ emptySlots === 1 ? 'lugar em aberto' : 'lugares em aberto' }}
+              </strong>
+            </header>
+            <p class="cycle-panel__copy">
+              Cada sorteio traz um jogo das Cinzas para esta votação. Os jogos já escolhidos e o
+              histórico de passagens são preservados.
+            </p>
+            <div
+              v-if="selectedAshes.length"
+              class="backlog-grid cycle-catalog-grid"
+              aria-live="polite"
+            >
+              <BacklogGameCard
+                v-for="game in selectedAshes"
+                :key="game.id"
+                :game="asBacklogGame(game)"
+                :retirement-threshold="retirementThreshold"
+              />
+            </div>
+            <template v-if="emptySlots">
+              <p v-if="!availableAshes.length">Não há mais jogos disponíveis nas Cinzas.</p>
+              <div class="draw-actions game-links">
+                <button
+                  data-testid="draw-ashes"
+                  type="button"
+                  :disabled="drawing || drawingAshes || startingElection || !availableAshes.length"
+                  @click="drawFromAshes"
+                >
+                  {{ drawingAshes ? 'Resgatando das Cinzas…' : 'Sortear 1 jogo das Cinzas' }}
+                </button>
+              </div>
+            </template>
+          </section>
 
           <div v-if="allRevealed" class="election-launch">
             <div>
-              <span class="cycle-eyebrow">A roda está formada</span>
+              <span class="cycle-eyebrow">{{
+                emptySlots ? 'A roda ainda tem vagas' : 'A roda está formada'
+              }}</span>
               <h3>Quando as urnas se fecham?</h3>
               <p>Você pode deixar sem prazo e encerrar manualmente depois.</p>
             </div>
@@ -605,7 +683,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
               <button
                 data-testid="start-election"
                 type="button"
-                :disabled="startingElection"
+                :disabled="startingElection || drawingAshes || !selectionSize"
                 @click="openElection"
               >
                 {{ startingElection ? 'Acendendo a votação…' : 'Começar a eleição' }}

@@ -12,6 +12,7 @@ import { Campaign } from '../campaign/entities/campaign.entity';
 import { Game } from '../games/entities/game.entity';
 import {
   TARGET_POOL_SIZE,
+  findAshesGames,
   findEligibleBacklogGames,
   findGuaranteedNextVoteGames,
   normalizeGameIdentity,
@@ -22,6 +23,7 @@ import { Pool } from '../pool/entities/pool.entity';
 import {
   ApplyCycleTransitionDto,
   CancelElectionDto,
+  DrawAshesDto,
   PreviewCycleTransitionDto,
   StartElectionDto,
 } from './dto/cycle-transition.dto';
@@ -60,6 +62,7 @@ interface DrawTokenPayload {
   campaignId: number;
   gameIds: number[];
   guaranteedGameIds: number[];
+  ashesGameIds?: number[];
   expiresAt: number;
 }
 
@@ -181,6 +184,7 @@ export class CycleService {
       campaignId: campaign.id,
       gameIds: selection.map((game) => game.id),
       guaranteedGameIds: guaranteedGames.map((game) => game.id),
+      ashesGameIds: [],
       expiresAt: Date.now() + 30 * 60 * 1000,
     });
 
@@ -189,12 +193,120 @@ export class CycleService {
       targetPoolSize: TARGET_POOL_SIZE,
       guaranteedGames,
       selectedFillers,
+      selectedAshes: [],
       revealOrder,
       excludedUnverified,
       excludedTooLong,
       selectionToken: token,
       warnings,
     };
+  }
+
+  async drawAshes(dto: DrawAshesDto): Promise<Record<string, unknown>> {
+    const token = this.verifyToken<DrawTokenPayload>(
+      dto.selectionToken,
+      'cycle-draw',
+    );
+    const manager = this.dataSource.manager;
+    const { games, guaranteedGames } = await this.validateDraw(token, manager);
+    if (games.length >= TARGET_POOL_SIZE) {
+      throw new BadRequestException('A votação já está completa.');
+    }
+
+    const candidates = await findAshesGames(
+      manager,
+      new Set(games.map(normalizeGameIdentity)),
+    );
+    if (!candidates.length) {
+      throw new BadRequestException(
+        'Não há mais jogos disponíveis nas Cinzas.',
+      );
+    }
+    const selected = candidates[randomInt(candidates.length)];
+    const ashesGameIds = [...(token.ashesGameIds ?? []), selected.id];
+    const selectedAshes = ashesGameIds.map(
+      (id) => [...games, selected].find((game) => game.id === id)!,
+    );
+    const selectedFillers = token.gameIds
+      .filter(
+        (id) =>
+          !token.guaranteedGameIds.includes(id) && !ashesGameIds.includes(id),
+      )
+      .map((id) => games.find((game) => game.id === id)!);
+    const gameIds = [...token.gameIds, selected.id];
+    const remaining = TARGET_POOL_SIZE - gameIds.length;
+
+    return {
+      campaignId: token.campaignId,
+      targetPoolSize: TARGET_POOL_SIZE,
+      guaranteedGames,
+      selectedFillers,
+      selectedAshes,
+      revealOrder: selectedFillers,
+      excludedUnverified: [],
+      excludedTooLong: [],
+      selectionToken: this.signToken<DrawTokenPayload>({
+        ...token,
+        gameIds,
+        ashesGameIds,
+        expiresAt: Date.now() + 30 * 60 * 1000,
+      }),
+      warnings: remaining
+        ? [`Ainda faltam ${remaining} jogos para completar a votação.`]
+        : [],
+    };
+  }
+
+  private async validateDraw(token: DrawTokenPayload, manager: EntityManager) {
+    const current = await this.findCurrentCampaignOrFail(manager);
+    if (current.id !== token.campaignId) {
+      throw new BadRequestException(
+        'A campanha mudou desde o sorteio. Sorteie novamente.',
+      );
+    }
+    if (current.electionActive) {
+      throw new BadRequestException('A votação já está aberta.');
+    }
+
+    const guaranteedGames = await findGuaranteedNextVoteGames(manager);
+    if (
+      !this.sameNumbers(
+        guaranteedGames.map((game) => game.id).sort(),
+        [...token.guaranteedGameIds].sort(),
+      )
+    ) {
+      throw new BadRequestException(
+        'As sugestões mudaram desde o sorteio. Sorteie novamente.',
+      );
+    }
+
+    const games = await manager.getRepository(Game).findByIds(token.gameIds);
+    if (games.length !== new Set(token.gameIds).size) {
+      throw new BadRequestException(
+        'Um dos jogos sorteados não está mais disponível.',
+      );
+    }
+    const excluded = new Set(guaranteedGames.map(normalizeGameIdentity));
+    const allowedFillers = await findEligibleBacklogGames(manager, excluded);
+    const allowedIdentities = new Set(
+      [...guaranteedGames, ...allowedFillers].map(normalizeGameIdentity),
+    );
+    const allowedAshes = token.ashesGameIds?.length
+      ? await findAshesGames(manager, excluded)
+      : [];
+    const allowedAshesIds = new Set(allowedAshes.map((game) => game.id));
+    if (
+      games.some((game) =>
+        token.ashesGameIds?.includes(game.id)
+          ? !allowedAshesIds.has(game.id)
+          : !allowedIdentities.has(normalizeGameIdentity(game)),
+      )
+    ) {
+      throw new BadRequestException(
+        'Um dos jogos sorteados deixou de ser elegível. Sorteie novamente.',
+      );
+    }
+    return { games, guaranteedGames, current };
   }
 
   async startElection(dto: StartElectionDto, actor: Player): Promise<Campaign> {
@@ -213,46 +325,10 @@ export class CycleService {
     }
 
     const campaign = await this.dataSource.transaction(async (manager) => {
-      const current = await this.findCurrentCampaignOrFail(manager);
-      if (current.id !== token.campaignId) {
+      const { current, games } = await this.validateDraw(token, manager);
+      if (!games.length) {
         throw new BadRequestException(
-          'A campanha mudou desde o sorteio. Sorteie novamente.',
-        );
-      }
-      if (current.electionActive) {
-        throw new BadRequestException('A votação já está aberta.');
-      }
-
-      const guaranteedGames = await findGuaranteedNextVoteGames(manager);
-      const guaranteedIds = guaranteedGames.map((game) => game.id).sort();
-      if (
-        !this.sameNumbers(guaranteedIds, [...token.guaranteedGameIds].sort())
-      ) {
-        throw new BadRequestException(
-          'As sugestões mudaram desde o sorteio. Sorteie novamente.',
-        );
-      }
-
-      const games = await manager.getRepository(Game).findByIds(token.gameIds);
-      if (games.length !== new Set(token.gameIds).size) {
-        throw new BadRequestException(
-          'Um dos jogos sorteados não está mais disponível.',
-        );
-      }
-      const allowedFillers = await findEligibleBacklogGames(
-        manager,
-        new Set(guaranteedGames.map(normalizeGameIdentity)),
-      );
-      const allowedIdentities = new Set(
-        [...guaranteedGames, ...allowedFillers].map(normalizeGameIdentity),
-      );
-      if (
-        games.some(
-          (game) => !allowedIdentities.has(normalizeGameIdentity(game)),
-        )
-      ) {
-        throw new BadRequestException(
-          'Um dos jogos sorteados deixou de ser elegível. Sorteie novamente.',
+          'Selecione ao menos um jogo para a votação.',
         );
       }
 
@@ -283,6 +359,7 @@ export class CycleService {
           campaignId: current.id,
           poolId: savedPool.id,
           gameIds: token.gameIds,
+          ashesGameIds: token.ashesGameIds ?? [],
         },
       );
 

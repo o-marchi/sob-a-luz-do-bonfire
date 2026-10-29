@@ -156,6 +156,172 @@ describe('CycleService', () => {
     await dataSource.destroy();
   });
 
+  it('fills empty slots from the ashes without repeats or changing prior selections', async () => {
+    const guaranteed = await saveGame({
+      title: 'Guaranteed',
+      suggestion: true,
+    });
+    await attachSuggestion(guaranteed);
+    const filler = await saveGame({ title: 'Brasa', suggestion: true });
+    const ashes: Game[] = [];
+    for (const title of ['Ash A', 'Ash B', 'Ash C']) {
+      ashes.push(await saveGame({ title, suggestion: true }));
+    }
+    await addAppearances(ashes, 3);
+    let draw = (await service.drawPool()) as {
+      guaranteedGames: Game[];
+      selectedFillers: Game[];
+      selectedAshes: Game[];
+      selectionToken: string;
+    };
+    expect(draw.selectedFillers.map((game) => game.id)).toEqual([filler.id]);
+    expect(draw.selectedAshes).toEqual([]);
+
+    for (let count = 1; count <= 3; count++) {
+      draw = (await service.drawAshes({
+        selectionToken: draw.selectionToken,
+      })) as typeof draw;
+      expect(draw.selectedAshes).toHaveLength(count);
+      expect(new Set(draw.selectedAshes.map((game) => game.id)).size).toBe(
+        count,
+      );
+      expect(draw.guaranteedGames.map((game) => game.id)).toEqual([
+        guaranteed.id,
+      ]);
+      expect(draw.selectedFillers.map((game) => game.id)).toEqual([filler.id]);
+    }
+    await expect(dataSource.getRepository(Pool).count()).resolves.toBe(3);
+    await expect(
+      service.drawAshes({ selectionToken: draw.selectionToken }),
+    ).rejects.toThrow('A votação já está completa');
+
+    const started = await service.startElection(
+      { selectionToken: draw.selectionToken },
+      actor,
+    );
+    expect(started.pool?.options.map((option) => option.game.id)).toEqual(
+      expect.arrayContaining([
+        guaranteed.id,
+        filler.id,
+        ...ashes.map((game) => game.id),
+      ]),
+    );
+    expect(started.pool?.options).toHaveLength(5);
+    await expect(dataSource.getRepository(Pool).count()).resolves.toBe(4);
+    const audit = await dataSource
+      .getRepository(AdminAuditLog)
+      .findOneByOrFail({
+        action: 'cycle_election_started',
+      });
+    expect(audit.result).toMatchObject({
+      ashesGameIds: draw.selectedAshes.map((game) => game.id),
+    });
+    await service.cancelElection({ confirm: true }, actor);
+    await expect(dataSource.getRepository(Pool).count()).resolves.toBe(3);
+    await expect(dataSource.getRepository(PoolOption).count()).resolves.toBe(9);
+  });
+
+  it('draws unique ashes identities and excludes past winners, current suggestions and withdrawn games', async () => {
+    const ash = await saveGame({
+      title: 'Ash',
+      suggestion: true,
+      steam: 'https://store.steampowered.com/app/42/',
+    });
+    await saveGame({ title: 'Ash alias', suggestion: true, steam: ash.steam });
+    const withdrawn = await saveGame({ title: 'Withdrawn', suggestion: false });
+    const guaranteed = await saveGame({
+      title: 'Guaranteed ash',
+      suggestion: true,
+    });
+    await attachSuggestion(guaranteed);
+    await dataSource
+      .getRepository(Game)
+      .update(currentGame.id, { suggestion: true });
+    const winner = await saveGame({ title: 'Past winner', suggestion: true });
+    await dataSource
+      .getRepository(Campaign)
+      .save(
+        dataSource
+          .getRepository(Campaign)
+          .create({ month: 'Julho', year: '2026', game: winner }),
+      );
+    await addAppearances([ash, withdrawn, guaranteed, currentGame, winner], 3);
+    const draw = (await service.drawPool()) as { selectionToken: string };
+    const extended = (await service.drawAshes(draw)) as {
+      selectedAshes: Game[];
+      selectionToken: string;
+    };
+    expect(extended.selectedAshes.map((game) => game.id)).toEqual([ash.id]);
+    await expect(service.drawAshes(extended)).rejects.toThrow(
+      'Não há mais jogos disponíveis nas Cinzas',
+    );
+    await expect(dataSource.getRepository(Pool).count()).resolves.toBe(3);
+  });
+
+  it('revalidates ashes before opening the election and rejects withdrawn selections', async () => {
+    const ash = await saveGame({ title: 'Ash', suggestion: true });
+    await addAppearances([ash], 3);
+    const draw = (await service.drawPool()) as { selectionToken: string };
+    const extended = (await service.drawAshes(draw)) as {
+      selectionToken: string;
+    };
+    await dataSource.getRepository(Game).update(ash.id, { suggestion: false });
+    await expect(service.startElection(extended, actor)).rejects.toThrow(
+      'deixou de ser elegível',
+    );
+    await expect(service.drawAshes(extended)).rejects.toThrow(
+      'deixou de ser elegível',
+    );
+    await expect(dataSource.getRepository(Pool).count()).resolves.toBe(3);
+  });
+
+  it('rejects expired, tampered and stale ashes draw tokens', async () => {
+    const ash = await saveGame({ title: 'Ash', suggestion: true });
+    await addAppearances([ash], 3);
+    const draw = (await service.drawPool()) as { selectionToken: string };
+    await expect(
+      service.drawAshes({ selectionToken: `${draw.selectionToken}x` }),
+    ).rejects.toThrow('Token de confirmação inválido');
+    const now = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(Date.now() + 31 * 60 * 1000);
+    try {
+      await expect(service.drawAshes(draw)).rejects.toThrow('expirou');
+    } finally {
+      now.mockRestore();
+    }
+    await attachSuggestion(
+      await saveGame({ title: 'New suggestion', suggestion: true }),
+    );
+    await expect(service.drawAshes(draw)).rejects.toThrow(
+      'As sugestões mudaram',
+    );
+    const refreshed = (await service.drawPool()) as { selectionToken: string };
+    await dataSource
+      .getRepository(Campaign)
+      .update(campaign.id, { electionActive: true });
+    await expect(service.drawAshes(refreshed)).rejects.toThrow(
+      'A votação já está aberta',
+    );
+  });
+
+  it('requires a selection and can open an election filled only from the ashes', async () => {
+    const draw = (await service.drawPool()) as { selectionToken: string };
+    await expect(service.startElection(draw, actor)).rejects.toThrow(
+      'Selecione ao menos um jogo',
+    );
+    await expect(dataSource.getRepository(Pool).count()).resolves.toBe(0);
+    const ash = await saveGame({ title: 'Only ash', suggestion: true });
+    await addAppearances([ash], 3);
+    const extended = (await service.drawAshes(draw)) as {
+      selectionToken: string;
+    };
+    const started = await service.startElection(extended, actor);
+    expect(started.pool?.options.map((option) => option.game.id)).toEqual([
+      ash.id,
+    ]);
+  });
+
   it('draws all meeting suggestions and fills the pool from the curated catalog', async () => {
     const suggestion = await saveGame({
       title: 'Meeting Suggestion',
@@ -509,6 +675,17 @@ describe('CycleService', () => {
   ): Promise<Game> {
     const repository = dataSource.getRepository(Game);
     return repository.save(repository.create(game));
+  }
+
+  async function addAppearances(games: Game[], count: number): Promise<void> {
+    for (let index = 0; index < count; index++) {
+      const options = games.map((game) =>
+        dataSource.getRepository(PoolOption).create({ game, players: [] }),
+      );
+      await dataSource
+        .getRepository(Pool)
+        .save(dataSource.getRepository(Pool).create({ options }));
+    }
   }
 
   async function attachSuggestion(game: Game): Promise<void> {

@@ -8,6 +8,7 @@ import { CycleService } from './cycle.service';
 import {
   ApplyCycleTransitionDto,
   CancelElectionDto,
+  DrawAshesDto,
   PreviewCycleTransitionDto,
   StartElectionDto,
 } from './dto/cycle-transition.dto';
@@ -27,6 +28,11 @@ export class CycleController {
   @Post('draw')
   drawPool() {
     return this.cycleService.drawPool();
+  }
+
+  @Post('draw-ashes')
+  drawAshes(@Body() body: DrawAshesDto) {
+    return this.cycleService.drawAshes(body);
   }
 
   @Post('start-election')

@@ -966,6 +966,10 @@ body.bonfire-inner-page .user-menu-popover {
   margin-top: 30px;
 }
 
+.ashes-selection .draw-actions {
+  margin-top: 18px;
+}
+
 .cycle-catalog-grid {
   gap: 14px;
 }

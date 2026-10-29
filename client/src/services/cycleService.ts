@@ -18,6 +18,11 @@ export const drawCyclePool = async (): Promise<CycleDraw> => {
   return data
 }
 
+export const drawCycleAshes = async (selectionToken: string): Promise<CycleDraw> => {
+  const { data } = await api.post<CycleDraw>('/cycle/draw-ashes', { selectionToken })
+  return data
+}
+
 export const startCycleElection = async (
   selectionToken: string,
   electionEndsAt?: string,
